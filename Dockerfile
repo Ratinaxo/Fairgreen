@@ -10,10 +10,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# --- Dependencias del sistema para psycopg2-binary ---
-# libpq-dev es necesario en runtime para que psycopg2-binary encuentre libpq.
+# --- Dependencias del sistema para psycopg2-binary y GeoDjango ---
+# libpq-dev es necesario para psycopg2. binutils, libproj-dev y gdal-bin para GeoDjango.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq-dev \
+    && apt-get install -y --no-install-recommends \
+       libpq-dev \
+       binutils \
+       libproj-dev \
+       gdal-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Instalar dependencias de Python ---
