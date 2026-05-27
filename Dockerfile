@@ -35,9 +35,9 @@ RUN python manage.py collectstatic --noinput 2>/dev/null || true
 RUN addgroup --system appgroup \
     && adduser --system --ingroup appgroup appuser
 
-# --- Dar permisos al entrypoint ---
+# --- Dar permisos y corregir formato del entrypoint ---
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # --- Cambiar a usuario no-root ---
 USER appuser
