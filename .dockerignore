@@ -1,0 +1,40 @@
+# =============================================================================
+# .dockerignore — Excluir archivos innecesarios del contexto de build
+# =============================================================================
+
+# Entorno virtual de Python (puede pesar cientos de MB)
+venv/
+env/
+.venv/
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Variables de entorno reales (se inyectan via docker-compose)
+.env
+
+# Control de versiones
+.git/
+.gitignore
+
+# Docker (evitar recursión)
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+.dockerignore
+
+# Documentación y archivos no necesarios en la imagen
+README.md
+LICENSE
+*.md
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
