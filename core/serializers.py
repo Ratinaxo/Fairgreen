@@ -34,11 +34,12 @@ class PuntoCriticoSerializer(GeoFeatureModelSerializer):
     Incluye información de su sección padre en modo de solo lectura.
     """
     id_seccion = SeccionSerializer(read_only=True)
+    id_seccion_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = PuntoCritico
         geo_field = 'ubicacion'  # Campo PostGIS PointField serializado como punto GeoJSON
-        fields = ['id_punto_critico', 'id_seccion', 'descripcion', 'ubicacion']
+        fields = ['id_punto_critico', 'id_seccion', 'id_seccion_id', 'descripcion', 'ubicacion']
 
 
 class FotoSerializer(serializers.ModelSerializer):

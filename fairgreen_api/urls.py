@@ -15,8 +15,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from core.views import SeccionViewSet, PuntoCriticoViewSet, MuestraViewSet
+
+# Configuración del enrutador automático de DRF
+router = DefaultRouter()
+router.register(r'secciones', SeccionViewSet, basename='seccion')
+router.register(r'puntos-criticos', PuntoCriticoViewSet, basename='puntocritico')
+router.register(r'muestras', MuestraViewSet, basename='muestra')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,4 +34,8 @@ urlpatterns = [
     # POST /api/token/refresh/ → Enviar {"refresh": "..."} → Recibe un nuevo {access}
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Endpoints de la API REST / GeoJSON
+    path('api/', include(router.urls)),
 ]
+
