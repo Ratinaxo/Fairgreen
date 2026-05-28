@@ -16,7 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Endpoints de autenticación JWT
+    # POST /api/token/         → Enviar {"correo_electronico": "...", "password": "..."} → Recibe {access, refresh}
+    # POST /api/token/refresh/ → Enviar {"refresh": "..."} → Recibe un nuevo {access}
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

@@ -6,13 +6,13 @@ from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto
 class UsuarioSerializer(serializers.ModelSerializer):
     """
     Serializador para el modelo Usuario.
-    El campo 'contrasena' está excluido intencionalmente para no
-    exponer información sensible a través de la API.
+    Solo expone campos públicos del perfil. Los campos sensibles heredados
+    de AbstractBaseUser (password, is_staff, is_superuser, last_login,
+    groups, user_permissions) se excluyen al no estar en la lista de 'fields'.
     """
     class Meta:
         model = Usuario
-        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto']
-        # 'contrasena' se excluye explícitamente por seguridad
+        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active']
 
 
 class SeccionSerializer(GeoFeatureModelSerializer):

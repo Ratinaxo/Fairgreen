@@ -40,7 +40,10 @@ services:
       - .env.docker
     ports:
       - "8000:8000"
-    command: python manage.py runserver 0.0.0.0:8000
+    # Anulamos el ENTRYPOINT del Dockerfile para evitar problemas de CRLF en Windows
+    entrypoint: []
+    command: >
+      sh -c "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
