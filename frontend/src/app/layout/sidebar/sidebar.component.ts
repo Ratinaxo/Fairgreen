@@ -1,245 +1,588 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, computed } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface NavItem {
   label: string;
   route: string;
-  icon: string;
+  icon: string;       // Bootstrap Icons class name
+  roles?: string[];
 }
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NgClass],
   template: `
-    <aside class="sidebar" [class.collapsed]="isCollapsed()">
-      <!-- Logo -->
-      <div class="sidebar-logo">
-        <div class="logo-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-          </svg>
+    <!-- Overlay for mobile drawer -->
+    <div
+      class="sb-overlay"
+      [class.visible]="isOpen()"
+      (click)="isOpen.set(false)"
+    ></div>
+
+    <aside
+      class="sb"
+      [class.collapsed]="isCollapsed()"
+      [class.open]="isOpen()"
+    >
+      <!-- Logo zone -->
+      <div class="sb-logo">
+        <div class="sb-logo-mark">
+          <i class="bi bi-leaf"></i>
         </div>
-        @if (!isCollapsed()) {
-          <span class="logo-text">FairGreen</span>
-        }
+        <span class="sb-logo-text">Fairgreen</span>
       </div>
 
-      <!-- Nav -->
-      <nav class="sidebar-nav" aria-label="Navegación principal">
-        @for (item of navItems; track item.route) {
+      <!-- Navigation -->
+      <nav class="sb-nav" aria-label="Navegación principal">
+        <div class="sb-section-label">MENÚ</div>
+
+        @for (item of filteredMainNav(); track item.route) {
           <a
             [routerLink]="item.route"
             routerLinkActive="active"
-            class="nav-item"
-            [title]="item.label"
+            class="sb-link"
             [attr.aria-label]="item.label"
+            (click)="closeOnMobile()"
           >
-            <span class="nav-icon" aria-hidden="true" [innerHTML]="item.icon"></span>
-            @if (!isCollapsed()) {
-              <span class="nav-label">{{ item.label }}</span>
-            }
+            <span class="sb-link-indicator"></span>
+            <i class="bi" [ngClass]="item.icon"></i>
+            <span class="sb-link-label">{{ item.label }}</span>
+            <span class="sb-tooltip">{{ item.label }}</span>
+          </a>
+        }
+
+        <div class="sb-divider"></div>
+        <div class="sb-section-label">ANÁLISIS</div>
+
+        @for (item of filteredSecondaryNav(); track item.route) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            class="sb-link"
+            [attr.aria-label]="item.label"
+            (click)="closeOnMobile()"
+          >
+            <span class="sb-link-indicator"></span>
+            <i class="bi" [ngClass]="item.icon"></i>
+            <span class="sb-link-label">{{ item.label }}</span>
+            <span class="sb-tooltip">{{ item.label }}</span>
           </a>
         }
       </nav>
 
-      <!-- Footer user -->
-      <div class="sidebar-footer">
-        <div class="sidebar-divider"></div>
-        <div class="user-info">
-          <div class="user-avatar" aria-hidden="true">AG</div>
-          @if (!isCollapsed()) {
-            <div class="user-details">
-              <div class="user-name">Agrónomo Principal</div>
-              <div class="user-role">Club Las Palmas</div>
-            </div>
-          }
-        </div>
+      <!-- Bottom zone -->
+      <div class="sb-footer">
+        <a
+          routerLink="/settings"
+          routerLinkActive="active"
+          class="sb-link"
+          aria-label="Configuración"
+          (click)="closeOnMobile()"
+        >
+          <span class="sb-link-indicator"></span>
+          <i class="bi bi-gear"></i>
+          <span class="sb-link-label">Configuración</span>
+          <span class="sb-tooltip">Configuración</span>
+        </a>
+
+        <!-- Collapse toggle -->
+        <button
+          class="sb-toggle"
+          (click)="toggleCollapse()"
+          [attr.aria-label]="isCollapsed() ? 'Expandir sidebar' : 'Colapsar sidebar'"
+        >
+          <i class="bi" [ngClass]="isCollapsed() ? 'bi-chevron-right' : 'bi-chevron-left'"></i>
+        </button>
       </div>
     </aside>
   `,
   styles: [`
-    .sidebar {
+    /* ═══════════════════════════════════════════════════
+       Design Tokens
+       ═══════════════════════════════════════════════════ */
+    :host {
+      --sb-w:               220px;
+      --sb-w-collapsed:     60px;
+
+      --sb-bg:              #14332A;
+      --sb-bg-subtle:       linear-gradient(180deg, #17392F 0%, #112A22 100%);
+
+      --sb-accent:          #4ADE80;
+      --sb-accent-glow:     rgba(74, 222, 128, 0.15);
+
+      --sb-text:            rgba(255, 255, 255, 0.55);
+      --sb-text-hover:      rgba(255, 255, 255, 0.85);
+      --sb-text-active:     #FFFFFF;
+
+      --sb-icon:            rgba(255, 255, 255, 0.45);
+      --sb-icon-hover:      rgba(255, 255, 255, 0.75);
+      --sb-icon-active:     #4ADE80;
+
+      --sb-border:          rgba(255, 255, 255, 0.06);
+      --sb-hover-bg:        rgba(255, 255, 255, 0.04);
+      --sb-active-bg:       rgba(255, 255, 255, 0.08);
+
+      --sb-radius:          10px;
+      --sb-ease:            cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Container
+       ═══════════════════════════════════════════════════ */
+    .sb {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 200px;
+      left: 0; top: 0;
+      width: var(--sb-w);
       height: 100vh;
-      background: var(--color-sidebar-bg);
+      background: var(--sb-bg-subtle);
       display: flex;
       flex-direction: column;
       z-index: 100;
-      transition: width var(--transition-normal);
       overflow: hidden;
+      transition: width 280ms var(--sb-ease);
+      border-right: 1px solid var(--sb-border);
     }
 
-    .sidebar.collapsed { width: 56px; }
+    .sb.collapsed {
+      width: var(--sb-w-collapsed);
+    }
 
-    /* Logo */
-    .sidebar-logo {
+    /* ═══════════════════════════════════════════════════
+       Logo
+       ═══════════════════════════════════════════════════ */
+    .sb-logo {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 20px 16px;
-      color: white;
+      padding: 20px 18px 18px;
       flex-shrink: 0;
-      min-height: 64px;
     }
 
-    .logo-icon {
-      color: var(--color-accent);
-      flex-shrink: 0;
+    .sb-logo-mark {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0.08) 100%);
+      border: 1px solid rgba(74, 222, 128, 0.15);
       display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 280ms var(--sb-ease);
+    }
+    .sb-logo-mark i {
+      font-size: 16px;
+      color: var(--sb-accent);
     }
 
-    .logo-text {
-      font-family: var(--font-display);
+    .sb-logo-text {
+      font-family: var(--font-display, 'DM Serif Display', serif);
       font-size: 17px;
-      color: white;
+      color: var(--sb-text-active);
+      letter-spacing: 0.01em;
       white-space: nowrap;
+      opacity: 1;
+      transition: opacity 180ms ease, visibility 180ms ease, width 180ms ease;
     }
 
-    /* Nav */
-    .sidebar-nav {
+    .sb.collapsed .sb-logo {
+      justify-content: center;
+      padding: 20px 0 18px;
+    }
+    .sb.collapsed .sb-logo-text {
+      opacity: 0;
+      visibility: hidden;
+      width: 0;
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Section labels
+       ═══════════════════════════════════════════════════ */
+    .sb-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.25);
+      padding: 16px 20px 6px;
+      text-transform: uppercase;
+      transition: opacity 180ms ease, visibility 180ms ease;
+    }
+
+    .sb.collapsed .sb-section-label {
+      opacity: 0;
+      visibility: hidden;
+      height: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Nav container
+       ═══════════════════════════════════════════════════ */
+    .sb-nav {
       flex: 1;
-      padding: 8px 0;
+      padding: 4px 10px;
       overflow-y: auto;
       overflow-x: hidden;
     }
 
-    .nav-item {
+    .sb-nav::-webkit-scrollbar { width: 2px; }
+    .sb-nav::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 1px;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Nav link
+       ═══════════════════════════════════════════════════ */
+    .sb-link {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 16px;
-      border-radius: var(--radius-md);
-      margin: 2px 8px;
+      padding: 9px 14px;
+      margin-bottom: 2px;
+      border-radius: var(--sb-radius);
       text-decoration: none;
-      color: var(--color-sidebar-text);
+      color: var(--sb-text);
+      cursor: pointer;
+      transition:
+        background 180ms ease,
+        color 180ms ease;
+      white-space: nowrap;
+    }
+
+    .sb-link i.bi {
+      font-size: 18px;
+      color: var(--sb-icon);
+      flex-shrink: 0;
+      transition: color 180ms ease;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sb-link-label {
       font-size: 13px;
       font-weight: 500;
-      transition: background var(--transition-fast), color var(--transition-fast);
-      position: relative;
+      transition: opacity 180ms ease, visibility 180ms ease;
+    }
+
+    /* Indicator bar (left accent) */
+    .sb-link-indicator {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%) scaleY(0);
+      width: 3px;
+      height: 18px;
+      border-radius: 0 3px 3px 0;
+      background: var(--sb-accent);
+      transition: transform 250ms var(--sb-ease);
+    }
+
+    /* ── Hover ── */
+    .sb-link:hover {
+      background: var(--sb-hover-bg);
+      color: var(--sb-text-hover);
+    }
+    .sb-link:hover i.bi {
+      color: var(--sb-icon-hover);
+    }
+
+    /* ── Active ── */
+    .sb-link.active {
+      background: var(--sb-active-bg);
+      color: var(--sb-text-active);
+      font-weight: 500;
+    }
+    .sb-link.active i.bi {
+      color: var(--sb-icon-active);
+    }
+    .sb-link.active .sb-link-indicator {
+      transform: translateY(-50%) scaleY(1);
+    }
+
+    /* ── Focus ── */
+    .sb-link:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--sb-accent-glow);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Collapsed state — links
+       ═══════════════════════════════════════════════════ */
+    .sb.collapsed .sb-link {
+      justify-content: center;
+      padding: 10px 0;
+      margin: 0 auto 2px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+    }
+    .sb.collapsed .sb-link-label {
+      opacity: 0;
+      visibility: hidden;
+      width: 0;
+      overflow: hidden;
+      position: absolute;
+    }
+    .sb.collapsed .sb-link-indicator {
+      left: -2px;
+      height: 20px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Tooltip (collapsed only)
+       ═══════════════════════════════════════════════════ */
+    .sb-tooltip {
+      position: absolute;
+      left: calc(100% + 12px);
+      top: 50%;
+      transform: translateY(-50%) translateX(4px);
+      background: #1A3C30;
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
       white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 200ms ease, transform 200ms ease;
+      transition-delay: 400ms;
+      z-index: 110;
+      display: none;
+    }
+    .sb.collapsed .sb-tooltip {
+      display: block;
+    }
+    .sb.collapsed .sb-link:hover .sb-tooltip {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
 
-      &:hover { background: rgba(255,255,255,0.07); color: white; }
+    /* ═══════════════════════════════════════════════════
+       Divider
+       ═══════════════════════════════════════════════════ */
+    .sb-divider {
+      height: 1px;
+      background: var(--sb-border);
+      margin: 8px 18px;
+    }
+    .sb.collapsed .sb-divider {
+      margin: 6px 14px;
+    }
 
-      &.active {
-        background: var(--color-sidebar-active-bg);
-        color: var(--color-sidebar-active);
-        &::before {
-          content: '';
-          position: absolute;
-          left: -8px;
-          top: 6px;
-          bottom: 6px;
-          width: 3px;
-          background: var(--color-accent);
-          border-radius: 0 2px 2px 0;
-        }
+    /* ═══════════════════════════════════════════════════
+       Footer
+       ═══════════════════════════════════════════════════ */
+    .sb-footer {
+      flex-shrink: 0;
+      padding: 8px 10px 12px;
+      border-top: 1px solid var(--sb-border);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Collapse toggle button
+       ═══════════════════════════════════════════════════ */
+    .sb-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 32px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      color: rgba(255, 255, 255, 0.35);
+      cursor: pointer;
+      transition: background 180ms ease, color 180ms ease;
+    }
+    .sb-toggle:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .sb-toggle i {
+      font-size: 14px;
+      transition: transform 280ms var(--sb-ease);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Mobile drawer
+       ═══════════════════════════════════════════════════ */
+    .sb-overlay {
+      display: none;
+    }
+
+    @media (max-width: 1199px) {
+      .sb:not(.open) { width: var(--sb-w-collapsed); }
+      .sb:not(.open) .sb-link {
+        justify-content: center;
+        padding: 10px 0;
+        margin: 0 auto 2px;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+      .sb:not(.open) .sb-link-label,
+      .sb:not(.open) .sb-section-label {
+        opacity: 0;
+        visibility: hidden;
+        width: 0;
+        overflow: hidden;
+        position: absolute;
+      }
+      .sb:not(.open) .sb-logo {
+        justify-content: center;
+        padding: 20px 0 18px;
+      }
+      .sb:not(.open) .sb-logo-text {
+        opacity: 0;
+        visibility: hidden;
+        width: 0;
+        overflow: hidden;
+      }
+      .sb:not(.open) .sb-tooltip { display: block; }
+      .sb:not(.open) .sb-link:hover .sb-tooltip {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+      }
+      .sb:not(.open) .sb-link-indicator {
+        left: -2px;
+      }
+      .sb:not(.open) .sb-divider {
+        margin: 6px 14px;
       }
     }
 
-    .sidebar.collapsed .nav-item {
-      justify-content: center;
-      padding: 10px 0;
-    }
+    @media (max-width: 1023px) {
+      .sb {
+        transform: translateX(-100%);
+        transition: transform 300ms var(--sb-ease);
+        z-index: 200;
+        width: var(--sb-w) !important;
+        border-right: none;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+      }
+      .sb.open {
+        transform: translateX(0);
+      }
+      /* Reset collapsed overrides inside drawer */
+      .sb.open .sb-link {
+        justify-content: flex-start;
+        padding: 9px 14px;
+        margin: 0 0 2px;
+        width: auto;
+        height: auto;
+        border-radius: var(--sb-radius);
+      }
+      .sb.open .sb-link-label,
+      .sb.open .sb-section-label {
+        opacity: 1;
+        visibility: visible;
+        width: auto;
+        position: static;
+      }
+      .sb.open .sb-logo {
+        justify-content: flex-start;
+        padding: 20px 18px 18px;
+      }
+      .sb.open .sb-logo-text {
+        opacity: 1;
+        visibility: visible;
+        width: auto;
+      }
+      .sb.open .sb-tooltip { display: none; }
 
-    .nav-icon {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-      width: 20px;
-      height: 20px;
-    }
+      .sb-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 199;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 300ms ease;
+        backdrop-filter: blur(2px);
+      }
+      .sb-overlay.visible {
+        opacity: 1;
+        pointer-events: all;
+      }
 
-    /* Footer */
-    .sidebar-footer { flex-shrink: 0; padding: 12px 0 16px; }
-
-    .sidebar-divider {
-      height: 1px;
-      background: rgba(255,255,255,0.1);
-      margin: 0 16px 12px;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 16px;
-    }
-
-    .user-avatar {
-      width: 32px;
-      height: 32px;
-      background: rgba(255,255,255,0.15);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: white;
-      flex-shrink: 0;
-    }
-
-    .user-name {
-      font-size: 12px;
-      font-weight: 600;
-      color: white;
-      white-space: nowrap;
-    }
-
-    .user-role {
-      font-size: 11px;
-      color: var(--color-sidebar-text);
-      white-space: nowrap;
-    }
-
-    @media (max-width: 1200px) {
-      .sidebar { width: 56px; }
-      .nav-item { justify-content: center; padding: 10px 0; }
+      .sb-toggle { display: none; }
     }
   `]
 })
 export class SidebarComponent {
   isCollapsed = signal(false);
+  isOpen = signal(false);
 
-  navItems: NavItem[] = [
+  // Role: swap to 'Administrador' | 'Canchero' to test visibility
+  userRole = signal<'Administrador' | 'Agrónomo' | 'Canchero'>('Administrador');
+
+  mainNavItems: NavItem[] = [
     {
       label: 'Panel de Control',
       route: '/dashboard',
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`
+      icon: 'bi-grid-1x2',
+      roles: ['Administrador', 'Agrónomo', 'Canchero']
     },
     {
       label: 'Georreferenciación',
       route: '/geomap',
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>`
+      icon: 'bi-geo-alt',
+      roles: ['Administrador', 'Agrónomo', 'Canchero']
     },
     {
       label: 'Registro de Muestras',
       route: '/samples/new',
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></svg>`
+      icon: 'bi-droplet-half',
+      roles: ['Administrador', 'Agrónomo']
     },
     {
       label: 'Historial de Muestras',
       route: '/samples/history',
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>`
-    },
+      icon: 'bi-clipboard2-data',
+      roles: ['Administrador', 'Agrónomo', 'Canchero']
+    }
+  ];
+
+  secondaryNavItems: NavItem[] = [
     {
       label: 'Reportes',
       route: '/reports',
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>`
+      icon: 'bi-bar-chart-line',
+      roles: ['Administrador', 'Agrónomo']
     },
     {
       label: 'Gestión de Usuarios',
       route: '/users',
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
-    },
+      icon: 'bi-people',
+      roles: ['Administrador']
+    }
   ];
+
+  filteredMainNav = computed(() =>
+    this.mainNavItems.filter(i => !i.roles || i.roles.includes(this.userRole()))
+  );
+
+  filteredSecondaryNav = computed(() =>
+    this.secondaryNavItems.filter(i => !i.roles || i.roles.includes(this.userRole()))
+  );
 
   toggleCollapse() {
     this.isCollapsed.update(v => !v);
+  }
+
+  closeOnMobile() {
+    if (window.innerWidth < 1024) {
+      this.isOpen.set(false);
+    }
   }
 }

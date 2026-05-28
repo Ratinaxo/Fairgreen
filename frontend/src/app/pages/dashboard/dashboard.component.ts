@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
+import { MapOverviewComponent } from '../../components/map/map-overview.component';
+import { MapLegendComponent } from '../../components/map/map-legend.component';
 
 interface KpiCard {
   id: string;
@@ -23,7 +25,7 @@ interface Sector {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [NgClass, NgStyle],
+  imports: [NgClass, NgStyle, MapOverviewComponent, MapLegendComponent],
   template: `
     <div class="dashboard">
       <!-- Page header -->
@@ -98,106 +100,9 @@ interface Sector {
           <div style="font-size:15px;font-weight:600;color:var(--color-text-primary);">Club de Golf Las Palmas</div>
         </div>
 
-        <div class="map-container" role="img" aria-label="Mapa del campo de golf con sectores de monitoreo">
-          <!-- Golf map SVG -->
-          <svg viewBox="0 0 800 380" width="100%" style="border-radius: var(--radius-md);">
-            <!-- Background: sky -->
-            <defs>
-              <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#87CEEB"/>
-                <stop offset="100%" stop-color="#B0E2FF"/>
-              </linearGradient>
-              <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#3A7D44"/>
-                <stop offset="100%" stop-color="#2D5A32"/>
-              </linearGradient>
-              <linearGradient id="fairwayGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#4A8C52"/>
-                <stop offset="50%" stop-color="#3D7A45"/>
-                <stop offset="100%" stop-color="#4A8C52"/>
-              </linearGradient>
-            </defs>
-
-            <!-- Background grass -->
-            <rect width="800" height="380" fill="url(#grassGrad)"/>
-
-            <!-- Rough areas (darker) -->
-            <ellipse cx="150" cy="120" rx="140" ry="90" fill="rgba(30,60,35,0.5)"/>
-            <ellipse cx="650" cy="250" rx="160" ry="100" fill="rgba(30,60,35,0.5)"/>
-            <ellipse cx="400" cy="330" rx="200" ry="60" fill="rgba(30,60,35,0.4)"/>
-
-            <!-- Fairways -->
-            <path d="M120,80 Q200,110 250,180 Q300,240 380,280 Q460,310 560,290 Q640,270 680,240" stroke="#4CAF7D" stroke-width="70" stroke-linecap="round" fill="none" opacity="0.6"/>
-
-            <!-- Greens (circles) -->
-            <circle cx="680" cy="240" r="45" fill="#5DBB6B" stroke="#4CAF7D" stroke-width="2"/>
-            <circle cx="120" cy="80" r="35" fill="#5DBB6B" stroke="#4CAF7D" stroke-width="2"/>
-            <circle cx="400" cy="190" r="38" fill="#5DBB6B" stroke="#4CAF7D" stroke-width="2"/>
-
-            <!-- Sand bunkers -->
-            <ellipse cx="300" cy="215" rx="22" ry="12" fill="#D4C57A" opacity="0.8"/>
-            <ellipse cx="560" cy="260" rx="18" ry="10" fill="#D4C57A" opacity="0.8"/>
-            <ellipse cx="460" cy="170" rx="15" ry="9" fill="#D4C57A" opacity="0.7"/>
-
-            <!-- Water hazard -->
-            <ellipse cx="500" cy="310" rx="55" ry="22" fill="#5B9BD5" opacity="0.7"/>
-            <ellipse cx="500" cy="310" rx="50" ry="18" fill="#4A86C4" opacity="0.5"/>
-
-            <!-- Trees (dots cluster) -->
-            <g fill="#2D5A32" opacity="0.8">
-              <circle cx="50" cy="180" r="12"/><circle cx="70" cy="165" r="10"/>
-              <circle cx="60" cy="200" r="9"/><circle cx="750" cy="100" r="13"/>
-              <circle cx="765" cy="120" r="10"/><circle cx="735" cy="110" r="11"/>
-              <circle cx="200" cy="340" r="12"/><circle cx="220" cy="355" r="10"/>
-            </g>
-
-            <!-- Path/roads -->
-            <path d="M30,380 Q100,350 180,310 Q260,270 320,250" stroke="#B8A88A" stroke-width="8" fill="none" opacity="0.5" stroke-dasharray="0"/>
-
-            <!-- Status zone overlays -->
-            @for (sector of sectors; track sector.id) {
-              <circle
-                [attr.cx]="sector.x"
-                [attr.cy]="sector.y"
-                r="24"
-                [attr.fill]="zoneColor(sector.status)"
-                [attr.stroke]="zoneBorder(sector.status)"
-                stroke-width="2"
-              />
-              <text
-                [attr.x]="sector.x"
-                [attr.y]="sector.y + 5"
-                text-anchor="middle"
-                fill="white"
-                font-size="12"
-                font-weight="700"
-                font-family="DM Sans, sans-serif"
-              >{{ sector.id }}</text>
-            }
-
-            <!-- Flag pins -->
-            <line x1="680" y1="240" x2="680" y2="205" stroke="white" stroke-width="1.5" opacity="0.9"/>
-            <polygon points="680,205 695,212 680,219" fill="#EF4444" opacity="0.9"/>
-
-            <line x1="120" y1="80" x2="120" y2="50" stroke="white" stroke-width="1.5" opacity="0.9"/>
-            <polygon points="120,50 135,57 120,64" fill="white" opacity="0.9"/>
-          </svg>
-
-          <!-- Legend -->
-          <div class="map-legend" role="note" aria-label="Leyenda del mapa">
-            <span class="legend-item">
-              <span class="legend-dot" style="background: var(--color-accent);"></span>
-              ÓPTIMO
-            </span>
-            <span class="legend-item">
-              <span class="legend-dot" style="background: var(--color-warning);"></span>
-              ATENCIÓN
-            </span>
-            <span class="legend-item">
-              <span class="legend-dot" style="background: var(--color-danger);"></span>
-              CRÍTICO
-            </span>
-          </div>
+        <div class="map-container">
+          <app-map-overview (sectorClick)="onSectorClick($event)" />
+          <app-map-legend />
         </div>
       </div>
 
@@ -260,36 +165,6 @@ interface Sector {
 
     .map-card { }
     .map-container { position: relative; }
-
-    .map-legend {
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.92);
-      border-radius: var(--radius-md);
-      padding: 6px 16px;
-      display: flex;
-      gap: 20px;
-      backdrop-filter: blur(4px);
-      box-shadow: var(--shadow-card);
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--color-text-secondary);
-    }
-
-    .legend-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
 
     .report-card {
       margin-top: 16px;
@@ -384,7 +259,7 @@ export class DashboardComponent implements OnInit {
     { id: 5, label: '5', x: 680, y: 240, status: 'optimo' },
   ];
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   progressClass(progress: number): string {
     if (progress >= 67) return 'fill-optimal';
@@ -402,5 +277,11 @@ export class DashboardComponent implements OnInit {
     if (status === 'optimo') return '#4CAF7D';
     if (status === 'atencion') return '#F59E0B';
     return '#EF4444';
+  }
+
+  /** Navega a geomap con la zona preseleccionada */
+  onSectorClick(zoneId: string): void {
+    console.log('[Dashboard] Sector clickeado:', zoneId);
+    // Se puede navegar a geomap con query param en el futuro
   }
 }

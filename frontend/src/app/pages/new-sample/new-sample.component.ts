@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
+import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
 
 @Component({
   selector: 'app-new-sample',
   standalone: true,
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, MapPointPickerComponent],
   template: `
     <div class="new-sample-page">
       <div class="page-header d-flex align-center justify-between">
@@ -48,21 +49,32 @@ import { NgClass } from '@angular/common';
             </div>
           </div>
 
+          <!-- Botón y Mapa Picker -->
           <div style="margin-bottom:14px;">
-            <button type="button" class="btn-outline" id="mark-map-btn" (click)="markOnMap()">
+            <button type="button" class="btn-outline" id="mark-map-btn" (click)="toggleMap()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              Marcar en el mapa
+              {{ mostrarMapa ? 'Ocultar mapa' : 'Marcar en el mapa' }}
             </button>
           </div>
+
+          @if (mostrarMapa) {
+            <div style="margin-bottom: 14px;">
+              <app-map-point-picker
+                [initialLat]="form.lat ? +form.lat : null"
+                [initialLon]="form.lng ? +form.lng : null"
+                (coordinateSelect)="onCoordinateSelected($event)"
+              />
+            </div>
+          }
 
           <div class="form-row">
             <div class="form-group">
               <label for="lat-input" class="form-label">Latitud</label>
-              <input id="lat-input" type="text" class="form-control" placeholder="-34.9011" [(ngModel)]="form.lat" name="lat" [readonly]="mapMarked" aria-label="Latitud geográfica"/>
+              <input id="lat-input" type="text" class="form-control" placeholder="-33.0150" [(ngModel)]="form.lat" name="lat" readonly aria-label="Latitud geográfica"/>
             </div>
             <div class="form-group">
               <label for="lng-input" class="form-label">Longitud</label>
-              <input id="lng-input" type="text" class="form-control" placeholder="-56.1645" [(ngModel)]="form.lng" name="lng" [readonly]="mapMarked" aria-label="Longitud geográfica"/>
+              <input id="lng-input" type="text" class="form-control" placeholder="-71.5068" [(ngModel)]="form.lng" name="lng" readonly aria-label="Longitud geográfica"/>
             </div>
           </div>
         </div>
@@ -241,7 +253,7 @@ export class NewSampleComponent {
   isDragging = false;
   uploadedFile = '';
   showSuccess = false;
-  mapMarked = false;
+  mostrarMapa = false;
 
   form = {
     zona: '',
@@ -255,30 +267,32 @@ export class NewSampleComponent {
     notes: '',
   };
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
-  markOnMap() {
-    // Simulate picking coordinates
-    this.form.lat = '-34.9011';
-    this.form.lng = '-56.1645';
-    this.mapMarked = true;
+  toggleMap(): void {
+    this.mostrarMapa = !this.mostrarMapa;
   }
 
-  onFileChange(event: Event) {
+  onCoordinateSelected(coords: { lat: number; lon: number }): void {
+    this.form.lat = String(coords.lat);
+    this.form.lng = String(coords.lon);
+  }
+
+  onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files?.[0]) {
       this.uploadedFile = input.files[0].name;
     }
   }
 
-  onDrop(event: DragEvent) {
+  onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging = false;
     const file = event.dataTransfer?.files[0];
     if (file) this.uploadedFile = file.name;
   }
 
-  saveSample() {
+  saveSample(): void {
     this.showSuccess = true;
     setTimeout(() => {
       this.showSuccess = false;
@@ -286,7 +300,7 @@ export class NewSampleComponent {
     }, 2000);
   }
 
-  goBack() {
+  goBack(): void {
     this.router.navigate(['/samples/history']);
   }
 }

@@ -28,9 +28,10 @@ import { TopbarComponent } from '../topbar/topbar.component';
       flex: 1;
       display: flex;
       flex-direction: column;
-      margin-left: 200px;
+      margin-left: 220px;
       min-width: 0;
       overflow: hidden;
+      transition: margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
     }
     .content-area {
       flex: 1;
@@ -39,11 +40,11 @@ import { TopbarComponent } from '../topbar/topbar.component';
       background: var(--color-bg);
     }
 
-    @media (max-width: 1200px) {
-      .shell-main { margin-left: 56px; }
+    @media (max-width: 1199px) {
+      .shell-main { margin-left: 60px; }
     }
 
-    @media (max-width: 1024px) {
+    @media (max-width: 1023px) {
       .shell-main { margin-left: 0; }
     }
   `]
