@@ -1,0 +1,235 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": "green-1",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -71.5438,
+                            -32.9912
+                        ],
+                        [
+                            -71.5433,
+                            -32.9912
+                        ],
+                        [
+                            -71.5433,
+                            -32.9917
+                        ],
+                        [
+                            -71.5438,
+                            -32.9917
+                        ],
+                        [
+                            -71.5438,
+                            -32.9912
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "id": "green-1",
+                "nombre": "Green #1",
+                "sector": 1,
+                "zona": "Green",
+                "estado": "optimo",
+                "metricas": {
+                    "humedad": 4.0,
+                    "temperatura": 18.5,
+                    "salinidad": 0.8,
+                    "conductividad": 1.5
+                },
+                "ultimo_registro": "2026-04-16T08:30:00Z",
+                "responsable": "J. Pérez"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "green-2",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -71.5431,
+                            -32.9914
+                        ],
+                        [
+                            -71.5426,
+                            -32.9914
+                        ],
+                        [
+                            -71.5426,
+                            -32.9919
+                        ],
+                        [
+                            -71.5431,
+                            -32.9919
+                        ],
+                        [
+                            -71.5431,
+                            -32.9914
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "id": "green-2",
+                "nombre": "Green #2",
+                "sector": 2,
+                "zona": "Green",
+                "estado": "atencion",
+                "metricas": {
+                    "humedad": 2.8,
+                    "temperatura": 26.4,
+                    "salinidad": 1.2,
+                    "conductividad": 2.3
+                },
+                "ultimo_registro": "2026-04-16T07:00:00Z",
+                "responsable": "A. García"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "green-3",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -71.5436,
+                            -32.9922
+                        ],
+                        [
+                            -71.5431,
+                            -32.9922
+                        ],
+                        [
+                            -71.5431,
+                            -32.9927
+                        ],
+                        [
+                            -71.5436,
+                            -32.9927
+                        ],
+                        [
+                            -71.5436,
+                            -32.9922
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "id": "green-3",
+                "nombre": "Green #3",
+                "sector": 3,
+                "zona": "Green",
+                "estado": "critico",
+                "metricas": {
+                    "humedad": 1.5,
+                    "temperatura": 31.2,
+                    "salinidad": 2.8,
+                    "conductividad": 4.1
+                },
+                "ultimo_registro": "2026-04-16T06:15:00Z",
+                "responsable": "L. Muñoz"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "green-4",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -71.5418,
+                            -32.9919
+                        ],
+                        [
+                            -71.5411,
+                            -32.9919
+                        ],
+                        [
+                            -71.5411,
+                            -32.9926
+                        ],
+                        [
+                            -71.5418,
+                            -32.9926
+                        ],
+                        [
+                            -71.5418,
+                            -32.9919
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "id": "green-4",
+                "nombre": "Green #4",
+                "sector": 4,
+                "zona": "Green",
+                "estado": "atencion",
+                "metricas": {
+                    "humedad": 3.1,
+                    "temperatura": 25.0,
+                    "salinidad": 1.0,
+                    "conductividad": 2.0
+                },
+                "ultimo_registro": "2026-04-16T09:00:00Z",
+                "responsable": "M. Rojas"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "green-5",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -71.5423,
+                            -32.9924
+                        ],
+                        [
+                            -71.5418,
+                            -32.9924
+                        ],
+                        [
+                            -71.5418,
+                            -32.9929
+                        ],
+                        [
+                            -71.5423,
+                            -32.9929
+                        ],
+                        [
+                            -71.5423,
+                            -32.9924
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "id": "green-5",
+                "nombre": "Green #5",
+                "sector": 5,
+                "zona": "Green",
+                "estado": "optimo",
+                "metricas": {
+                    "humedad": 4.5,
+                    "temperatura": 21.8,
+                    "salinidad": 0.5,
+                    "conductividad": 1.5
+                },
+                "ultimo_registro": "2026-04-16T10:00:00Z",
+                "responsable": "C. Díaz"
+            }
+        }
+    ]
+}
