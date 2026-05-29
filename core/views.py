@@ -1,6 +1,7 @@
 from rest_framework import viewsets
-from .models import Seccion, PuntoCritico, Muestra
-from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer
+from rest_framework_gis.pagination import GeoJsonPagination
+from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto
+from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer, UsuarioSerializer, FotoSerializer
 from .permissions import EsAdmin, EsAdminOAgronoma
 
 
@@ -14,6 +15,7 @@ class SeccionViewSet(viewsets.ModelViewSet):
     queryset = Seccion.objects.all().order_by('numero_de_hoyo')
     serializer_class = SeccionSerializer
     permission_classes = [EsAdmin]
+    pagination_class = GeoJsonPagination
 
 
 class PuntoCriticoViewSet(viewsets.ModelViewSet):
@@ -27,6 +29,7 @@ class PuntoCriticoViewSet(viewsets.ModelViewSet):
     queryset = PuntoCritico.objects.all().order_by('id_punto_critico')
     serializer_class = PuntoCriticoSerializer
     permission_classes = [EsAdminOAgronoma]
+    pagination_class = GeoJsonPagination
 
 
 class MuestraViewSet(viewsets.ModelViewSet):
@@ -41,6 +44,7 @@ class MuestraViewSet(viewsets.ModelViewSet):
     queryset = Muestra.objects.all().order_by('-fecha_hora_captura')
     serializer_class = MuestraSerializer
     permission_classes = [EsAdminOAgronoma]
+    pagination_class = GeoJsonPagination
 
     def perform_create(self, serializer):
         """
@@ -53,3 +57,22 @@ class MuestraViewSet(viewsets.ModelViewSet):
             # Fallback en caso de que falte autenticación (aunque sea atrapada por el permiso)
             serializer.save()
 
+
+class UsuarioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar Usuarios.
+    - Solo los administradores pueden crear, editar o eliminar usuarios.
+    """
+    queryset = Usuario.objects.all().order_by('nombre')
+    serializer_class = UsuarioSerializer
+    permission_classes = [EsAdmin]
+
+
+class FotoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar Fotos asociadas a las muestras.
+    - Administradores y Agrónomas pueden subir o eliminar fotos.
+    """
+    queryset = Foto.objects.all().order_by('-fecha_hora_subida')
+    serializer_class = FotoSerializer
+    permission_classes = [EsAdminOAgronoma]

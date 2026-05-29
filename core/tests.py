@@ -71,3 +71,21 @@ class SeguridadRolesTests(APITestCase):
             'poligono': 'POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'
         })
         self.assertEqual(res_post.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    def test_endpoints_crud_accesibles_admin(self):
+        """Un ADMIN debe tener acceso a todos los endpoints del CRUD."""
+        self.client.force_authenticate(user=self.admin)
+        
+        endpoints = [
+            '/api/usuarios/',
+            '/api/secciones/',
+            '/api/puntos-criticos/',
+            '/api/muestras/',
+            '/api/fotos/'
+        ]
+        
+        for endpoint in endpoints:
+            response = self.client.get(endpoint)
+            # Como admin, debe tener acceso a leer todos los endpoints
+            self.assertEqual(response.status_code, status.HTTP_200_OK, f"Error en endpoint {endpoint}: {response.status_code}")
