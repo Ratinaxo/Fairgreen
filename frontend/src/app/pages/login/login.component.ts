@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -6,7 +7,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, NgOptimizedImage],
   template: `
     <div class="login-shell">
       <!-- Columna izquierda: Hero -->
@@ -14,10 +15,7 @@ import { AuthService } from '../../services/auth.service';
         <div class="hero-overlay"></div>
         <div class="hero-content">
           <div class="hero-logo">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-            </svg>
+            <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" width="64" height="64" priority style="border-radius:12px; object-fit: contain;">
           </div>
           <h1 class="hero-title">FAIRGREEN</h1>
           <p class="hero-subtitle">Control y Trazabilidad del estado<br>de Campos de Golf</p>
@@ -48,10 +46,7 @@ import { AuthService } from '../../services/auth.service';
           <!-- Logo marca -->
           <div class="form-logo">
             <div class="form-logo-icon" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-              </svg>
+              <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" width="32" height="32" priority style="border-radius:8px; object-fit: contain;">
             </div>
             <span class="form-logo-text">Fairgreen</span>
           </div>
@@ -287,7 +282,9 @@ import { AuthService } from '../../services/auth.service';
 
     @media (max-width: 768px) {
       .login-hero { display: none; }
-      .login-form-col { width: 100%; }
+      .login-form-col { width: 100%; padding: 24px; }
+      .login-form-wrapper { max-width: 100%; }
+      .form-title { font-size: 20px; }
     }
   `]
 })

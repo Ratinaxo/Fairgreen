@@ -35,13 +35,22 @@ interface Zone {
 
         <!-- Map legend -->
         <app-map-legend />
+
+        @if (selectedMuestra()) {
+          <button class="panel-toggle-btn" (click)="togglePanel()">
+            {{ isPanelOpen() ? 'Ocultar Detalles' : 'Ver Detalles' }}
+          </button>
+        }
       </div>
 
       <!-- Right panel -->
-      <aside class="geo-panel" [class.panel-visible]="!!selectedMuestra()" aria-label="Detalles de muestra seleccionada">
+      <aside class="geo-panel" [class.panel-visible]="isPanelOpen()" aria-label="Detalles de muestra seleccionada">
         @if (selectedMuestra(); as muestra) {
           <!-- Zone header -->
-          <div style="margin-bottom: 20px;">
+          <div style="margin-bottom: 20px; position: relative;">
+            <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
             <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
               Muestra Seleccionada
             </div>
@@ -138,6 +147,68 @@ interface Zone {
       border-left: 1px solid #dde5df;
       padding: 20px;
       overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+
+    .panel-toggle-btn {
+      display: none;
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      white-space: nowrap;
+    }
+
+    .panel-close-btn-mobile {
+      display: none;
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      padding: 4px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .geomap-layout { flex-direction: column; height: calc(100vh - 52px - 48px); }
+      .map-area { flex: 1; }
+
+      .geo-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: 60vh;
+        border-left: none;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+        transform: translateY(100%);
+        opacity: 0;
+        z-index: 150;
+        overflow-y: auto;
+        padding-top: 24px;
+      }
+
+      .geo-panel.panel-visible {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .panel-toggle-btn { display: block; }
+      .panel-close-btn-mobile { display: block; }
     }
 
     .maintenance-card {
@@ -239,6 +310,7 @@ export class GeomapComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   selectedMuestra = signal<any | null>(null);
+  isPanelOpen = signal(false);
   zonesHealth = signal<Record<string, string>>({});
   muestras = signal<MuestraFeature[]>([]);
   focusId = signal<string | null>(null);
@@ -397,5 +469,11 @@ export class GeomapComponent implements OnInit {
       recomendaciones: props['recomendaciones'],
       foto
     });
+
+    this.isPanelOpen.set(true);
+  }
+
+  togglePanel() {
+    this.isPanelOpen.set(!this.isPanelOpen());
   }
 }

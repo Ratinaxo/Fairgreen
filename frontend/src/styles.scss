@@ -497,9 +497,19 @@ body {
     border-radius: var(--radius-xl);
     padding: var(--space-xl);
     width: 360px;
+    max-width: 90%;
     box-shadow: var(--shadow-modal);
     animation: scaleIn var(--transition-normal);
     text-align: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .btn-primary, .btn-outline, .btn-text, .form-control, .input-field, .select-wrapper select {
+    min-height: 44px;
+  }
+  .modal-overlay .modal-card {
+    padding: var(--space-lg);
   }
 }
 

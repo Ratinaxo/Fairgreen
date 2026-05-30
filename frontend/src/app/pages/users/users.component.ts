@@ -322,6 +322,30 @@ interface UserRow {
       animation: fadeSlideUp 200ms ease;
       z-index: 200;
     }
+
+    @media (max-width: 768px) {
+      .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      #add-user-btn { width: 100%; justify-content: center; }
+
+      .edit-panel {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100% !important;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        border-left: none;
+        overflow-y: auto;
+      }
+      
+      .edit-panel-open {
+        transform: translateX(0);
+      }
+
+      .data-table th:nth-child(4),
+      .data-table td:nth-child(4) { display: none; }
+    }
   `]
 })
 export class UsersComponent implements OnInit {

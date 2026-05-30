@@ -19,7 +19,7 @@ interface ReportRow {
   template: `
     <div class="reports-page">
       <!-- Header -->
-      <div class="d-flex align-center justify-between" style="margin-bottom:20px;">
+      <div class="reports-header" style="margin-bottom:20px;">
         <div>
           <h1 style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">Análisis histórico</h1>
           <p style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">Seleccione las métricas a analizar</p>
@@ -307,6 +307,31 @@ interface ReportRow {
       color: var(--color-text-muted);
       margin-bottom: 16px;
       box-shadow: var(--shadow-card);
+    }
+
+    .reports-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 768px) {
+      .reports-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .reports-header > div:last-child { width: 100%; display: flex; gap: 8px; }
+      .reports-header > div:last-child button { flex: 1; justify-content: center; }
+
+      .filters-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .filter-item input, .filter-item .select-wrapper, .filter-item select { width: 100% !important; }
+      #apply-report-btn { grid-column: span 2; width: 100%; justify-content: center; }
+
+      .data-table th:nth-child(2), .data-table td:nth-child(2),
+      .data-table th:nth-child(3), .data-table td:nth-child(3) { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .filters-row { grid-template-columns: 1fr; }
+      #apply-report-btn { grid-column: span 1; }
+      .chart-card { padding: 12px; }
     }
   `]
 })

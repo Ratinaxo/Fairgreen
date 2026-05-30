@@ -1,4 +1,5 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, EventEmitter, Output } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -15,10 +16,24 @@ const ROUTE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [],
+  imports: [NgOptimizedImage],
   template: `
     <header class="topbar" role="banner">
+      <!-- Botón hamburguesa (móvil) -->
+      <button
+        class="hamburger-btn"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="sidebarOpen ? 'Cerrar menú' : 'Abrir menú'"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
       <div class="topbar-left">
+        <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" class="topbar-logo" width="28" height="28" priority style="object-fit: contain;">
         <span class="club-name">FairGreen</span>
         @if (currentRoute && currentRoute !== '/dashboard') {
           <span class="breadcrumb-sep" aria-hidden="true">›</span>
@@ -26,12 +41,6 @@ const ROUTE_LABELS: Record<string, string> = {
         }
       </div>
       <div class="topbar-right">
-        <button class="notif-btn" aria-label="Notificaciones">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-          </svg>
-        </button>
         <div class="user-chip">
           <div class="user-avatar" aria-hidden="true">{{ iniciales() }}</div>
           <div class="user-meta">
@@ -94,21 +103,30 @@ const ROUTE_LABELS: Record<string, string> = {
       gap: 16px;
     }
 
-    .notif-btn {
+    /* Hamburguesa (móvil) */
+    .hamburger-btn {
+      display: none;
       background: transparent;
       border: none;
       cursor: pointer;
       color: var(--color-text-muted);
-      display: flex;
-      align-items: center;
       padding: 6px;
       border-radius: var(--radius-sm);
+      flex-shrink: 0;
       transition: color var(--transition-fast), background var(--transition-fast);
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-btn:hover { 
+      color: var(--color-text-primary);
+      background: var(--color-surface-alt); 
+    }
 
-      &:hover {
-        color: var(--color-text-primary);
-        background: var(--color-surface-alt);
-      }
+    .topbar-logo {
+      flex-shrink: 0;
+      border-radius: 4px;
     }
 
     .user-chip {
@@ -168,11 +186,29 @@ const ROUTE_LABELS: Record<string, string> = {
         background: #fee2e2;
       }
     }
+
+    /* ── Media Queries ── */
+    @media (max-width: 1023px) {
+      .hamburger-btn { display: flex; flex-direction: column; }
+    }
+
+    @media (max-width: 768px) {
+      .topbar { padding: 0 12px; }
+      .user-meta { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .breadcrumb-sep,
+      .breadcrumb-page { display: none; }
+    }
   `]
 })
 export class TopbarComponent {
   currentRoute = '';
   routeLabel = '';
+  sidebarOpen = false;
+
+  @Output() toggleSidebarEvent = new EventEmitter<void>();
 
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -212,5 +248,10 @@ export class TopbarComponent {
 
   logout() {
     this.auth.logout();
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+    this.toggleSidebarEvent.emit();
   }
 }

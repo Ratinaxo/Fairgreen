@@ -9,9 +9,9 @@ import { TopbarComponent } from '../topbar/topbar.component';
   imports: [RouterOutlet, SidebarComponent, TopbarComponent],
   template: `
     <div class="shell">
-      <app-sidebar />
+      <app-sidebar #sidebar />
       <div class="shell-main">
-        <app-topbar />
+        <app-topbar (toggleSidebarEvent)="sidebar.isOpen.set(!sidebar.isOpen())" />
         <main class="content-area">
           <router-outlet />
         </main>

@@ -200,6 +200,18 @@ interface Sector {
     @media (max-width: 1200px) {
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    @media (max-width: 768px) {
+      .report-card { flex-direction: column; align-items: flex-start; }
+      .report-actions { width: 100%; display: flex; }
+      .report-actions button { flex: 1; justify-content: center; }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .page-header h1 { font-size: 20px !important; }
+    }
   `]
 })
 export class DashboardComponent implements OnInit {

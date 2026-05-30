@@ -1,5 +1,5 @@
 import { Component, signal, computed, inject } from '@angular/core';
-import { NgClass } from '@angular/common';
+import { NgClass, NgOptimizedImage } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
@@ -13,7 +13,7 @@ interface NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, NgClass],
+  imports: [RouterLink, RouterLinkActive, NgClass, NgOptimizedImage],
   template: `
     <!-- Overlay for mobile drawer -->
     <div
@@ -30,7 +30,7 @@ interface NavItem {
       <!-- Logo zone -->
       <div class="sb-logo">
         <div class="sb-logo-mark">
-          <i class="bi bi-leaf"></i>
+          <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" width="32" height="32" priority style="border-radius:8px; object-fit: contain;">
         </div>
         <span class="sb-logo-text">Fairgreen</span>
       </div>
@@ -163,18 +163,15 @@ interface NavItem {
 
     .sb-logo-mark {
       width: 32px; height: 32px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0.08) 100%);
-      border: 1px solid rgba(74, 222, 128, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       transition: transform 280ms var(--sb-ease);
     }
-    .sb-logo-mark i {
-      font-size: 16px;
-      color: var(--sb-accent);
+    .sb-logo-mark img {
+      display: block;
+      object-fit: contain;
     }
 
     .sb-logo-text {
