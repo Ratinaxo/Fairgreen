@@ -1,30 +1,16 @@
-FROM node:22-alpine AS build
+FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Instalar dependencias
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy the rest of the application
+# Copiar el resto del proyecto
 COPY . .
 
-# Build the Angular application
-RUN npm run build -- --configuration production
+# Exponer el puerto de Angular
+EXPOSE 4200
 
-# Stage 2: Serve the application with Nginx
-FROM nginx:alpine
-
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built files from the build stage
-COPY --from=build /app/dist/angular-app/browser /usr/share/nginx/html
-
-# Expose port 80
-EXPOSE 80
-
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Ejecutar el servidor de desarrollo en 0.0.0.0
+CMD ["npm", "start", "--", "--host", "0.0.0.0", "--poll", "2000"]

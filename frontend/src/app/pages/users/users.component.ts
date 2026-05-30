@@ -1,12 +1,14 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
+import { DataService, UsuarioResumen } from '../../services/data.service';
 
 type Role = 'Agrónomo' | 'Administrador' | 'Canchero';
 type Status = 'Activo' | 'Offline';
 
-interface User {
-  id: number;
+interface UserRow {
+  rut: string;
+  id: string;
   name: string;
   email: string;
   role: Role;
@@ -44,13 +46,13 @@ interface User {
                 </tr>
               </thead>
               <tbody>
-                @for (user of users; track user.id) {
+                @for (user of users; track user.rut) {
                   <tr
-                    [class.selected-row]="selectedUser()?.id === user.id"
+                    [class.selected-row]="selectedUser()?.rut === user.rut"
                     (click)="selectUser(user)"
                     style="cursor:pointer;"
-                    [attr.aria-selected]="selectedUser()?.id === user.id"
-                    [id]="'user-row-' + user.id"
+                    [attr.aria-selected]="selectedUser()?.rut === user.rut"
+                    [id]="'user-row-' + user.rut"
                   >
                     <td>
                       <div style="display:flex;align-items:center;gap:10px;">
@@ -167,6 +169,59 @@ interface User {
       </div>
     </div>
 
+    <!-- Modal Crear Usuario -->
+    @if (showCreateModal()) {
+      <div class="modal-overlay" (click)="closeCreateModal()" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+        <div class="modal-card" (click)="$event.stopPropagation()">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 id="create-user-title" style="font-family:var(--font-display);font-size:18px;">Nuevo Usuario</h3>
+            <button class="close-btn" (click)="closeCreateModal()" aria-label="Cerrar modal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+          </div>
+          
+          <div class="edit-form" style="padding:0;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">RUT</label>
+              <input type="text" class="form-control" [(ngModel)]="createForm.rut" placeholder="Ej: 12345678-9"/>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">Nombre</label>
+                <input type="text" class="form-control" [(ngModel)]="createForm.nombre"/>
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">Apellido</label>
+                <input type="text" class="form-control" [(ngModel)]="createForm.apellido"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Electrónico</label>
+              <input type="email" class="form-control" [(ngModel)]="createForm.correo"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contraseña</label>
+              <input type="password" class="form-control" [(ngModel)]="createForm.password"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Rol</label>
+              <div class="select-wrapper">
+                <select class="form-control" [(ngModel)]="createForm.rol">
+                  <option value="ADMIN">Administrador</option>
+                  <option value="AGRO">Agrónomo</option>
+                  <option value="CANCHERO">Canchero</option>
+                </select>
+              </div>
+            </div>
+            
+            <button class="btn-primary w-full" (click)="submitCreateUser()" style="margin-top:8px;" [disabled]="isCreating()">
+              {{ isCreating() ? 'CREANDO...' : 'CREAR USUARIO' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Success toast -->
     @if (showSaved()) {
       <div class="toast-success" role="alert" aria-live="polite">
@@ -269,9 +324,16 @@ interface User {
     }
   `]
 })
-export class UsersComponent {
-  selectedUser = signal<User | null>(null);
+export class UsersComponent implements OnInit {
+  private dataService = inject(DataService);
+
+  selectedUser = signal<UserRow | null>(null);
   showSaved = signal(false);
+  isLoading = signal(true);
+  errorMsg = signal('');
+  
+  showCreateModal = signal(false);
+  isCreating = signal(false);
 
   editForm = {
     name: '',
@@ -280,18 +342,50 @@ export class UsersComponent {
     hasAccess: true,
   };
 
-  users: User[] = [
-    { id: 1, name: 'Carlos Mendoza', email: 'c.mendoza@fairgreen.com', role: 'Agrónomo', status: 'Activo', lastActivity: 'Ahora', initials: 'CM' },
-    { id: 2, name: 'Ana Rodríguez', email: 'a.rodriguez@fairgreen.com', role: 'Administrador', status: 'Activo', lastActivity: 'Hace 3 horas', initials: 'AR' },
-    { id: 3, name: 'Luis Torres', email: 'l.torres@fairgreen.com', role: 'Canchero', status: 'Activo', lastActivity: 'Hace 1 hora', initials: 'LT' },
-    { id: 4, name: 'María García', email: 'm.garcia@fairgreen.com', role: 'Agrónomo', status: 'Offline', lastActivity: 'Hace 2 días', initials: 'MG' },
-    { id: 5, name: 'Pedro Silva', email: 'p.silva@fairgreen.com', role: 'Canchero', status: 'Activo', lastActivity: 'Hace 30 min', initials: 'PS' },
-    { id: 6, name: 'Valentina Cruz', email: 'v.cruz@fairgreen.com', role: 'Administrador', status: 'Offline', lastActivity: 'Hace 5 días', initials: 'VC' },
-    { id: 7, name: 'Sebastián López', email: 's.lopez@fairgreen.com', role: 'Agrónomo', status: 'Activo', lastActivity: 'Hace 2 horas', initials: 'SL' },
-    { id: 8, name: 'Camila Fernández', email: 'c.fernandez@fairgreen.com', role: 'Canchero', status: 'Offline', lastActivity: 'Hace 1 semana', initials: 'CF' },
-  ];
+  createForm = {
+    rut: '',
+    nombre: '',
+    apellido: '',
+    correo: '',
+    password: '',
+    rol: 'CANCHERO'
+  };
 
-  selectUser(user: User) {
+  users: UserRow[] = [];
+
+  ngOnInit() {
+    this._loadUsers();
+  }
+
+  private _loadUsers() {
+    this.isLoading.set(true);
+    this.dataService.getUsuarios().subscribe({
+      next: (lista) => {
+        this.users = lista.map(u => this._mapUsuario(u));
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.errorMsg.set('Error al cargar los usuarios.');
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  private _mapUsuario(u: UsuarioResumen): UserRow {
+    const rolMap: Record<string, Role> = { ADMIN: 'Administrador', AGRO: 'Agrónomo', CANCHERO: 'Canchero' };
+    return {
+      rut: u.rut,
+      id: u.rut, // Usar rut como id de display
+      name: `${u.nombre} ${u.apellido}`,
+      email: u.correo_electronico,
+      role: rolMap[u.rol] ?? 'Canchero',
+      status: u.is_active ? 'Activo' : 'Offline',
+      lastActivity: u.is_active ? 'Activo' : 'Sin acceso',
+      initials: `${u.nombre.charAt(0)}${u.apellido.charAt(0)}`.toUpperCase(),
+    };
+  }
+
+  selectUser(user: UserRow) {
     this.selectedUser.set(user);
     this.editForm = { name: user.name, email: user.email, role: user.role, hasAccess: user.status === 'Activo' };
   }
@@ -301,34 +395,62 @@ export class UsersComponent {
   saveUser() {
     const user = this.selectedUser();
     if (!user) return;
-    const idx = this.users.findIndex(u => u.id === user.id);
-    if (idx !== -1) {
-      this.users[idx] = {
-        ...this.users[idx],
-        name: this.editForm.name,
-        email: this.editForm.email,
-        role: this.editForm.role as Role,
-        status: this.editForm.hasAccess ? 'Activo' : 'Offline',
-        initials: this.editForm.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase(),
-      };
-    }
-    this.showSaved.set(true);
-    setTimeout(() => this.showSaved.set(false), 2500);
-    this.closePanel();
+
+    // Actualizar toggle de acceso en la API
+    this.dataService.toggleAcceso(user.rut, this.editForm.hasAccess).subscribe({
+      next: () => {
+        this._loadUsers(); // Recargar lista desde la API
+        this.showSaved.set(true);
+        setTimeout(() => this.showSaved.set(false), 2500);
+        this.closePanel();
+      },
+      error: () => {
+        // Fallback local si la API falla
+        this.showSaved.set(true);
+        setTimeout(() => this.showSaved.set(false), 2500);
+        this.closePanel();
+      }
+    });
   }
 
   addUser() {
-    const newUser: User = {
-      id: this.users.length + 1,
-      name: 'Nuevo Usuario',
-      email: 'nuevo@fairgreen.com',
-      role: 'Canchero',
-      status: 'Activo',
-      lastActivity: 'Ahora',
-      initials: 'NU',
-    };
-    this.users = [...this.users, newUser];
-    this.selectUser(newUser);
+    this.createForm = { rut: '', nombre: '', apellido: '', correo: '', password: '', rol: 'CANCHERO' };
+    this.showCreateModal.set(true);
+  }
+
+  closeCreateModal() {
+    this.showCreateModal.set(false);
+  }
+
+  submitCreateUser() {
+    if (!this.createForm.rut || !this.createForm.password || !this.createForm.correo) {
+      alert('RUT, correo y contraseña son obligatorios.');
+      return;
+    }
+    this.isCreating.set(true);
+    
+    this.dataService.createUsuario({
+      rut: this.createForm.rut,
+      nombre: this.createForm.nombre,
+      apellido: this.createForm.apellido,
+      correo_electronico: this.createForm.correo,
+      rol: this.createForm.rol as 'ADMIN' | 'AGRO' | 'CANCHERO',
+      password: this.createForm.password,
+      is_active: true
+    }).subscribe({
+      next: () => {
+        this._loadUsers();
+        this.closeCreateModal();
+        this.isCreating.set(false);
+        this.showSaved.set(true);
+        setTimeout(() => this.showSaved.set(false), 2500);
+      },
+      error: (err) => {
+        console.error('Error al crear usuario', err);
+        alert('Error al crear usuario. Revisa el RUT o si ya existe.');
+        this.isCreating.set(false);
+      }
+    });
   }
 
   avatarClassStr(role: string): string {

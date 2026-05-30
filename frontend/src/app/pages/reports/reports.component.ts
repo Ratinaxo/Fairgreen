@@ -1,4 +1,5 @@
-import { Component, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, signal, ElementRef, ViewChild, inject } from '@angular/core';
+import { DataService, MuestraFeature } from '../../services/data.service';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 
@@ -92,10 +93,10 @@ interface ReportRow {
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
             <div>
               <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);">
-                Nivel de {{ filters.component || 'Humedad' }}
+                Análisis Temporal de {{ filters.component || 'Humedad' }}
               </h2>
               <p style="font-size:12px;color:var(--color-text-muted);">
-                {{ filters.dateFrom || '01/01/2025' }} → {{ filters.dateTo || '26/05/2025' }}
+                {{ displayDateFrom() }} → {{ displayDateTo() }}
               </p>
             </div>
             <button style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);" aria-label="Expandir gráfico">
@@ -117,14 +118,14 @@ interface ReportRow {
               </defs>
 
               <!-- Y axis labels -->
-              @for (val of [5,4,3,2,1,0]; track val) {
-                <text [attr.x]="52" [attr.y]="10 + (5 - val) * 38 + 4" text-anchor="end" font-size="10" font-family="JetBrains Mono" fill="#8FA895">{{ val }}</text>
-                <line [attr.x1]="60" [attr.y1]="10 + (5 - val) * 38" [attr.x2]="680" [attr.y2]="10 + (5 - val) * 38" stroke="#DDE5DF" stroke-width="1"/>
+              @for (val of yAxisValues; track val) {
+                <text [attr.x]="52" [attr.y]="10 + (yAxisMax - val) * yFactor + 4" text-anchor="end" font-size="10" font-family="JetBrains Mono" fill="#8FA895">{{ val }}</text>
+                <line [attr.x1]="60" [attr.y1]="10 + (yAxisMax - val) * yFactor" [attr.x2]="680" [attr.y2]="10 + (yAxisMax - val) * yFactor" stroke="#DDE5DF" stroke-width="1"/>
               }
 
               <!-- Reference threshold line -->
-              <line x1="60" y1="125" x2="680" y2="125" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4,4"/>
-              <text x="684" y="129" font-size="9" fill="#F59E0B" font-family="DM Sans">Mín</text>
+              <line x1="60" [attr.y1]="10 + (yAxisMax - yAxisMinThreshold) * yFactor" x2="680" [attr.y2]="10 + (yAxisMax - yAxisMinThreshold) * yFactor" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4,4"/>
+              <text x="684" [attr.y]="10 + (yAxisMax - yAxisMinThreshold) * yFactor + 4" font-size="9" fill="#F59E0B" font-family="DM Sans">Mín</text>
 
               <!-- Area fill -->
               <path
@@ -163,6 +164,39 @@ interface ReportRow {
                 <text [attr.x]="label.x" y="210" text-anchor="middle" font-size="10" font-family="DM Sans" fill="#8FA895">{{ label.text }}</text>
               }
             </svg>
+          </div>
+        </div>
+
+        <!-- Comparative Chart Card (Green vs Fairway) -->
+        <div class="card chart-card" style="margin-top:16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+            <div>
+              <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);">
+                Promedio de {{ filters.component || 'Humedad' }} por Zona
+              </h2>
+              <p style="font-size:12px;color:var(--color-text-muted);">
+                Comparativa: Green vs Fairway
+              </p>
+            </div>
+          </div>
+          
+          <div style="display:flex;align-items:flex-end;gap:40px;height:160px;padding:20px 40px 0;">
+            <!-- Bar 1: Green -->
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+              <div style="font-size:13px;font-family:var(--font-mono);font-weight:600;margin-bottom:8px;color:var(--color-text-primary);">
+                {{ avgGreen().toFixed(2) }}
+              </div>
+              <div [style.height]="barHeight(avgGreen()) + '%'" style="width:60px;background:#4CAF7D;border-radius:6px 6px 0 0;transition:height 0.8s ease;"></div>
+              <div style="margin-top:12px;font-size:12px;font-weight:500;color:var(--color-text-secondary);">Green</div>
+            </div>
+            <!-- Bar 2: Fairway -->
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+              <div style="font-size:13px;font-family:var(--font-mono);font-weight:600;margin-bottom:8px;color:var(--color-text-primary);">
+                {{ avgFairway().toFixed(2) }}
+              </div>
+              <div [style.height]="barHeight(avgFairway()) + '%'" style="width:60px;background:#F59E0B;border-radius:6px 6px 0 0;transition:height 0.8s ease;"></div>
+              <div style="margin-top:12px;font-size:12px;font-weight:500;color:var(--color-text-secondary);">Fairway</div>
+            </div>
           </div>
         </div>
 
@@ -276,7 +310,9 @@ interface ReportRow {
     }
   `]
 })
-export class ReportsComponent implements AfterViewInit {
+export class ReportsComponent {
+  private dataService = inject(DataService);
+
   @ViewChild('chartSvg') chartSvgRef!: ElementRef;
 
   filtersApplied = signal(false);
@@ -298,10 +334,20 @@ export class ReportsComponent implements AfterViewInit {
     { x: 555, text: 'Mar' }, { x: 610, text: 'Abr' }, { x: 665, text: 'May' },
   ];
 
+  // Averages for bar chart
+  avgGreen = signal(0);
+  avgFairway = signal(0);
+
+  // Chart properties dinámicos
+  yAxisValues: number[] = [5, 4, 3, 2, 1, 0];
+  yAxisMax = 5;
+  yAxisMinThreshold = 2;
+  yFactor = 38; // (200px height / 5 units)
+
   get chartPoints() {
     return this.rawData.map((v, i) => ({
       x: this.xLabels[i].x,
-      y: 10 + (5 - v) * 38,
+      y: 10 + (this.yAxisMax - v) * this.yFactor,
     }));
   }
 
@@ -329,20 +375,126 @@ export class ReportsComponent implements AfterViewInit {
     return d;
   }
 
-  reportRows: ReportRow[] = [
-    { date: '26/05/2025', sector: 'Sector 3', point: 'Green #3', component: 'Humedad', level: 1.5, status: 'critico' },
-    { date: '26/05/2025', sector: 'Sector 1', point: 'Green #1', component: 'Humedad', level: 4.2, status: 'optimo' },
-    { date: '25/05/2025', sector: 'Sector 4', point: 'Fairway #4', component: 'Humedad', level: 3.1, status: 'atencion' },
-    { date: '25/05/2025', sector: 'Sector 2', point: 'Green #2', component: 'Humedad', level: 2.8, status: 'atencion' },
-    { date: '24/05/2025', sector: 'Sector 5', point: 'Green #5', component: 'Humedad', level: 4.5, status: 'optimo' },
-    { date: '24/05/2025', sector: 'Sector 3', point: 'Rough #3', component: 'Humedad', level: 1.2, status: 'critico' },
-    { date: '23/05/2025', sector: 'Sector 1', point: 'Tee #1', component: 'Humedad', level: 3.8, status: 'optimo' },
-    { date: '23/05/2025', sector: 'Sector 2', point: 'Fairway #2', component: 'Humedad', level: 2.5, status: 'atencion' },
-  ];
+  reportRows: ReportRow[] = [];
 
-  ngAfterViewInit() {}
+  displayDateFrom(): string {
+    if (this.filters.dateFrom) {
+      return new Date(this.filters.dateFrom).toLocaleDateString('es-CL');
+    }
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toLocaleDateString('es-CL');
+  }
+
+  displayDateTo(): string {
+    if (this.filters.dateTo) {
+      return new Date(this.filters.dateTo).toLocaleDateString('es-CL');
+    }
+    return new Date().toLocaleDateString('es-CL');
+  }
+
+  barHeight(value: number): number {
+    // Escalar la altura de la barra relativa al maximo (yAxisMax)
+    return Math.min(100, Math.max(0, (value / this.yAxisMax) * 100));
+  }
 
   applyFilters() {
-    this.filtersApplied.set(true);
+    this.dataService.getMuestras(1, 500).subscribe({
+      next: (geoJson) => {
+        let features = geoJson.features ?? [];
+        
+        // 1. Filtrar por fecha
+        if (this.filters.dateFrom) {
+          const from = new Date(this.filters.dateFrom);
+          features = features.filter(f => new Date(f.properties.fecha_hora_captura) >= from);
+        }
+        if (this.filters.dateTo) {
+          const to = new Date(this.filters.dateTo);
+          to.setHours(23, 59, 59, 999);
+          features = features.filter(f => new Date(f.properties.fecha_hora_captura) <= to);
+        }
+
+        // 2. Filtrar por sector
+        if (this.filters.sector) {
+          features = features.filter(f => f.properties.id_seccion?.properties?.numero_de_hoyo === parseInt(this.filters.sector));
+        }
+
+        // 3. Filtrar por zona
+        if (this.filters.zona) {
+          features = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra.toLowerCase() === this.filters.zona.toLowerCase());
+        }
+
+        this._processData(features);
+        this.filtersApplied.set(true);
+      }
+    });
+  }
+
+  private _processData(features: MuestraFeature[]) {
+    // Definir configuración del gráfico según componente
+    let propKey: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad' = 'humedad';
+    if (this.filters.component === 'Humedad') { propKey = 'humedad'; this.yAxisMax = 5; this.yAxisMinThreshold = 2; this.yAxisValues = [5,4,3,2,1,0]; }
+    else if (this.filters.component === 'Temperatura') { propKey = 'temperatura'; this.yAxisMax = 40; this.yAxisMinThreshold = 15; this.yAxisValues = [40,32,24,16,8,0]; }
+    else if (this.filters.component === 'Salinidad') { propKey = 'salinidad'; this.yAxisMax = 5; this.yAxisMinThreshold = 1.5; this.yAxisValues = [5,4,3,2,1,0]; }
+    else if (this.filters.component === 'Conductividad') { propKey = 'conductividad'; this.yAxisMax = 6; this.yAxisMinThreshold = 2; this.yAxisValues = [6,5,4,3,2,1,0]; }
+    
+    this.yFactor = 200 / this.yAxisMax;
+
+    // Actualizar tabla
+    this.reportRows = features.map(f => {
+      const p = f.properties;
+      const val = p[propKey];
+      let status: 'optimo' | 'atencion' | 'critico' = 'optimo';
+      if (propKey === 'conductividad' || propKey === 'salinidad') {
+        if (val > (this.yAxisMax * 0.6)) status = 'critico';
+        else if (val > (this.yAxisMax * 0.4)) status = 'atencion';
+      } else {
+        if (val < (this.yAxisMax * 0.2)) status = 'critico';
+        else if (val < (this.yAxisMax * 0.4)) status = 'atencion';
+      }
+
+      return {
+        date: new Date(p.fecha_hora_captura).toLocaleDateString('es-CL'),
+        sector: `Sector ${p.id_seccion?.properties?.numero_de_hoyo ?? 0}`,
+        point: `${p.id_seccion?.properties?.tipo_de_tierra ?? 'Z'}`,
+        component: this.filters.component,
+        level: val,
+        status: status
+      };
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Generar 12 puntos equitativos para el gráfico (mock simple agrupado por tiempo)
+    if (features.length === 0) {
+      this.rawData = Array(12).fill(0);
+      return;
+    }
+    
+    // Ordenamos cronológicamente
+    features.sort((a, b) => new Date(a.properties.fecha_hora_captura).getTime() - new Date(b.properties.fecha_hora_captura).getTime());
+    
+    // Dividir en 12 buckets y sacar promedio
+    const buckets = Array.from({ length: 12 }, () => [] as number[]);
+    const bucketSize = Math.max(1, Math.floor(features.length / 12));
+    
+    for (let i = 0; i < features.length; i++) {
+      const bucketIdx = Math.min(11, Math.floor(i / bucketSize));
+      buckets[bucketIdx].push(features[i].properties[propKey]);
+    }
+    
+    this.rawData = buckets.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
+
+    // Calcular promedios para Green vs Fairway
+    const greenFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN');
+    const fairwayFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY');
+
+    const gAvg = greenFeatures.length > 0 
+      ? greenFeatures.reduce((acc, f) => acc + f.properties[propKey], 0) / greenFeatures.length 
+      : 0;
+    const fAvg = fairwayFeatures.length > 0 
+      ? fairwayFeatures.reduce((acc, f) => acc + f.properties[propKey], 0) / fairwayFeatures.length 
+      : 0;
+
+    this.avgGreen.set(gAvg);
+    this.avgFairway.set(fAvg);
   }
 }

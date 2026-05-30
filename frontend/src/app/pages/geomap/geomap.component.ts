@@ -1,9 +1,9 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, signal, inject } from '@angular/core';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
 import { MapLegendComponent } from '../../components/map/map-legend.component';
-import { ZoneProperties } from '../../services/data.service';
+import { DataService, SeccionFeature, MuestraFeature } from '../../services/data.service';
 
 interface Zone {
   id: number;
@@ -28,27 +28,30 @@ interface Zone {
       <!-- Map area -->
       <div class="map-area">
         <!-- OpenLayers Map -->
-        <app-map-georef (zoneSelect)="onZoneSelect($event)" />
+        <app-map-georef 
+            (zoneSelect)="onZoneSelect($event)" 
+            [muestras]="muestras()"
+            [focusId]="focusId()" />
 
         <!-- Map legend -->
         <app-map-legend />
       </div>
 
       <!-- Right panel -->
-      <aside class="geo-panel" [class.panel-visible]="!!selectedZone()" aria-label="Detalles de zona seleccionada">
-        @if (selectedZone(); as zone) {
+      <aside class="geo-panel" [class.panel-visible]="!!selectedMuestra()" aria-label="Detalles de muestra seleccionada">
+        @if (selectedMuestra(); as muestra) {
           <!-- Zone header -->
           <div style="margin-bottom: 20px;">
             <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
-              Zona Seleccionada
+              Muestra Seleccionada
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <span class="badge" [ngClass]="'badge-' + zone.health">
-                {{ zoneHealthLabel[zone.health] }}
+              <span class="badge" [ngClass]="'badge-' + muestra.health">
+                {{ zoneHealthLabel[muestra.health] }}
               </span>
             </div>
             <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
-              {{ zone.name }}
+              {{ muestra.zonaName }}
             </div>
           </div>
 
@@ -59,65 +62,54 @@ interface Zone {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
               <div>
-                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Estado en verde</div>
-                <div style="font-size:11px;color:var(--color-text-muted);">Suelo · Último registro: {{ zone.lastRecord }}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Capturada el</div>
+                <div style="font-size:11px;color:var(--color-text-muted);">{{ muestra.fechaStr }}</div>
               </div>
             </div>
           </div>
 
           <!-- Metrics 2x2 -->
           <div style="margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Métricas clave promedio</div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Mediciones</div>
             <div class="metrics-grid">
               <div class="metric-cell">
                 <div class="metric-label">Humedad</div>
-                <div class="metric-value">{{ zone.humidity }}<span class="metric-unit"> /5</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(+zone.humidity / 5 * 100) + '%'"></div></div>
+                <div class="metric-value">{{ muestra.humedad }}<span class="metric-unit"> /5</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(muestra.humedad / 5 * 100) + '%'"></div></div>
               </div>
               <div class="metric-cell">
                 <div class="metric-label">Temperatura</div>
-                <div class="metric-value">{{ zone.temperature }}<span class="metric-unit">°C</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-warning" style="width:58%;"></div></div>
+                <div class="metric-value">{{ muestra.temperatura }}<span class="metric-unit">°C</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-warning" [style.width]="(muestra.temperatura / 40 * 100) + '%'"></div></div>
               </div>
               <div class="metric-cell">
                 <div class="metric-label">Salinidad</div>
-                <div class="metric-value">{{ zone.salinity }}<span class="metric-unit"> dS</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" style="width:80%;"></div></div>
+                <div class="metric-value">{{ muestra.salinidad }}<span class="metric-unit"> dS</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(muestra.salinidad / 5 * 100) + '%'"></div></div>
               </div>
               <div class="metric-cell">
                 <div class="metric-label">Conductividad</div>
-                <div class="metric-value">{{ zone.conductivity }}<span class="metric-unit"> dS</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-danger" style="width:22%;"></div></div>
+                <div class="metric-value">{{ muestra.conductividad }}<span class="metric-unit"> dS</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-danger" [style.width]="(muestra.conductividad / 5 * 100) + '%'"></div></div>
               </div>
             </div>
           </div>
 
-          <!-- Timeline -->
+          <!-- Image & Notes -->
           <div style="margin-bottom: 20px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Últimos estados registrados</div>
-            <div class="timeline">
-              @for (entry of zone.timeline; track entry.time) {
-                <div class="timeline-item">
-                  <div class="timeline-dot status-dot" [ngClass]="'dot-' + (entry.status === 'optimo' ? 'activo' : 'offline')"></div>
-                  <div>
-                    <div style="font-size:11px;color:var(--color-text-muted);">{{ entry.time }}</div>
-                    <div style="font-size:12px;color:var(--color-text-primary);">{{ entry.desc }}</div>
-                  </div>
-                </div>
-              }
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Evidencia e Indicaciones</div>
+            @if (muestra.foto) {
+              <img [src]="muestra.foto" alt="Foto de muestra" style="width:100%;border-radius:8px;margin-bottom:10px;border:1px solid #dde5df;" />
+            }
+            <div style="background:#f9fbf9;border:1px solid #dde5df;padding:12px;border-radius:8px;font-size:12px;color:var(--color-text-secondary);line-height:1.5;">
+              {{ muestra.recomendaciones || 'Sin indicaciones registradas para esta muestra.' }}
             </div>
-            <a href="#" style="font-size:12px;color:var(--color-primary-light);font-weight:500;">Reporte total →</a>
           </div>
 
-          <!-- CTA button -->
-          <a [routerLink]="'/samples/new'" class="btn-primary w-full" id="register-sample-btn">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
-            Registrar Muestra
-          </a>
         } @else {
           <div class="empty-panel">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
-            <p>Selecciona una zona en el mapa para ver sus detalles</p>
+            <p>Selecciona una muestra en el mapa para ver sus detalles</p>
           </div>
         }
       </aside>
@@ -242,8 +234,14 @@ interface Zone {
     .fill-danger  { background: #EF4444; }
   `]
 })
-export class GeomapComponent {
-  selectedZone = signal<Zone | null>(null);
+export class GeomapComponent implements OnInit {
+  private dataService = inject(DataService);
+  private route = inject(ActivatedRoute);
+
+  selectedMuestra = signal<any | null>(null);
+  zonesHealth = signal<Record<string, string>>({});
+  muestras = signal<MuestraFeature[]>([]);
+  focusId = signal<string | null>(null);
 
   zoneHealthLabel: Record<string, string> = {
     optimo: 'ÓPTIMO',
@@ -251,67 +249,153 @@ export class GeomapComponent {
     critico: 'CRÍTICO',
   };
 
-  private zonesData: Record<string, Zone> = {
-    'green-1': {
-      id: 1, name: 'Green #1', zoneId: 'green-1', status: 'activo', health: 'optimo',
-      humidity: '4.2', temperature: '22.1', salinity: '0.6', conductivity: '1.8',
-      lastRecord: '2h',
-      timeline: [
-        { time: 'Hoy, 10:30', desc: 'Registro normal — Parámetros en rango', status: 'optimo' },
-        { time: 'Ayer, 16:00', desc: 'Revisión de salinidad — OK', status: 'optimo' },
-        { time: 'Hace 2 días', desc: 'Riego programado aplicado', status: 'optimo' },
-      ]
-    },
-    'green-2': {
-      id: 2, name: 'Green #2', zoneId: 'green-2', status: 'activo', health: 'atencion',
-      humidity: '2.8', temperature: '26.4', salinity: '1.2', conductivity: '2.3',
-      lastRecord: '4h',
-      timeline: [
-        { time: 'Hoy, 08:00', desc: 'Temperatura elevada detectada', status: 'atencion' },
-        { time: 'Ayer, 14:30', desc: 'Registro de humedad bajo', status: 'atencion' },
-        { time: 'Hace 3 días', desc: 'Muestra tomada — Análisis pendiente', status: 'optimo' },
-      ]
-    },
-    'green-3': {
-      id: 3, name: 'Green #3', zoneId: 'green-3', status: 'activo', health: 'critico',
-      humidity: '1.5', temperature: '31.2', salinity: '2.8', conductivity: '4.1',
-      lastRecord: '6h',
-      timeline: [
-        { time: 'Hoy, 07:00', desc: '⚠ Conductividad crítica detectada', status: 'critico' },
-        { time: 'Ayer, 12:00', desc: 'Alerta de salinidad alta', status: 'critico' },
-        { time: 'Hace 2 días', desc: 'Inspección de urgencia realizada', status: 'atencion' },
-      ]
-    },
-    'green-4': {
-      id: 4, name: 'Green #4', zoneId: 'green-4', status: 'activo', health: 'atencion',
-      humidity: '3.1', temperature: '25.0', salinity: '1.0', conductivity: '2.0',
-      lastRecord: '3h',
-      timeline: [
-        { time: 'Hoy, 09:15', desc: 'Control rutinario realizado', status: 'optimo' },
-        { time: 'Ayer, 11:00', desc: 'Humedad en límite inferior', status: 'atencion' },
-      ]
-    },
-    'green-5': {
-      id: 5, name: 'Green #5', zoneId: 'green-5', status: 'activo', health: 'optimo',
-      humidity: '4.5', temperature: '21.8', salinity: '0.5', conductivity: '1.5',
-      lastRecord: '1h',
-      timeline: [
-        { time: 'Hoy, 11:00', desc: 'Todos los parámetros óptimos', status: 'optimo' },
-        { time: 'Ayer, 15:30', desc: 'Riego completado exitosamente', status: 'optimo' },
-      ]
-    },
-  };
+  private zonesData: Record<string, Zone> = {};
+  isLoading = signal(true);
 
-  /** Recibe las properties de la zona desde el mapa OpenLayers */
-  onZoneSelect(props: Record<string, unknown> | null): void {
+  ngOnInit() {
+    this._loadRealData();
+    this.route.queryParams.subscribe(params => {
+      if (params['muestraId']) {
+        this.focusId.set(params['muestraId']);
+      }
+    });
+  }
+
+  private _loadRealData() {
+    this.isLoading.set(true);
+
+    // Fetch secciones y muestras reales en paralelo
+    Promise.all([
+      new Promise<SeccionFeature[]>((res) => {
+        this.dataService.getSecciones().subscribe({
+          next: (geoJson) => res(geoJson.features ?? []),
+          error: () => res([])
+        });
+      }),
+      new Promise<MuestraFeature[]>((res) => {
+        this.dataService.getMuestras(1, 100).subscribe({
+          next: (geoJson) => res(geoJson.features ?? []),
+          error: () => res([])
+        });
+      })
+    ]).then(([secciones, muestras]) => {
+      this.muestras.set(muestras);
+      this._buildZonesData(secciones, muestras);
+      this.isLoading.set(false);
+    });
+  }
+
+  private _buildZonesData(secciones: SeccionFeature[], muestras: MuestraFeature[]) {
+    const newZonesData: Record<string, Zone> = {};
+
+    for (const sec of secciones) {
+      const p = sec.properties;
+      const zoneId = sec.id.toString();
+
+      // Filtrar muestras que pertenezcan a esta sección
+      const secMuestras = muestras.filter(m => m.properties.id_seccion.id === sec.id);
+
+      // Calcular KPIs promedios si hay muestras
+      let avgH = 0, avgT = 0, avgS = 0, avgC = 0;
+      let lastRecord = 'Sin registros';
+      let health: 'optimo' | 'atencion' | 'critico' = 'optimo';
+      const timeline: Zone['timeline'] = [];
+
+      if (secMuestras.length > 0) {
+        // Ordenar muestras por fecha (más reciente primero)
+        secMuestras.sort((a, b) => new Date(b.properties.fecha_hora_captura).getTime() - new Date(a.properties.fecha_hora_captura).getTime());
+
+        const mProps = secMuestras.map(m => m.properties);
+        avgH = mProps.reduce((acc, m) => acc + m.humedad, 0) / mProps.length;
+        avgT = mProps.reduce((acc, m) => acc + m.temperatura, 0) / mProps.length;
+        avgS = mProps.reduce((acc, m) => acc + m.salinidad, 0) / mProps.length;
+        avgC = mProps.reduce((acc, m) => acc + m.conductividad, 0) / mProps.length;
+
+        const ultimaFecha = new Date(mProps[0].fecha_hora_captura);
+        lastRecord = ultimaFecha.toLocaleDateString('es-CL') + ' ' + ultimaFecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+        // Determinar salud general (lógica básica basada en salinidad/conductividad)
+        if (avgC > 3.5 || avgS > 2.5) {
+          health = 'critico';
+        } else if (avgC > 2.0 || avgS > 1.5) {
+          health = 'atencion';
+        } else {
+          health = 'optimo';
+        }
+
+        // Generar timeline de los últimos 3 registros
+        for (const m of secMuestras.slice(0, 3)) {
+          const f = new Date(m.properties.fecha_hora_captura);
+          let mHealth: 'optimo' | 'atencion' | 'critico' = 'optimo';
+          if (m.properties.conductividad > 3.5) mHealth = 'critico';
+          else if (m.properties.conductividad > 2.0) mHealth = 'atencion';
+
+          timeline.push({
+            time: f.toLocaleDateString('es-CL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            desc: `Registro (C:${m.properties.conductividad.toFixed(1)}, S:${m.properties.salinidad.toFixed(1)})`,
+            status: mHealth
+          });
+        }
+      }
+
+      newZonesData[zoneId] = {
+        id: sec.id,
+        name: `${p.tipo_de_tierra} #${p.numero_de_hoyo}`,
+        zoneId: zoneId,
+        status: 'activo',
+        health: health,
+        humidity: secMuestras.length > 0 ? avgH.toFixed(1) : '--',
+        temperature: secMuestras.length > 0 ? avgT.toFixed(1) : '--',
+        salinity: secMuestras.length > 0 ? avgS.toFixed(2) : '--',
+        conductivity: secMuestras.length > 0 ? avgC.toFixed(2) : '--',
+        lastRecord: lastRecord,
+        timeline: timeline
+      };
+    }
+
+    this.zonesData = newZonesData;
+
+    // Extraer health object
+    const healthMap: Record<string, string> = {};
+    for (const zId in newZonesData) {
+      healthMap[zId] = newZonesData[zId].health;
+    }
+    this.zonesHealth.set(healthMap);
+  }
+
+  /** Recibe las properties de la muestra desde el mapa OpenLayers */
+  onZoneSelect(props: Record<string, any> | null): void {
     if (!props) {
-      this.selectedZone.set(null);
+      this.selectedMuestra.set(null);
       return;
     }
-    const zoneId = props['id'] as string;
-    const zone = this.zonesData[zoneId];
-    if (zone) {
-      this.selectedZone.set(zone);
+
+    const fecha = new Date(props['fecha_hora_captura']);
+    const fechaStr = fecha.toLocaleDateString('es-CL') + ' ' + fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+    let health: 'optimo' | 'atencion' | 'critico' = 'optimo';
+    if (props['conductividad'] > 3.5 || props['salinidad'] > 2.5) {
+      health = 'critico';
+    } else if (props['conductividad'] > 2.0 || props['salinidad'] > 1.5) {
+      health = 'atencion';
     }
+
+    const seccionProps = props['id_seccion']?.properties;
+    const zonaName = seccionProps ? `${seccionProps.tipo_de_tierra} #${seccionProps.numero_de_hoyo}` : 'Zona Desconocida';
+
+    const foto = props['fotos'] && props['fotos'].length > 0 ? props['fotos'][0].ruta_archivo : null;
+
+    this.selectedMuestra.set({
+      id: props['id_muestra'],
+      zonaName,
+      fechaStr,
+      health,
+      humedad: props['humedad']?.toFixed(1) || '0.0',
+      temperatura: props['temperatura']?.toFixed(1) || '0.0',
+      salinidad: props['salinidad']?.toFixed(2) || '0.00',
+      conductividad: props['conductividad']?.toFixed(2) || '0.00',
+      recomendaciones: props['recomendaciones'],
+      foto
+    });
   }
 }

@@ -19,6 +19,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from core.views import SeccionViewSet, PuntoCriticoViewSet, MuestraViewSet, UsuarioViewSet, FotoViewSet
+from core.auth_views import AuthMeView
 
 # Configuración del enrutador automático de DRF
 router = DefaultRouter()
@@ -36,6 +37,9 @@ urlpatterns = [
     # POST /api/token/refresh/ → Enviar {"refresh": "..."} → Recibe un nuevo {access}
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Perfil del usuario autenticado (requiere Bearer token)
+    path('api/auth/me', AuthMeView.as_view(), name='auth_me'),
 
     # Endpoints de la API REST / GeoJSON
     path('api/', include(router.urls)),

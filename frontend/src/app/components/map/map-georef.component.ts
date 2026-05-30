@@ -4,17 +4,23 @@ import {
     OnDestroy,
     ElementRef,
     output,
+    Input,
+    OnChanges,
+    SimpleChanges
 } from '@angular/core';
 import Map from 'ol/Map.js';
-import View from 'ol/View.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
+import Feature from 'ol/Feature.js';
+import Point from 'ol/geom/Point.js';
+import { Style, Circle, Fill, Stroke } from 'ol/style.js';
 import { Zoom } from 'ol/control.js';
 import { fromLonLat } from 'ol/proj';
-import { getZoneStyle, getZoneStyleSelected } from '../../utils/map-utils';
-import { DataService, ZonesGeoJSON } from '../../services/data.service';
+import { getCenter } from 'ol/extent.js';
+import { DataService, MuestraFeature } from '../../services/data.service';
 import { MapService } from '../../services/map.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
     selector: 'app-map-georef',
@@ -37,12 +43,16 @@ import { MapService } from '../../services/map.service';
     `,
     ],
 })
-export class MapGeorefComponent implements AfterViewInit, OnDestroy {
-    /** Emite las properties de la zona seleccionada, o null al hacer click fuera */
+export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
+    @Input() muestras: MuestraFeature[] = [];
+    @Input() focusId: string | null = null;
+
+    /** Emite las properties de la muestra seleccionada, o null al hacer click fuera */
     zoneSelect = output<Record<string, unknown> | null>();
 
     private mapInstance: Map | null = null;
-    private zonesSource: VectorSource | null = null;
+    private pointsSource: VectorSource | null = null;
+    private pointsLayer: VectorLayer | null = null;
     private selectedId: string | null = null;
 
     constructor(
@@ -60,32 +70,75 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy {
         this.mapInstance = null;
     }
 
+    ngOnChanges(changes: SimpleChanges): void {
+        if (this.mapInstance) {
+            if (changes['muestras'] && this.pointsSource) {
+                this.updatePoints();
+                if (this.focusId) {
+                    setTimeout(() => this.zoomToSample(this.focusId!), 100);
+                }
+            }
+            if (changes['focusId'] && this.focusId) {
+                this.zoomToSample(this.focusId);
+            }
+        }
+    }
+
+    private zoomToSample(id: string): void {
+        if (!this.pointsSource || !this.mapInstance) return;
+        const features = this.pointsSource.getFeatures();
+        const feat = features.find(f => String(f.get('id_muestra')) === id);
+        if (feat) {
+            const geom = feat.getGeometry();
+            if (geom) {
+                this.mapInstance.getView().animate({ center: getCenter(geom.getExtent()), zoom: 19, duration: 800 });
+            }
+        }
+    }
+
+    private updatePoints(): void {
+        if (!this.pointsSource) return;
+        this.pointsSource.clear();
+        for (const m of this.muestras) {
+            const coords = m.geometry.coordinates;
+            const point = new Feature({ geometry: new Point(fromLonLat([coords[0], coords[1]])) });
+            
+            // Determinar color según estado (salinidad/conductividad)
+            let color = '#4CAF7D'; // Optimo
+            if (m.properties.conductividad > 3.5 || m.properties.salinidad > 2.5) color = '#EF4444'; // Critico
+            else if (m.properties.conductividad > 2.0 || m.properties.salinidad > 1.5) color = '#F59E0B'; // Atencion
+            
+            point.setProperties({ ...m.properties, color });
+            this.pointsSource.addFeature(point);
+        }
+    }
+
     private async initMap(): Promise<void> {
         const container = this.el.nativeElement.querySelector('.map-georef-container');
-        const geojsonData: ZonesGeoJSON = await this.dataService.getZones();
 
-        this.zonesSource = new VectorSource({
-            features: new GeoJSON().readFeatures(geojsonData, {
-                featureProjection: 'EPSG:3857',
-            }),
-        });
+        this.pointsSource = new VectorSource();
+        this.updatePoints();
 
-        const zonesLayer = new VectorLayer({
-            source: this.zonesSource,
+        this.pointsLayer = new VectorLayer({
+            source: this.pointsSource,
             style: (feature) => {
-                const isSelected = feature.get('id') === this.selectedId;
-                const estado = feature.get('estado') as string;
-                return isSelected
-                    ? getZoneStyleSelected(estado)
-                    : getZoneStyle(estado);
-            },
+                const isSelected = String(feature.get('id_muestra')) === this.selectedId;
+                const color = feature.get('color') as string;
+                return new Style({
+                    image: new Circle({
+                        radius: isSelected ? 10 : 8,
+                        fill: new Fill({ color }),
+                        stroke: new Stroke({ color: '#FFFFFF', width: isSelected ? 3 : 2 }),
+                    })
+                });
+            }
         });
 
         const map = new Map({
             target: container,
             layers: [
                 this.mapService.createSatelliteLayer(),
-                zonesLayer,
+                this.pointsLayer,
             ],
             view: this.mapService.createDefaultView(),
             controls: [new Zoom()],
@@ -98,21 +151,21 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy {
             target.style.cursor = hit ? 'pointer' : '';
         });
 
-        // Selección de zona
+        // Selección de muestra
         map.on('click', (e) => {
             let clicked = false;
             map.forEachFeatureAtPixel(e.pixel, (feature) => {
                 if (clicked) return;
                 clicked = true;
                 const props = feature.getProperties() as Record<string, unknown>;
-                this.selectedId = props['id'] as string;
+                this.selectedId = String(props['id_muestra']);
                 this.zoneSelect.emit(props);
-                zonesLayer.changed();
+                this.pointsLayer?.changed();
             });
             if (!clicked) {
                 this.selectedId = null;
                 this.zoneSelect.emit(null);
-                zonesLayer.changed();
+                this.pointsLayer?.changed();
             }
         });
 

@@ -1,6 +1,7 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 interface NavItem {
   label: string;
@@ -523,8 +524,19 @@ export class SidebarComponent {
   isCollapsed = signal(false);
   isOpen = signal(false);
 
-  // Role: swap to 'Administrador' | 'Canchero' to test visibility
-  userRole = signal<'Administrador' | 'Agrónomo' | 'Canchero'>('Administrador');
+  private auth = inject(AuthService);
+
+  // Mapeo de rol backend → etiqueta de menú
+  private readonly rolMap: Record<string, string> = {
+    ADMIN: 'Administrador',
+    AGRO: 'Agrónomo',
+    CANCHERO: 'Canchero',
+  };
+
+  // Rol del usuario autenticado, mapeado al formato de filtro del menú
+  readonly userRole = computed<'Administrador' | 'Agrónomo' | 'Canchero'>(
+    () => (this.rolMap[this.auth.rol() ?? ''] as 'Administrador' | 'Agrónomo' | 'Canchero') ?? 'Canchero'
+  );
 
   mainNavItems: NavItem[] = [
     {

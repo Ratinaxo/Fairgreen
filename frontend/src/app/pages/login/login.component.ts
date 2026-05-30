@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -296,7 +297,10 @@ export class LoginComponent {
   isLoading = false;
   error = '';
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private auth: AuthService,
+  ) {}
 
   onSubmit() {
     if (!this.email || !this.password) {
@@ -305,15 +309,19 @@ export class LoginComponent {
     }
     this.error = '';
     this.isLoading = true;
-    // Simular autenticación
-    setTimeout(() => {
-      this.isLoading = false;
-      if (this.email === 'admin@fairgreen.com' && this.password === '1234') {
-        this.router.navigate(['/dashboard']);
-      } else {
-        // Para demo, cualquier credencial funciona
-        this.router.navigate(['/dashboard']);
-      }
-    }, 900);
+
+    this.auth.login(this.email, this.password).subscribe({
+      next: () => {
+        // Cargar perfil del usuario y navegar al dashboard
+        this.auth.loadMe().subscribe({
+          next: () => this.router.navigate(['/dashboard']),
+          error: () => this.router.navigate(['/dashboard']),
+        });
+      },
+      error: (err: Error) => {
+        this.isLoading = false;
+        this.error = err.message || 'Error al iniciar sesión.';
+      },
+    });
   }
 }
