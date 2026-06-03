@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { NgClass, NgStyle } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { NgClass, NgStyle, DatePipe } from '@angular/common';
 import { MapOverviewComponent } from '../../components/map/map-overview.component';
 import { MapLegendComponent } from '../../components/map/map-legend.component';
+import { DataService, MuestraFeature, SeccionFeature } from '../../services/data.service';
 
 interface KpiCard {
   id: string;
@@ -101,7 +102,9 @@ interface Sector {
         </div>
 
         <div class="map-container">
-          <app-map-overview (sectorClick)="onSectorClick($event)" />
+          <app-map-overview 
+            (sectorClick)="onSectorClick($event)" 
+            [muestras]="muestras()" />
           <app-map-legend />
         </div>
       </div>
@@ -197,10 +200,26 @@ interface Sector {
     @media (max-width: 1200px) {
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    @media (max-width: 768px) {
+      .report-card { flex-direction: column; align-items: flex-start; }
+      .report-actions { width: 100%; display: flex; }
+      .report-actions button { flex: 1; justify-content: center; }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .page-header h1 { font-size: 20px !important; }
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
   showDownloadModal = false;
+  isLoading = signal(true);
+  muestras = signal<MuestraFeature[]>([]);
+
+  private dataService = inject(DataService);
 
   statusLabel: Record<string, string> = {
     optimo: 'ÓPTIMO',
@@ -212,41 +231,41 @@ export class DashboardComponent implements OnInit {
     {
       id: 'humidity',
       label: 'Humedad general',
-      value: '3.8',
+      value: '--',
       unit: '/ 5',
       status: 'optimo',
-      progress: 76,
-      sync: '1 hora',
+      progress: 0,
+      sync: 'Cargando...',
       icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>`
     },
     {
       id: 'temp',
       label: 'Temperatura general',
-      value: '24.3',
+      value: '--',
       unit: '°C',
       status: 'atencion',
-      progress: 58,
-      sync: '1 hora',
+      progress: 0,
+      sync: 'Cargando...',
       icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>`
     },
     {
       id: 'salinity',
       label: 'Salinidad general',
-      value: '0.8',
+      value: '--',
       unit: 'dS/m',
       status: 'optimo',
-      progress: 82,
-      sync: '2 horas',
+      progress: 0,
+      sync: 'Cargando...',
       icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>`
     },
     {
       id: 'conductivity',
       label: 'Conductividad general',
-      value: '2.1',
+      value: '--',
       unit: 'dS/m',
-      status: 'critico',
-      progress: 22,
-      sync: '3 horas',
+      status: 'optimo',
+      progress: 0,
+      sync: 'Cargando...',
       icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
     },
   ];
@@ -259,7 +278,85 @@ export class DashboardComponent implements OnInit {
     { id: 5, label: '5', x: 680, y: 240, status: 'optimo' },
   ];
 
-  ngOnInit() { }
+  ngOnInit() {
+    Promise.all([
+      new Promise<SeccionFeature[]>((res) => {
+        this.dataService.getSecciones().subscribe({
+          next: (geoJson) => res(geoJson.features ?? []),
+          error: () => res([])
+        });
+      }),
+      new Promise<MuestraFeature[]>((res) => {
+        this.dataService.getMuestras(1, 200).subscribe({
+          next: (geoJson) => res(geoJson.features ?? []),
+          error: () => res([])
+        });
+      })
+    ]).then(([secciones, muestras]) => {
+      if (muestras.length === 0) {
+        this.isLoading.set(false);
+        return;
+      }
+      
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentMuestras = muestras.filter(m => new Date(m.properties.fecha_hora_captura) >= sevenDaysAgo);
+
+      const targetMuestras = recentMuestras.length > 0 ? recentMuestras : muestras;
+      this.muestras.set(targetMuestras);
+
+      this._calcularKPIs(targetMuestras); 
+      this.isLoading.set(false);
+    });
+  }
+
+  private _calcularKPIs(features: MuestraFeature[]) {
+    const props = features.map(f => f.properties);
+    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+    const avgHumedad = avg(props.map(p => p.humedad));
+    const avgTemp = avg(props.map(p => p.temperatura));
+    const avgSalinidad = avg(props.map(p => p.salinidad));
+    const avgConduct = avg(props.map(p => p.conductividad));
+
+    const ultima = new Date(props[0].fecha_hora_captura);
+    const agoStr = this._tiempoRelativo(ultima);
+
+    // Humedad (escala 1-5, óptimo > 3)
+    this.kpiCards[0].value = avgHumedad.toFixed(1);
+    this.kpiCards[0].progress = Math.round((avgHumedad / 5) * 100);
+    this.kpiCards[0].status = avgHumedad >= 3 ? 'optimo' : avgHumedad >= 2 ? 'atencion' : 'critico';
+    this.kpiCards[0].sync = agoStr;
+
+    // Temperatura (15-28°C = normal)
+    this.kpiCards[1].value = avgTemp.toFixed(1);
+    this.kpiCards[1].progress = Math.round(Math.min((avgTemp / 35) * 100, 100));
+    this.kpiCards[1].status = avgTemp <= 28 && avgTemp >= 15 ? 'optimo' : avgTemp <= 32 ? 'atencion' : 'critico';
+    this.kpiCards[1].sync = agoStr;
+
+    // Salinidad (< 1.5 = óptimo)
+    this.kpiCards[2].value = avgSalinidad.toFixed(2);
+    this.kpiCards[2].progress = Math.round(Math.min((1 - avgSalinidad / 3) * 100, 100));
+    this.kpiCards[2].status = avgSalinidad < 1.5 ? 'optimo' : avgSalinidad < 2.5 ? 'atencion' : 'critico';
+    this.kpiCards[2].sync = agoStr;
+
+    // Conductividad (< 2 = óptimo)
+    this.kpiCards[3].value = avgConduct.toFixed(2);
+    this.kpiCards[3].progress = Math.round(Math.min((1 - avgConduct / 4) * 100, 100));
+    this.kpiCards[3].status = avgConduct < 2 ? 'optimo' : avgConduct < 3.5 ? 'atencion' : 'critico';
+    this.kpiCards[3].sync = agoStr;
+  }
+
+
+
+  private _tiempoRelativo(fecha: Date): string {
+    const diffMs = Date.now() - fecha.getTime();
+    const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffD = Math.floor(diffH / 24);
+    if (diffH < 1) return 'hace menos de 1h';
+    if (diffH < 24) return `hace ${diffH}h`;
+    return `hace ${diffD} días`;
+  }
 
   progressClass(progress: number): string {
     if (progress >= 67) return 'fill-optimal';

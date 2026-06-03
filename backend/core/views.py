@@ -1,4 +1,6 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework_gis.pagination import GeoJsonPagination
 from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto
 from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer, UsuarioSerializer, FotoSerializer
@@ -48,7 +50,7 @@ class MuestraViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Sobrescribe la creación para enlazar automáticamente la muestra 
+        Sobrescribe la creación para enlazar automáticamente la muestra
         al usuario autenticado mediante su token JWT de sesión.
         """
         if self.request.user and self.request.user.is_authenticated:
@@ -56,6 +58,15 @@ class MuestraViewSet(viewsets.ModelViewSet):
         else:
             # Fallback en caso de que falte autenticación (aunque sea atrapada por el permiso)
             serializer.save()
+
+    @action(detail=False, methods=['delete'], url_path='delete_all')
+    def delete_all(self, request):
+        """
+        Elimina TODAS las muestras del sistema.
+        Solo accesible por ADMIN y AGRO (mismo permiso que el ViewSet).
+        """
+        count, _ = Muestra.objects.all().delete()
+        return Response({'deleted': count})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):

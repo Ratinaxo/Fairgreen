@@ -1,7 +1,10 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { DataService, MuestraFeature } from '../../services/data.service';
 
-interface Sample {
+interface SampleRow {
   id: number;
   date: string;
   humidity: number;
@@ -11,12 +14,13 @@ interface Sample {
   responsible: string;
   zona: string;
   sector: number;
+  rawFeature: MuestraFeature;
 }
 
 @Component({
   selector: 'app-sample-history',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule],
   template: `
     <div class="history-page">
       <!-- Header -->
@@ -30,7 +34,7 @@ interface Sample {
           <div style="display:flex;align-items:center;gap:8px;">
             <label for="filter-sector" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Sector:</label>
             <div class="select-wrapper" style="width:120px;">
-              <select id="filter-sector" class="form-control" [(ngModel)]="filterSector" (change)="applyFilters()" aria-label="Filtrar por sector">
+              <select id="filter-sector" class="form-control" [(ngModel)]="filterSector" aria-label="Filtrar por sector">
                 <option value="">Todos</option>
                 @for (s of sectorOptions; track s) {
                   <option [value]="s">{{ s }}</option>
@@ -41,16 +45,14 @@ interface Sample {
           <div style="display:flex;align-items:center;gap:8px;">
             <label for="filter-zona" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Zona:</label>
             <div class="select-wrapper" style="width:140px;">
-              <select id="filter-zona" class="form-control" [(ngModel)]="filterZona" (change)="applyFilters()" aria-label="Filtrar por zona">
+              <select id="filter-zona" class="form-control" [(ngModel)]="filterZona" aria-label="Filtrar por zona">
                 <option value="">Todas</option>
                 <option>Green</option>
                 <option>Fairway</option>
-                <option>Rough</option>
-                <option>Tee</option>
               </select>
             </div>
           </div>
-          <button class="btn-primary" id="apply-filters-btn" (click)="applyFilters()">Aplicar</button>
+          <button class="btn-primary" id="apply-filters-btn" (click)="loadPage(1)">Aplicar</button>
           <button class="btn-text" (click)="clearFilters()">Limpiar</button>
         </div>
       </div>
@@ -61,7 +63,9 @@ interface Sample {
           {{ filterSector ? 'Sector ' + filterSector : 'Todos los sectores' }}
           {{ filterZona ? ' · ' + filterZona : '' }}
         </span>
-        <span style="font-size:13px;color:var(--color-text-muted);margin-left:8px;">Muestras</span>
+        <span style="font-size:13px;color:var(--color-text-muted);margin-left:8px;">
+          @if (isLoading()) { Cargando... } @else { {{ totalCount() }} Muestras }
+        </span>
       </div>
 
       <!-- Table card -->
@@ -77,55 +81,71 @@ interface Sample {
           </button>
         </div>
 
-        <div style="overflow-x:auto;">
-          <table class="data-table" aria-label="Historial de muestras">
-            <thead>
-              <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Humedad</th>
-                <th scope="col">Temperatura (°C)</th>
-                <th scope="col">Conductividad</th>
-                <th scope="col">Salinidad</th>
-                <th scope="col">Responsable</th>
-                <th scope="col"><span class="sr-only">Acción</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (sample of pagedSamples(); track sample.id) {
+        @if (isLoading()) {
+          <div style="padding:40px;text-align:center;color:var(--color-text-muted);">
+            <span>Cargando muestras...</span>
+          </div>
+        } @else if (rows().length === 0) {
+          <div style="padding:40px;text-align:center;color:var(--color-text-muted);">
+            No hay muestras registradas.
+          </div>
+        } @else {
+          <div style="overflow-x:auto;">
+            <table class="data-table" aria-label="Historial de muestras">
+              <thead>
                 <tr>
-                  <td>
-                    <span style="font-size:13px;font-weight:500;">{{ sample.date }}</span>
-                    <div style="font-size:11px;color:var(--color-text-muted);">Sector {{ sample.sector }} · {{ sample.zona }}</div>
-                  </td>
-                  <td class="mono">{{ sample.humidity.toFixed(1) }}</td>
-                  <td class="mono">{{ sample.temperature.toFixed(1) }}</td>
-                  <td class="mono">{{ sample.conductivity.toFixed(2) }}</td>
-                  <td class="mono">{{ sample.salinity.toFixed(2) }}</td>
-                  <td style="color:var(--color-text-secondary);">{{ sample.responsible }}</td>
-                  <td>
-                    <button
-                      class="btn-primary"
-                      style="height:30px;font-size:12px;padding:0 12px;"
-                      [id]="'view-sample-' + sample.id"
-                      [attr.aria-label]="'Ver muestra del ' + sample.date"
-                    >Ver Muestra</button>
-                  </td>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Humedad</th>
+                  <th scope="col">Temperatura (°C)</th>
+                  <th scope="col">Conductividad</th>
+                  <th scope="col">Salinidad</th>
+                  <th scope="col">Responsable</th>
+                  <th scope="col"><span class="sr-only">Acción</span></th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (sample of rows(); track sample.id) {
+                  <tr>
+                    <td>
+                      <span style="font-size:13px;font-weight:500;">{{ sample.date }}</span>
+                      <div style="font-size:11px;color:var(--color-text-muted);">Sector {{ sample.sector }} · {{ sample.zona }}</div>
+                    </td>
+                    <td class="mono">{{ sample.humidity.toFixed(1) }}</td>
+                    <td class="mono">{{ sample.temperature.toFixed(1) }}</td>
+                    <td class="mono">{{ sample.conductivity.toFixed(2) }}</td>
+                    <td class="mono">{{ sample.salinity.toFixed(2) }}</td>
+                    <td style="color:var(--color-text-secondary);">{{ sample.responsible }}</td>
+                    <td style="display:flex;gap:6px;">
+                      <button
+                        class="btn-outline"
+                        style="height:30px;font-size:12px;padding:0 8px;"
+                        [attr.aria-label]="'Ver en mapa muestra del ' + sample.date"
+                        (click)="viewInMap(sample.id)"
+                      >Ver en Mapa</button>
+                      <button
+                        class="btn-primary"
+                        style="height:30px;font-size:12px;padding:0 8px;"
+                        [attr.aria-label]="'Ver detalle muestra del ' + sample.date"
+                        (click)="openDetailModal(sample.rawFeature)"
+                      >Ver Detalle</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
 
         <!-- Pagination -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--color-border);">
           <span style="font-size:12px;color:var(--color-text-muted);">
-            Mostrando {{ startIndex + 1 }}–{{ endIndex }} de {{ filteredSamples().length }} registros
+            Página {{ currentPage() }} de {{ totalPages() }} · {{ totalCount() }} registros
           </span>
           <div style="display:flex;gap:6px;">
             <button
               class="page-btn"
               id="prev-page-btn"
-              (click)="prevPage()"
+              (click)="loadPage(currentPage() - 1)"
               [disabled]="currentPage() === 1"
               aria-label="Página anterior"
             >‹</button>
@@ -133,7 +153,7 @@ interface Sample {
               <button
                 class="page-btn"
                 [class.active]="p === currentPage()"
-                (click)="goToPage(p)"
+                (click)="loadPage(p)"
                 [attr.aria-label]="'Página ' + p"
                 [attr.aria-current]="p === currentPage() ? 'page' : null"
               >{{ p }}</button>
@@ -141,13 +161,50 @@ interface Sample {
             <button
               class="page-btn"
               id="next-page-btn"
-              (click)="nextPage()"
+              (click)="loadPage(currentPage() + 1)"
               [disabled]="currentPage() === totalPages()"
               aria-label="Página siguiente"
             >›</button>
           </div>
         </div>
       </div>
+
+      <!-- Sample Detail Modal -->
+      @if (selectedFeature()) {
+        <div class="modal-overlay" (click)="closeDetailModal()" role="dialog" aria-modal="true">
+          <div class="modal-card" style="max-width:500px;text-align:left;padding:24px;" (click)="$event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="font-family:var(--font-display);font-size:20px;margin:0;">Detalle de Muestra</h3>
+              <button class="btn-text" (click)="closeDetailModal()" style="padding:4px;min-width:auto;">✕</button>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+              <div><span style="font-size:12px;color:var(--color-text-muted);">Fecha</span><div style="font-weight:500;">{{ formatFecha(selectedFeature()!.properties.fecha_hora_captura) }}</div></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);">Ubicación</span><div style="font-weight:500;">{{ selectedFeature()!.properties.id_seccion?.properties?.tipo_de_tierra }} #{{ selectedFeature()!.properties.id_seccion?.properties?.numero_de_hoyo }}</div></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);">Humedad</span><div style="font-weight:500;">{{ selectedFeature()!.properties.humedad }} / 5</div></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);">Temperatura</span><div style="font-weight:500;">{{ selectedFeature()!.properties.temperatura }} °C</div></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);">Salinidad</span><div style="font-weight:500;">{{ selectedFeature()!.properties.salinidad }} dS/m</div></div>
+              <div><span style="font-size:12px;color:var(--color-text-muted);">Conductividad</span><div style="font-weight:500;">{{ selectedFeature()!.properties.conductividad }} dS/m</div></div>
+            </div>
+
+            @if (selectedFeature()!.properties.fotos && selectedFeature()!.properties.fotos!.length > 0) {
+              <div style="margin-bottom:16px;">
+                <span style="font-size:12px;color:var(--color-text-muted);display:block;margin-bottom:8px;">Evidencia Fotográfica</span>
+                <img [src]="selectedFeature()!.properties.fotos![0].ruta_archivo" alt="Evidencia" style="width:100%;border-radius:8px;max-height:200px;object-fit:cover;border:1px solid var(--color-border);" />
+              </div>
+            }
+
+            <div style="margin-bottom:20px;">
+              <span style="font-size:12px;color:var(--color-text-muted);display:block;margin-bottom:8px;">Observaciones y Recomendaciones</span>
+              <div style="background:var(--color-surface-alt);padding:12px;border-radius:8px;font-size:13px;line-height:1.5;">
+                {{ selectedFeature()!.properties.recomendaciones || 'Sin observaciones registradas.' }}
+              </div>
+            </div>
+
+            <button class="btn-primary" style="width:100%;justify-content:center;" (click)="closeDetailModal()">Cerrar</button>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -189,33 +246,22 @@ interface Sample {
     }
   `]
 })
-export class SampleHistoryComponent {
+export class SampleHistoryComponent implements OnInit {
+  private dataService = inject(DataService);
+  private router = inject(Router);
+
   filterSector = '';
   filterZona = '';
+  readonly pageSize = 20;
+
   currentPage = signal(1);
-  readonly pageSize = 8;
+  totalCount = signal(0);
+  isLoading = signal(true);
+  rows = signal<SampleRow[]>([]);
 
   sectorOptions = ['1', '2', '3', '4', '5'];
 
-  allSamples: Sample[] = this.generateMockSamples(142);
-
-  filteredSamples = computed(() => {
-    return this.allSamples.filter(s => {
-      const sectorMatch = !this.filterSector || s.sector.toString() === this.filterSector;
-      const zonaMatch = !this.filterZona || s.zona === this.filterZona;
-      return sectorMatch && zonaMatch;
-    });
-  });
-
-  totalPages = computed(() => Math.ceil(this.filteredSamples().length / this.pageSize));
-
-  get startIndex() { return (this.currentPage() - 1) * this.pageSize; }
-  get endIndex() { return Math.min(this.startIndex + this.pageSize, this.filteredSamples().length); }
-
-  pagedSamples = computed(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredSamples().slice(start, start + this.pageSize);
-  });
+  totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize)));
 
   pageNumbers = computed(() => {
     const total = this.totalPages();
@@ -228,31 +274,76 @@ export class SampleHistoryComponent {
     return range;
   });
 
-  applyFilters() { this.currentPage.set(1); }
-  clearFilters() { this.filterSector = ''; this.filterZona = ''; this.currentPage.set(1); }
-  prevPage() { if (this.currentPage() > 1) this.currentPage.update(p => p - 1); }
-  nextPage() { if (this.currentPage() < this.totalPages()) this.currentPage.update(p => p + 1); }
-  goToPage(p: number) { this.currentPage.set(p); }
+  selectedFeature = signal<MuestraFeature | null>(null);
 
-  private generateMockSamples(count: number): Sample[] {
-    const zones = ['Green', 'Fairway', 'Rough', 'Tee'];
-    const responsibles = ['Carlos M.', 'Ana R.', 'Luis T.', 'María G.', 'Pedro S.'];
-    const samples: Sample[] = [];
-    const now = new Date(2025, 4, 26);
-    for (let i = 0; i < count; i++) {
-      const date = new Date(now.getTime() - i * 8 * 3600000);
-      samples.push({
-        id: i + 1,
-        date: date.toLocaleDateString('es-UY', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        humidity: +(1 + Math.random() * 4).toFixed(1),
-        temperature: +(18 + Math.random() * 16).toFixed(1),
-        conductivity: +(0.5 + Math.random() * 4).toFixed(2),
-        salinity: +(0.2 + Math.random() * 3).toFixed(2),
-        responsible: responsibles[i % responsibles.length],
-        zona: zones[i % zones.length],
-        sector: (i % 5) + 1,
-      });
-    }
-    return samples;
+  ngOnInit() {
+    this.loadPage(1);
+  }
+
+  loadPage(page: number) {
+    if (page < 1 || page > this.totalPages()) return;
+    this.isLoading.set(true);
+    this.currentPage.set(page);
+
+    this.dataService.getMuestras(page, this.pageSize).subscribe({
+      next: (geoJson) => {
+        this.totalCount.set(geoJson.count ?? 0);
+        this.rows.set(this._mapFeatures(geoJson.features ?? []));
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  clearFilters() {
+    this.filterSector = '';
+    this.filterZona = '';
+    this.loadPage(1);
+  }
+
+  viewInMap(id: number) {
+    this.router.navigate(['/geomap'], { queryParams: { muestraId: id } });
+  }
+
+  openDetailModal(feature: MuestraFeature) {
+    this.selectedFeature.set(feature);
+  }
+
+  closeDetailModal() {
+    this.selectedFeature.set(null);
+  }
+
+  formatFecha(fechaIso: string): string {
+    const f = new Date(fechaIso);
+    return f.toLocaleDateString('es-CL') + ' ' + f.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private _mapFeatures(features: MuestraFeature[]): SampleRow[] {
+    const zonaMap: Record<string, string> = {
+      GREEN: 'Green',
+      FAIRWAY: 'Fairway',
+    };
+
+    return features.map(f => {
+      const p = f.properties;
+      const fecha = new Date(p.fecha_hora_captura);
+      const tipo = p.id_seccion?.properties?.tipo_de_tierra ?? '—';
+      return {
+        id: p.id_muestra,
+        date: fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        humidity: p.humedad,
+        temperature: p.temperatura,
+        conductivity: p.conductividad,
+        salinity: p.salinidad,
+        responsible: p.rut_usuario
+          ? `${p.rut_usuario.nombre} ${p.rut_usuario.apellido}`
+          : '—',
+        zona: zonaMap[tipo] ?? tipo,
+        sector: p.id_seccion?.properties?.numero_de_hoyo ?? 0,
+        rawFeature: f
+      };
+    });
   }
 }

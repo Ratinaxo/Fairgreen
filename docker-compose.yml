@@ -1,9 +1,6 @@
 # =============================================================================
-# docker-compose.yml — Orquestación de Fairgreen (Django + PostgreSQL)
+# docker-compose.yml — Orquestación de Fairgreen (Django + PostgreSQL + Angular)
 # =============================================================================
-# Uso:
-#   Desarrollo: docker-compose up --build
-#   Producción: crear un .env.docker con credenciales reales y ejecutar igual.
 
 services:
 
@@ -16,11 +13,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
-      - .env.docker
+      - ./backend/.env.docker
     environment:
       - POSTGRES_DB=${DB_NAME:-fairgreen}
       - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-your_db_password}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-fairgreen_pass_2024}
     ports:
       - "5435:5432"
     healthcheck:
@@ -31,28 +28,43 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # Aplicación Django (Gunicorn)
+  # Aplicación Django (Backend)
   # ---------------------------------------------------------------------------
-  web:
-    build: .
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - ./backend/.env.docker
     ports:
       - "8000:8000"
-    # Anulamos el ENTRYPOINT del Dockerfile para evitar problemas de CRLF en Windows
     entrypoint: []
     command: >
-      sh -c "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py seed_data && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - .:/app
-      - static_files:/app/staticfiles
+      - ./backend:/app
+      - backend_static:/app/staticfiles
+
+  # ---------------------------------------------------------------------------
+  # Aplicación Angular (Frontend)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   postgres_data:
-    driver: local
-  static_files:
-    driver: local
+  backend_static:

@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
+import { DataService, SeccionFeature } from '../../services/data.service';
 
 @Component({
   selector: 'app-new-sample',
@@ -36,16 +37,28 @@ import { MapPointPickerComponent } from '../../components/map/map-point-picker.c
               <div class="select-wrapper">
                 <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true">
                   <option value="">Seleccionar zona</option>
-                  <option>Green</option>
-                  <option>Fairway</option>
-                  <option>Rough</option>
-                  <option>Tee</option>
+                  <option value="GREEN">Green</option>
+                  <option value="FAIRWAY">Fairway</option>
                 </select>
               </div>
             </div>
             <div class="form-group">
-              <label for="sector-input" class="form-label">Número de Sector</label>
-              <input id="sector-input" type="number" class="form-control" placeholder="Ej: 3" [(ngModel)]="form.sector" name="sector" min="1" max="18" aria-required="true" required/>
+              <label for="sector-select" class="form-label">Sector seleccionado</label>
+              <div class="select-wrapper">
+                <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true">
+                  <option value="">Seleccionar sector</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -249,11 +262,17 @@ import { MapPointPickerComponent } from '../../components/map/map-point-picker.c
     }
   `]
 })
-export class NewSampleComponent {
+export class NewSampleComponent implements OnInit {
+  private dataService = inject(DataService);
+  private router = inject(Router);
+
   isDragging = false;
   uploadedFile = '';
   showSuccess = false;
   mostrarMapa = false;
+  isLoading = false;
+
+  secciones: SeccionFeature[] = [];
 
   form = {
     zona: '',
@@ -267,7 +286,15 @@ export class NewSampleComponent {
     notes: '',
   };
 
-  constructor(private router: Router) { }
+  ngOnInit() {
+    this.dataService.getSecciones().subscribe({
+      next: (data) => {
+        this.secciones = data.features ?? [];
+      }
+    });
+  }
+
+
 
   toggleMap(): void {
     this.mostrarMapa = !this.mostrarMapa;
@@ -293,11 +320,46 @@ export class NewSampleComponent {
   }
 
   saveSample(): void {
-    this.showSuccess = true;
-    setTimeout(() => {
-      this.showSuccess = false;
-      this.router.navigate(['/samples/history']);
-    }, 2000);
+    if (!this.form.zona || !this.form.sector || !this.form.lat || !this.form.lng || !this.form.humidity || !this.form.temperature || !this.form.salinity || !this.form.conductivity) {
+      alert('Por favor complete los campos obligatorios.');
+      return;
+    }
+
+    const sec = this.secciones.find(s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === parseInt(this.form.sector, 10));
+    
+    if (!sec) {
+      alert('La combinación de Zona y Sector no existe en la base de datos del sistema.');
+      return;
+    }
+
+    this.isLoading = true;
+    const payload = {
+      id_seccion_id: sec.id,
+      salinidad: parseFloat(this.form.salinity),
+      humedad: parseFloat(this.form.humidity),
+      conductividad: parseFloat(this.form.conductivity),
+      temperatura: parseFloat(this.form.temperature),
+      recomendaciones: this.form.notes,
+      ubicacion_exacta: {
+        type: 'Point' as const,
+        coordinates: [parseFloat(this.form.lng), parseFloat(this.form.lat)] as [number, number]
+      }
+    };
+
+    this.dataService.createMuestra(payload).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.showSuccess = true;
+        setTimeout(() => {
+          this.showSuccess = false;
+          this.router.navigate(['/samples/history']);
+        }, 2000);
+      },
+      error: () => {
+        this.isLoading = false;
+        alert('Ocurrió un error al guardar la muestra.');
+      }
+    });
   }
 
   goBack(): void {

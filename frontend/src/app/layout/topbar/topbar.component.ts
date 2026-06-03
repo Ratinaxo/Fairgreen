@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject, EventEmitter, Output } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
+import { AuthService } from '../../services/auth.service';
 
 const ROUTE_LABELS: Record<string, string> = {
   '/dashboard': 'Panel de Control',
@@ -14,30 +16,45 @@ const ROUTE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [],
+  imports: [NgOptimizedImage],
   template: `
     <header class="topbar" role="banner">
+      <!-- Botón hamburguesa (móvil) -->
+      <button
+        class="hamburger-btn"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="sidebarOpen ? 'Cerrar menú' : 'Abrir menú'"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
       <div class="topbar-left">
-        <span class="club-name">Club de Golf Las Palmas</span>
+        <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" class="topbar-logo" width="28" height="28" priority style="object-fit: contain;">
+        <span class="club-name">FairGreen</span>
         @if (currentRoute && currentRoute !== '/dashboard') {
           <span class="breadcrumb-sep" aria-hidden="true">›</span>
           <span class="breadcrumb-page">{{ routeLabel }}</span>
         }
       </div>
       <div class="topbar-right">
-        <button class="notif-btn" aria-label="Notificaciones">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-          </svg>
-        </button>
         <div class="user-chip">
-          <div class="user-avatar" aria-hidden="true">AG</div>
+          <div class="user-avatar" aria-hidden="true">{{ iniciales() }}</div>
           <div class="user-meta">
-            <span class="user-name">Agrónomo Principal</span>
-            <span class="user-role">Administrador</span>
+            <span class="user-name">{{ nombreCompleto() }}</span>
+            <span class="user-role">{{ rolLabel() }}</span>
           </div>
         </div>
+        <button class="logout-btn" (click)="logout()" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
       </div>
     </header>
   `,
@@ -86,21 +103,30 @@ const ROUTE_LABELS: Record<string, string> = {
       gap: 16px;
     }
 
-    .notif-btn {
+    /* Hamburguesa (móvil) */
+    .hamburger-btn {
+      display: none;
       background: transparent;
       border: none;
       cursor: pointer;
       color: var(--color-text-muted);
-      display: flex;
-      align-items: center;
       padding: 6px;
       border-radius: var(--radius-sm);
+      flex-shrink: 0;
       transition: color var(--transition-fast), background var(--transition-fast);
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-btn:hover { 
+      color: var(--color-text-primary);
+      background: var(--color-surface-alt); 
+    }
 
-      &:hover {
-        color: var(--color-text-primary);
-        background: var(--color-surface-alt);
-      }
+    .topbar-logo {
+      flex-shrink: 0;
+      border-radius: 4px;
     }
 
     .user-chip {
@@ -143,13 +169,72 @@ const ROUTE_LABELS: Record<string, string> = {
       color: var(--color-text-muted);
       line-height: 1.3;
     }
+
+    .logout-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      display: flex;
+      align-items: center;
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      transition: color var(--transition-fast), background var(--transition-fast);
+
+      &:hover {
+        color: #dc2626;
+        background: #fee2e2;
+      }
+    }
+
+    /* ── Media Queries ── */
+    @media (max-width: 1023px) {
+      .hamburger-btn { display: flex; flex-direction: column; }
+    }
+
+    @media (max-width: 768px) {
+      .topbar { padding: 0 12px; }
+      .user-meta { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .breadcrumb-sep,
+      .breadcrumb-page { display: none; }
+    }
   `]
 })
 export class TopbarComponent {
   currentRoute = '';
   routeLabel = '';
+  sidebarOpen = false;
 
-  constructor(private router: Router) {
+  @Output() toggleSidebarEvent = new EventEmitter<void>();
+
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
+  // Datos reactivos del usuario
+  readonly iniciales = computed(() => {
+    const u = this.auth.usuario();
+    if (!u) return '??';
+    return `${u.nombre.charAt(0)}${u.apellido.charAt(0)}`.toUpperCase();
+  });
+
+  readonly nombreCompleto = computed(() => {
+    const u = this.auth.usuario();
+    return u ? `${u.nombre} ${u.apellido}` : 'Cargando...';
+  });
+
+  readonly rolLabel = computed(() => {
+    const roles: Record<string, string> = {
+      ADMIN: 'Administrador',
+      AGRO: 'Agrónoma',
+      CANCHERO: 'Canchero',
+    };
+    return roles[this.auth.rol() ?? ''] ?? '';
+  });
+
+  constructor() {
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
       map(e => (e as NavigationEnd).urlAfterRedirects)
@@ -159,5 +244,14 @@ export class TopbarComponent {
     });
     this.currentRoute = this.router.url;
     this.routeLabel = ROUTE_LABELS[this.currentRoute] ?? '';
+  }
+
+  logout() {
+    this.auth.logout();
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+    this.toggleSidebarEvent.emit();
   }
 }
