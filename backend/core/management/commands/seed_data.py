@@ -52,7 +52,7 @@ class Command(BaseCommand):
         self._seed_usuarios()
         secciones = self._seed_secciones()
         puntos = self._seed_puntos_criticos(secciones)
-        # self._seed_muestras(secciones, puntos)
+        self._seed_muestras(secciones, puntos)
         self.stdout.write(self.style.SUCCESS('\n✅ Seed completado exitosamente.\n'))
 
     # -------------------------------------------------------------------------

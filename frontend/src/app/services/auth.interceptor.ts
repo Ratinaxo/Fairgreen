@@ -20,8 +20,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Si es 401 y tenemos refresh token, intentar renovar
-      if (error.status === 401 && auth.getRefreshToken()) {
+      const isTokenRequest = req.url.includes('/token/');
+
+      // Si es 401, no es la solicitud de token/login y tenemos refresh token, intentar renovar
+      if (error.status === 401 && !isTokenRequest && auth.getRefreshToken()) {
         return auth.refreshAccessToken().pipe(
           switchMap((res) => {
             // Reintentar el request original con el nuevo token

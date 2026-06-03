@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -297,6 +297,7 @@ export class LoginComponent {
   constructor(
     private router: Router,
     private auth: AuthService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   onSubmit() {
@@ -311,13 +312,21 @@ export class LoginComponent {
       next: () => {
         // Cargar perfil del usuario y navegar al dashboard
         this.auth.loadMe().subscribe({
-          next: () => this.router.navigate(['/dashboard']),
-          error: () => this.router.navigate(['/dashboard']),
+          next: () => {
+            this.router.navigate(['/dashboard']);
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.router.navigate(['/dashboard']);
+            this.cdr.detectChanges();
+          },
         });
       },
-      error: (err: Error) => {
+      error: (err: any) => {
+        console.error('Error capturado en LoginComponent:', err);
         this.isLoading = false;
         this.error = err.message || 'Error al iniciar sesión.';
+        this.cdr.detectChanges();
       },
     });
   }

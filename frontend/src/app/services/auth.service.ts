@@ -50,7 +50,7 @@ export class AuthService {
         tap((tokens) => {
           this._saveTokens(tokens);
         }),
-        catchError(this._handleError),
+        catchError((err) => this._handleError(err)),
       );
   }
 
@@ -120,8 +120,24 @@ export class AuthService {
 
   private _handleError(err: HttpErrorResponse) {
     let message = 'Error de conexión con el servidor.';
-    if (err.status === 401) message = 'Correo o contraseña incorrectos.';
-    else if (err.status === 0) message = 'No se puede conectar con el servidor.';
+    if (err.status === 401) {
+      if (err.error?.detail) {
+        const detailStr = String(err.error.detail);
+        if (detailStr.includes('No active account') || detailStr.includes('inactiva') || detailStr.includes('disabled')) {
+          message = 'Tu cuenta de usuario está desactivada. Contacta al administrador.';
+        } else {
+          message = 'Correo o contraseña incorrectos.';
+        }
+      } else {
+        message = 'Correo o contraseña incorrectos.';
+      }
+    } else if (err.status === 400) {
+      message = err.error?.detail || 'Solicitud incorrecta. Verifica tus datos.';
+    } else if (err.status === 0) {
+      message = 'No se puede conectar con el servidor.';
+    } else {
+      message = err.error?.detail || message;
+    }
     return throwError(() => new Error(message));
   }
 }
