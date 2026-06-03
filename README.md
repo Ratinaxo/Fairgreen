@@ -14,59 +14,34 @@ Si acabas de clonar este repositorio y quieres empezar a desarrollar, **solo nec
 * Instala [Docker Desktop](https://www.docker.com/products/docker-desktop/) (en Windows/Mac) o Docker Engine (en Linux).
 * Asegúrate de que Docker esté ejecutándose (el icono de la ballena debe aparecer en tu barra de tareas).
 
-### 2. Levantar el Backend (API en Django + Base de Datos)
-El backend requiere una configuración inicial básica de credenciales.
-1. Abre tu terminal y navega a la carpeta del backend:
-   ```bash
-   cd backend
-   ```
-2. Haz una copia del archivo `.env.example` y renómbralo a `.env.docker`.
-3. Ejecuta el siguiente comando para construir y levantar los contenedores:
+### 2. Levantar el Proyecto Completo (Backend + Frontend + Base de Datos)
+Toda la orquestación está centralizada en la carpeta raíz.
+
+1. Abre tu terminal en la carpeta **raíz** del proyecto (`Fairgreen`).
+2. Configura las credenciales del backend:
+   Crea una copia del archivo `backend/.env.example` y renómbrala a `backend/.env.docker`.
+3. Ejecuta el comando para construir y levantar todos los contenedores:
    ```bash
    docker-compose up -d --build
    ```
-   *Nota: La primera vez tardará un par de minutos. Las siguientes veces levantará en segundos.*
-4. *(Solo la primera vez)* Crea un usuario administrador para el panel de Django:
-   ```bash
-   docker-compose exec web python manage.py createsuperuser
-   ```
-   Sigue las instrucciones en pantalla.
+   *Nota: La primera vez tardará varios minutos. Las siguientes veces levantará en segundos.*
 
-El backend ahora estará corriendo en:
-* API local: `http://localhost:8000/`
-* Panel de administración: `http://localhost:8000/admin/`
-
-### 3. Levantar el Frontend (Aplicación Angular)
-El frontend también está dockerizado para evitar problemas de versiones y dependencias locales.
-1. Abre **otra** terminal (o usa la misma si usaste el modo `-d` antes) y navega a la carpeta del frontend:
-   ```bash
-   cd frontend
-   ```
-2. Ejecuta el comando para construir y levantar el contenedor del frontend:
-   ```bash
-   docker-compose up -d --build
-   ```
-
-El frontend ahora estará disponible y funcionando en tu navegador en:
-👉 **http://localhost:4200**
+El proyecto ahora estará disponible en tu navegador:
+👉 **Frontend (Angular):** `http://localhost:4200`
+👉 **Backend (Django API):** `http://localhost:8000/`
+👉 **Panel de administración:** `http://localhost:8000/admin/`
 
 ---
 
 ## 🛑 Cómo apagar la aplicación
 Cuando termines de trabajar, es recomendable apagar los contenedores para liberar recursos.
 
-Para apagar el backend (desde la carpeta `backend`):
-```bash
-docker-compose down
-```
-
-Para apagar el frontend (desde la carpeta `frontend`):
+Desde la carpeta **raíz** del proyecto, ejecuta:
 ```bash
 docker-compose down
 ```
 
 **Apagar y RESETEAR la base de datos por completo (borrará todo, usar con cuidado):**
-Desde la carpeta `backend`:
 ```bash
 docker-compose down -v
 ```
@@ -81,6 +56,14 @@ El proyecto está configurado con **Hot-Reloading** tanto para el backend como p
 2. Abres tu editor de código (ej. VSCode) en la carpeta raíz del proyecto.
 3. Editas los archivos de código (Angular o Django).
 4. Al guardar (Ctrl+S), Docker detecta el cambio e instantáneamente recarga la aplicación correspondiente. No necesitas reiniciar nada manualmente.
+
+### Ejecutar partes específicas
+
+Si alguna vez necesitas trabajar solo en una parte del proyecto, puedes decirle a Docker que levante solo ese contenedor (desde la carpeta raíz):
+```bash
+docker-compose up -d frontend   # Levanta solo el frontend
+docker-compose up -d backend    # Levanta el backend y la base de datos
+```
 
 ### Comandos Frecuentes (Backend)
 
