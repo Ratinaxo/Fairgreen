@@ -31,6 +31,7 @@ interface Zone {
         <app-map-georef 
             (zoneSelect)="onZoneSelect($event)" 
             [muestras]="muestras()"
+            [secciones]="secciones()"
             [focusId]="focusId()" />
 
         <!-- Map legend -->
@@ -313,6 +314,7 @@ export class GeomapComponent implements OnInit {
   isPanelOpen = signal(false);
   zonesHealth = signal<Record<string, string>>({});
   muestras = signal<MuestraFeature[]>([]);
+  secciones = signal<SeccionFeature[]>([]);
   focusId = signal<string | null>(null);
 
   zoneHealthLabel: Record<string, string> = {
@@ -352,6 +354,7 @@ export class GeomapComponent implements OnInit {
       })
     ]).then(([secciones, muestras]) => {
       this.muestras.set(muestras);
+      this.secciones.set(secciones);
       this._buildZonesData(secciones, muestras);
       this.isLoading.set(false);
     });

@@ -117,68 +117,15 @@ class Command(BaseCommand):
     # 2. Secciones del campo
     # -------------------------------------------------------------------------
     def _seed_secciones(self):
-        self.stdout.write('\n🏌️  Creando secciones del campo...')
-
-        secciones_data = [
-            {
-                'numero_de_hoyo': 1,
-                'tipo_de_tierra': 'GREEN',
-                'offset_lon': 0.0000,
-                'offset_lat': 0.0010,
-            },
-            {
-                'numero_de_hoyo': 1,
-                'tipo_de_tierra': 'FAIRWAY',
-                'offset_lon': 0.0010,
-                'offset_lat': 0.0005,
-            },
-            {
-                'numero_de_hoyo': 2,
-                'tipo_de_tierra': 'GREEN',
-                'offset_lon': -0.0010,
-                'offset_lat': -0.0005,
-            },
-            {
-                'numero_de_hoyo': 2,
-                'tipo_de_tierra': 'FAIRWAY',
-                'offset_lon': -0.0020,
-                'offset_lat': 0.0000,
-            },
-            {
-                'numero_de_hoyo': 3,
-                'tipo_de_tierra': 'GREEN',
-                'offset_lon': 0.0005,
-                'offset_lat': -0.0015,
-            },
-        ]
-
-        secciones = []
-        for data in secciones_data:
-            cx = CAMPO_LON + data['offset_lon']
-            cy = CAMPO_LAT + data['offset_lat']
-            poligono = make_polygon(cx, cy)
-
-            # Verificar si ya existe
-            if Seccion.objects.filter(
-                numero_de_hoyo=data['numero_de_hoyo'],
-                tipo_de_tierra=data['tipo_de_tierra']
-            ).exists():
-                s = Seccion.objects.get(
-                    numero_de_hoyo=data['numero_de_hoyo'],
-                    tipo_de_tierra=data['tipo_de_tierra']
-                )
-                self.stdout.write(f'   ⏭  Sección Hoyo {data["numero_de_hoyo"]} - {data["tipo_de_tierra"]} ya existe.')
-            else:
-                s = Seccion.objects.create(
-                    tipo_de_tierra=data['tipo_de_tierra'],
-                    numero_de_hoyo=data['numero_de_hoyo'],
-                    poligono=poligono,
-                )
-                self.stdout.write(f'   ✅ Hoyo {data["numero_de_hoyo"]} - {data["tipo_de_tierra"]} (id={s.id_seccion})')
-
-            secciones.append(s)
-
-        return secciones
+        self.stdout.write('\n🏌️  Cargando secciones oficiales del campo (Fixtures)...')
+        from django.core.management import call_command
+        try:
+            call_command('loaddata', 'secciones.json')
+            self.stdout.write(self.style.SUCCESS('   ✅ Secciones cargadas desde fixture.'))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'   ❌ Error al cargar secciones: {e}'))
+        
+        return list(Seccion.objects.all())
 
     # -------------------------------------------------------------------------
     # 3. Puntos críticos
@@ -205,9 +152,10 @@ class Command(BaseCommand):
         for seccion in secciones:
             # 2 puntos por sección
             for i in range(2):
+                desc_actual = descripciones[desc_idx % len(descripciones)]
                 existing = PuntoCritico.objects.filter(
                     id_seccion=seccion,
-                    descripcion=descripciones[desc_idx]
+                    descripcion=desc_actual
                 ).first()
 
                 if existing:
@@ -215,15 +163,25 @@ class Command(BaseCommand):
                     puntos.append(existing)
                 else:
                     center = seccion.poligono.centroid
-                    lon = center.x + random.uniform(-0.0003, 0.0003)
-                    lat = center.y + random.uniform(-0.0003, 0.0003)
-
+                    
+                    # Garantizar con GeoDjango que el punto caiga dentro del polígono de la sección
+                    p_geom = None
+                    for _ in range(100):
+                        lon = center.x + random.uniform(-0.0003, 0.0003)
+                        lat = center.y + random.uniform(-0.0003, 0.0003)
+                        temp_p = Point(lon, lat, srid=4326)
+                        if seccion.poligono.contains(temp_p):
+                            p_geom = temp_p
+                            break
+                    if p_geom is None:
+                        p_geom = center  # Fallback al centroide si no encuentra
+ 
                     p = PuntoCritico.objects.create(
                         id_seccion=seccion,
-                        descripcion=descripciones[desc_idx],
-                        ubicacion=Point(lon, lat, srid=4326),
+                        descripcion=desc_actual,
+                        ubicacion=p_geom,
                     )
-                    self.stdout.write(f'   ✅ PC en Sección {seccion.id_seccion}: {descripciones[desc_idx][:30]}...')
+                    self.stdout.write(f'   ✅ PC en Sección {seccion.id_seccion}: {desc_actual[:30]}...')
                     puntos.append(p)
 
                 desc_idx += 1
@@ -268,19 +226,29 @@ class Command(BaseCommand):
             punto = random.choice([p for p in puntos if p.id_seccion == seccion] + [None, None])
 
             center = seccion.poligono.centroid
-            lon = center.x + random.uniform(-0.0004, 0.0004)
-            lat = center.y + random.uniform(-0.0004, 0.0004)
-
+            
+            # Garantizar con GeoDjango que la muestra caiga dentro del polígono de la sección
+            m_geom = None
+            for _ in range(100):
+                lon = center.x + random.uniform(-0.0004, 0.0004)
+                lat = center.y + random.uniform(-0.0004, 0.0004)
+                temp_m = Point(lon, lat, srid=4326)
+                if seccion.poligono.contains(temp_m):
+                    m_geom = temp_m
+                    break
+            if m_geom is None:
+                m_geom = center  # Fallback al centroide si no encuentra
+ 
             # Valores realistas para un campo de golf en Chile
             humedad = round(random.uniform(1.5, 4.8), 2)
             temperatura = round(random.uniform(12.0, 28.5), 1)
             salinidad = round(random.uniform(0.2, 2.5), 2)
             conductividad = round(random.uniform(0.5, 3.8), 2)
-
+ 
             # Fecha distribuida en los últimos 60 días
             dias_atras = random.randint(0, 60)
             fecha = ahora - timedelta(days=dias_atras, hours=random.randint(6, 18))
-
+ 
             m = Muestra(
                 rut_usuario=usuario,
                 id_seccion=seccion,
@@ -289,7 +257,7 @@ class Command(BaseCommand):
                 humedad=humedad,
                 conductividad=conductividad,
                 temperatura=temperatura,
-                ubicacion_exacta=Point(lon, lat, srid=4326),
+                ubicacion_exacta=m_geom,
                 recomendaciones=random.choice(recomendaciones_pool),
             )
             # Guardamos sin auto_now_add para poder setear la fecha

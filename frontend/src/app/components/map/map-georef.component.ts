@@ -18,7 +18,7 @@ import { Style, Circle, Fill, Stroke } from 'ol/style.js';
 import { Zoom } from 'ol/control.js';
 import { fromLonLat } from 'ol/proj';
 import { getCenter } from 'ol/extent.js';
-import { DataService, MuestraFeature } from '../../services/data.service';
+import { DataService, MuestraFeature, SeccionFeature } from '../../services/data.service';
 import { MapService } from '../../services/map.service';
 import { firstValueFrom } from 'rxjs';
 
@@ -45,6 +45,7 @@ import { firstValueFrom } from 'rxjs';
 })
 export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
     @Input() muestras: MuestraFeature[] = [];
+    @Input() secciones: SeccionFeature[] = [];
     @Input() focusId: string | null = null;
 
     /** Emite las properties de la muestra seleccionada, o null al hacer click fuera */
@@ -53,6 +54,8 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
     private mapInstance: Map | null = null;
     private pointsSource: VectorSource | null = null;
     private pointsLayer: VectorLayer | null = null;
+    private sectionsSource: VectorSource | null = null;
+    private sectionsLayer: VectorLayer | null = null;
     private selectedId: string | null = null;
 
     constructor(
@@ -72,6 +75,9 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
 
     ngOnChanges(changes: SimpleChanges): void {
         if (this.mapInstance) {
+            if (changes['secciones'] && this.sectionsSource) {
+                this.updateSections();
+            }
             if (changes['muestras'] && this.pointsSource) {
                 this.updatePoints();
                 if (this.focusId) {
@@ -96,6 +102,23 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
         }
     }
 
+    private updateSections(): void {
+        if (!this.sectionsSource) return;
+        this.sectionsSource.clear();
+        if (!this.secciones || this.secciones.length === 0) return;
+        
+        const geojsonFormat = new GeoJSON();
+        const features = geojsonFormat.readFeatures({
+            type: 'FeatureCollection',
+            features: this.secciones
+        }, {
+            dataProjection: 'EPSG:4326',
+            featureProjection: 'EPSG:3857'
+        });
+        
+        this.sectionsSource.addFeatures(features);
+    }
+
     private updatePoints(): void {
         if (!this.pointsSource) return;
         this.pointsSource.clear();
@@ -118,6 +141,9 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
 
         this.pointsSource = new VectorSource();
         this.updatePoints();
+        
+        this.sectionsSource = new VectorSource();
+        this.updateSections();
 
         this.pointsLayer = new VectorLayer({
             source: this.pointsSource,
@@ -133,20 +159,47 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                 });
             }
         });
+        
+        this.sectionsLayer = new VectorLayer({
+            source: this.sectionsSource,
+            style: (feature) => {
+                const props = feature.getProperties();
+                const tipo = props['tipo_de_tierra'];
+                
+                let fillColor = 'rgba(255, 255, 255, 0.2)';
+                let strokeColor = 'rgba(255, 255, 255, 0.5)';
+                
+                if (tipo === 'GREEN') {
+                    fillColor = 'rgba(76, 175, 125, 0.4)'; // Verde translúcido
+                    strokeColor = '#4CAF7D';
+                } else if (tipo === 'FAIRWAY') {
+                    fillColor = 'rgba(245, 158, 11, 0.4)'; // Naranja translúcido
+                    strokeColor = '#F59E0B';
+                }
+                
+                return new Style({
+                    fill: new Fill({ color: fillColor }),
+                    stroke: new Stroke({ color: strokeColor, width: 2 })
+                });
+            }
+        });
 
         const map = new Map({
             target: container,
             layers: [
                 this.mapService.createSatelliteLayer(),
+                this.sectionsLayer,
                 this.pointsLayer,
             ],
             view: this.mapService.createDefaultView(),
             controls: [new Zoom()],
         });
 
-        // Cursor pointer sobre zonas
+        // Cursor pointer sobre zonas (solo para puntos de muestras)
         map.on('pointermove', (e) => {
-            const hit = map.hasFeatureAtPixel(e.pixel);
+            const hit = map.hasFeatureAtPixel(e.pixel, {
+                layerFilter: (layer) => layer === this.pointsLayer
+            });
             const target = map.getTargetElement() as HTMLElement;
             target.style.cursor = hit ? 'pointer' : '';
         });
@@ -154,14 +207,17 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
         // Selección de muestra
         map.on('click', (e) => {
             let clicked = false;
-            map.forEachFeatureAtPixel(e.pixel, (feature) => {
-                if (clicked) return;
+            map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
+                if (clicked || layer === this.sectionsLayer) return;
                 clicked = true;
                 const props = feature.getProperties() as Record<string, unknown>;
                 this.selectedId = String(props['id_muestra']);
                 this.zoneSelect.emit(props);
                 this.pointsLayer?.changed();
+            }, {
+                layerFilter: (layer) => layer === this.pointsLayer
             });
+            
             if (!clicked) {
                 this.selectedId = null;
                 this.zoneSelect.emit(null);

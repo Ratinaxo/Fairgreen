@@ -35,11 +35,25 @@ class UsuarioAdmin(BaseUserAdmin):
 
 
 # =============================================================================
+# Clase base para administración de mapas GIS (GeoDjango)
+# Centrada en Club de Golf Las Palmas, Quillota, Chile (cerca de Viña del Mar)
+# =============================================================================
+class FairgreenGISAdmin(gis_admin.GISModelAdmin):
+    gis_widget_kwargs = {
+        'attrs': {
+            'default_lon': -71.543055,
+            'default_lat': -32.991957,
+            'default_zoom': 15,
+        }
+    }
+
+
+# =============================================================================
 # Registrar todos los modelos en el panel de administración
 # =============================================================================
 admin.site.register(Usuario, UsuarioAdmin)
-admin.site.register(Seccion, gis_admin.GISModelAdmin)
-admin.site.register(PuntoCritico, gis_admin.GISModelAdmin)
-admin.site.register(Muestra, gis_admin.GISModelAdmin)
+admin.site.register(Seccion, FairgreenGISAdmin)
+admin.site.register(PuntoCritico, FairgreenGISAdmin)
+admin.site.register(Muestra, FairgreenGISAdmin)
 admin.site.register(Foto)
 

@@ -259,7 +259,7 @@ export class SampleHistoryComponent implements OnInit {
   isLoading = signal(true);
   rows = signal<SampleRow[]>([]);
 
-  sectorOptions = ['1', '2', '3', '4', '5'];
+  sectorOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
   totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize)));
 

@@ -56,7 +56,6 @@ import { DataService, SeccionFeature } from '../../services/data.service';
                   <option value="7">7</option>
                   <option value="8">8</option>
                   <option value="9">9</option>
-                  <option value="10">10</option>
                 </select>
               </div>
             </div>
@@ -75,6 +74,7 @@ import { DataService, SeccionFeature } from '../../services/data.service';
               <app-map-point-picker
                 [initialLat]="form.lat ? +form.lat : null"
                 [initialLon]="form.lng ? +form.lng : null"
+                [secciones]="secciones"
                 (coordinateSelect)="onCoordinateSelected($event)"
               />
             </div>
@@ -323,6 +323,11 @@ export class NewSampleComponent implements OnInit {
     if (!this.form.zona || !this.form.sector || !this.form.lat || !this.form.lng || !this.form.humidity || !this.form.temperature || !this.form.salinity || !this.form.conductivity) {
       alert('Por favor complete los campos obligatorios.');
       return;
+    }
+
+    // Auto-mapear Green 4 a Green 2
+    if (this.form.zona === 'GREEN' && this.form.sector === '4') {
+      this.form.sector = '2';
     }
 
     const sec = this.secciones.find(s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === parseInt(this.form.sector, 10));
