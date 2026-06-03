@@ -8,53 +8,83 @@ El entorno de desarrollo está 100% dockerizado para eliminar problemas de compa
 
 ## 🚀 Guía de Inicio Rápido (Onboarding)
 
-Si acabas de clonar este repositorio y quieres empezar a desarrollar, **solo necesitas tener instalado Docker**. No necesitas instalar Python, PostgreSQL ni configurar entornos virtuales en tu máquina.
-
-Sigue estos 4 pasos:
+Si acabas de clonar este repositorio y quieres empezar a desarrollar, **solo necesitas tener instalado Docker**. No necesitas instalar Node.js, Python, PostgreSQL ni configurar entornos virtuales en tu máquina.
 
 ### 1. Requisitos Previos
 * Instala [Docker Desktop](https://www.docker.com/products/docker-desktop/) (en Windows/Mac) o Docker Engine (en Linux).
-* Asegúrate de que Docker esté ejecutándose.
+* Asegúrate de que Docker esté ejecutándose (el icono de la ballena debe aparecer en tu barra de tareas).
 
-### 2. Configurar el Entorno
-El proyecto necesita un archivo con las credenciales locales para Docker.
-1. Haz una copia del archivo `.env.example` y renómbralo a `.env.docker`.
-2. *(Opcional)* Genera una `SECRET_KEY` segura y colócala en `.env.docker` si lo deseas, aunque para desarrollo local el valor por defecto es suficiente.
+### 2. Levantar el Backend (API en Django + Base de Datos)
+El backend requiere una configuración inicial básica de credenciales.
+1. Abre tu terminal y navega a la carpeta del backend:
+   ```bash
+   cd backend
+   ```
+2. Haz una copia del archivo `.env.example` y renómbralo a `.env.docker`.
+3. Ejecuta el siguiente comando para construir y levantar los contenedores:
+   ```bash
+   docker-compose up -d --build
+   ```
+   *Nota: La primera vez tardará un par de minutos. Las siguientes veces levantará en segundos.*
+4. *(Solo la primera vez)* Crea un usuario administrador para el panel de Django:
+   ```bash
+   docker-compose exec web python manage.py createsuperuser
+   ```
+   Sigue las instrucciones en pantalla.
 
-### 3. Construir y Levantar el Proyecto
-Abre tu terminal en la carpeta raíz del proyecto y ejecuta:
+El backend ahora estará corriendo en:
+* API local: `http://localhost:8000/`
+* Panel de administración: `http://localhost:8000/admin/`
 
+### 3. Levantar el Frontend (Aplicación Angular)
+El frontend también está dockerizado para evitar problemas de versiones y dependencias locales.
+1. Abre **otra** terminal (o usa la misma si usaste el modo `-d` antes) y navega a la carpeta del frontend:
+   ```bash
+   cd frontend
+   ```
+2. Ejecuta el comando para construir y levantar el contenedor del frontend:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+El frontend ahora estará disponible y funcionando en tu navegador en:
+👉 **http://localhost:4200**
+
+---
+
+## 🛑 Cómo apagar la aplicación
+Cuando termines de trabajar, es recomendable apagar los contenedores para liberar recursos.
+
+Para apagar el backend (desde la carpeta `backend`):
 ```bash
-docker-compose up --build
+docker-compose down
 ```
-*¿Qué hace esto?* Descargará una base de datos PostGIS, instalará las dependencias complejas de mapas (GDAL/GEOS), instalará las librerías de Python y levantará el servidor de Django. 
 
-*Nota: La primera vez tardará un par de minutos. Las siguientes veces levantará en segundos.*
-
-### 4. Crear el Superusuario
-En una terminal nueva (mientras el paso anterior sigue corriendo), ejecuta este comando para crear tu usuario administrador:
-
+Para apagar el frontend (desde la carpeta `frontend`):
 ```bash
-docker-compose exec web python manage.py createsuperuser
+docker-compose down
 ```
-Sigue las instrucciones en pantalla para poner tu correo y contraseña.
 
-**¡Listo!** Ya puedes acceder a:
-* La API local: `http://localhost:8000/`
-* El panel de administración: `http://localhost:8000/admin/`
+**Apagar y RESETEAR la base de datos por completo (borrará todo, usar con cuidado):**
+Desde la carpeta `backend`:
+```bash
+docker-compose down -v
+```
 
 ---
 
 ## 💻 Flujo de Desarrollo del Día a Día
 
-El proyecto está configurado con **Hot-Reloading**. Esto significa que:
+El proyecto está configurado con **Hot-Reloading** tanto para el backend como para el frontend. Esto significa que:
 
-1. Mantienes la terminal con `docker-compose up` corriendo de fondo.
-2. Abres tu editor de código (ej. VSCode) en tu sistema operativo normal.
-3. Editas los archivos de Python.
-4. Al guardar (Ctrl+S), Docker detecta el cambio e instantáneamente recarga el servidor. No necesitas reiniciar nada.
+1. Mantienes los contenedores corriendo de fondo.
+2. Abres tu editor de código (ej. VSCode) en la carpeta raíz del proyecto.
+3. Editas los archivos de código (Angular o Django).
+4. Al guardar (Ctrl+S), Docker detecta el cambio e instantáneamente recarga la aplicación correspondiente. No necesitas reiniciar nada manualmente.
 
-### Comandos Frecuentes
+### Comandos Frecuentes (Backend)
+
+*Asegúrate de estar en la carpeta `backend` para ejecutar estos comandos.*
 
 **Crear una nueva migración (si cambiaste models.py):**
 ```bash
@@ -65,14 +95,4 @@ docker-compose exec web python manage.py makemigrations
 *(Nota: El contenedor aplica las migraciones automáticamente al arrancar, pero si haces cambios mientras está corriendo, puedes usar este comando)*
 ```bash
 docker-compose exec web python manage.py migrate
-```
-
-**Apagar el entorno al terminar el día:**
-```bash
-docker-compose down
-```
-
-**Apagar y RESETEAR la base de datos por completo (borrará todo):**
-```bash
-docker-compose down -v
 ```
