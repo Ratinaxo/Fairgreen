@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from core.views import SeccionViewSet, PuntoCriticoViewSet, MuestraViewSet, UsuarioViewSet, FotoViewSet
+from core.views import SeccionViewSet, PuntoCriticoViewSet, MuestraViewSet, UsuarioViewSet, FotoViewSet, NotificacionViewSet
 from core.auth_views import AuthMeView
 
 # Configuración del enrutador automático de DRF
@@ -28,6 +28,7 @@ router.register(r'puntos-criticos', PuntoCriticoViewSet, basename='puntocritico'
 router.register(r'muestras', MuestraViewSet, basename='muestra')
 router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'fotos', FotoViewSet, basename='foto')
+router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

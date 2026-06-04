@@ -1,0 +1,129 @@
+<section class="notif-page">
+
+  <!-- Header -->
+  <header class="notif-header">
+    <div class="notif-header-left">
+      <h1 class="notif-title">
+        <i class="bi bi-bell-fill"></i>
+        Notificaciones
+        @if (noLeidas() > 0) {
+          <span class="notif-count-badge">{{ noLeidas() }}</span>
+        }
+      </h1>
+      <p class="notif-subtitle">
+        {{ total() }} notificación{{ total() !== 1 ? 'es' : '' }} en total
+      </p>
+    </div>
+
+    @if (noLeidas() > 0) {
+      <button
+        class="btn-mark-all"
+        id="btn-mark-all-read"
+        (click)="marcarTodasLeidas()"
+        title="Marcar todas como leídas"
+      >
+        <i class="bi bi-check2-all"></i>
+        Marcar todas como leídas
+      </button>
+    }
+  </header>
+
+  <!-- Filtros -->
+  <div class="notif-filters" role="tablist" aria-label="Filtrar notificaciones">
+    <button
+      class="filter-btn"
+      [class.active]="filtro() === 'todas'"
+      (click)="setFiltro('todas')"
+      role="tab"
+      id="filter-todas"
+    >
+      Todas
+    </button>
+    <button
+      class="filter-btn"
+      [class.active]="filtro() === 'no_leidas'"
+      (click)="setFiltro('no_leidas')"
+      role="tab"
+      id="filter-no-leidas"
+    >
+      No leídas
+      @if (noLeidas() > 0) {
+        <span class="filter-badge">{{ noLeidas() }}</span>
+      }
+    </button>
+    <button
+      class="filter-btn"
+      [class.active]="filtro() === 'leidas'"
+      (click)="setFiltro('leidas')"
+      role="tab"
+      id="filter-leidas"
+    >
+      Leídas
+    </button>
+  </div>
+
+  <!-- Lista -->
+  <div class="notif-list">
+
+    @if (notificacionesFiltradas().length === 0) {
+      <div class="notif-empty">
+        <i class="bi bi-bell-slash"></i>
+        <p>No hay notificaciones{{ filtro() !== 'todas' ? ' en este filtro' : '' }}.</p>
+      </div>
+    }
+
+    @for (notif of notificacionesFiltradas(); track notif.id_notificacion) {
+      <article
+        class="notif-item"
+        [class.unread]="!notif.leida"
+        [id]="'notif-' + notif.id_notificacion"
+      >
+        <!-- Tipo icono -->
+        <div class="notif-icon" [ngClass]="colorPorTipo(notif.tipo)">
+          <i class="bi" [ngClass]="iconoPorTipo(notif.tipo)"></i>
+        </div>
+
+        <!-- Contenido -->
+        <div class="notif-body">
+          <div class="notif-item-header">
+            <span class="notif-item-title">{{ notif.titulo }}</span>
+            <span class="notif-time" [title]="notif.fecha_hora | date:'dd/MM/yyyy HH:mm'">
+              {{ tiempoRelativo(notif.fecha_hora) }}
+            </span>
+          </div>
+          <p class="notif-mensaje">{{ notif.mensaje }}</p>
+
+          <div class="notif-meta">
+            <span class="notif-tipo-label" [ngClass]="colorPorTipo(notif.tipo)">
+              @switch (notif.tipo) {
+                @case ('PUNTO_CRITICO') { Punto Crítico }
+                @default { Sistema }
+              }
+            </span>
+
+            @if (!notif.leida) {
+              <button
+                class="btn-marcar"
+                [id]="'btn-read-' + notif.id_notificacion"
+                (click)="marcarLeida(notif, $event)"
+              >
+                <i class="bi bi-check"></i>
+                Marcar como leída
+              </button>
+            } @else {
+              <span class="leida-label">
+                <i class="bi bi-check2"></i>
+                Leída
+              </span>
+            }
+          </div>
+        </div>
+
+        <!-- Indicador no leída -->
+        @if (!notif.leida) {
+          <span class="notif-dot" aria-label="No leída"></span>
+        }
+      </article>
+    }
+  </div>
+</section>

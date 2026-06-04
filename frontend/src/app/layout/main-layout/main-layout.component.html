@@ -1,0 +1,11 @@
+
+    <div class="shell">
+      <app-sidebar #sidebar />
+      <div class="shell-main">
+        <app-topbar (toggleSidebarEvent)="sidebar.isOpen.set(!sidebar.isOpen())" />
+        <main class="content-area">
+          <router-outlet />
+        </main>
+      </div>
+    </div>
+  

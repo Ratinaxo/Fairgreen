@@ -161,3 +161,50 @@ class Foto(models.Model):
 
     def __str__(self):
         return f"Foto de Muestra {self.id_muestra.id_muestra}"
+
+
+# =============================================================================
+# Modelo de Notificación (alertas del sistema para los usuarios)
+# =============================================================================
+class Notificacion(models.Model):
+    TIPOS_CHOICES = [
+        ('PUNTO_CRITICO', 'Punto Crítico Registrado'),
+        ('SISTEMA', 'Sistema'),
+    ]
+
+    id_notificacion = models.AutoField(primary_key=True)
+
+    # Destinatario de la notificación
+    rut_usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='notificaciones',
+    )
+
+    titulo = models.CharField(max_length=150)
+    mensaje = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPOS_CHOICES, default='SISTEMA')
+    leida = models.BooleanField(default=False)
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+
+    # Referencias opcionales a objetos del dominio
+    id_seccion = models.ForeignKey(
+        Seccion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notificaciones',
+    )
+    id_muestra = models.ForeignKey(
+        Muestra,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notificaciones',
+    )
+
+    class Meta:
+        ordering = ['-fecha_hora']
+
+    def __str__(self):
+        return f"[{self.tipo}] {self.titulo} → {self.rut_usuario}"

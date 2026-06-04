@@ -1,0 +1,126 @@
+
+    <div class="dashboard">
+      <!-- Page header -->
+      <div class="page-header d-flex align-center justify-between">
+        <div>
+          <h1 style="font-family: var(--font-display); font-size: 24px;">Panel de Control</h1>
+          <p class="text-muted" style="font-size: 13px; margin-top: 4px;">Monitoreo general del campo · Actualizado hace 1h</p>
+        </div>
+        <div style="font-size: 12px; color: var(--color-text-muted);">
+          <span style="display:inline-flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;background:#22C55E;border-radius:50%;display:inline-block;"></span>
+            Sistema activo
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        @for (card of kpiCards; track card.id; let i = $index) {
+          <div
+            class="kpi-card card"
+            [style.animation-delay]="(i * 60) + 'ms'"
+            style="animation: fadeSlideUp 300ms ease both; padding: 16px 20px;"
+            [attr.aria-label]="card.label + ': ' + card.value + card.unit"
+          >
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+              <span class="badge" [ngClass]="'badge-' + card.status">
+                {{ statusLabel[card.status] }}
+              </span>
+              <button style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);padding:0;" [attr.aria-label]="'Alerta de ' + card.label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+              </button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span aria-hidden="true" [innerHTML]="card.icon" style="color:var(--color-text-muted);"></span>
+              <span style="font-size:13px;font-weight:500;color:var(--color-text-secondary);">{{ card.label }}</span>
+            </div>
+
+            <div style="font-family:var(--font-mono);font-size:28px;font-weight:600;color:var(--color-text-primary);line-height:1;">
+              {{ card.value }}<span style="font-size:14px;font-weight:400;margin-left:4px;color:var(--color-text-muted);">{{ card.unit }}</span>
+            </div>
+
+            <div style="font-size:11px;color:var(--color-text-muted);margin:6px 0 10px;">Nivel promedio</div>
+
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                [ngClass]="progressClass(card.progress)"
+                [ngStyle]="{width: card.progress + '%'}"
+                [attr.aria-valuenow]="card.progress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                role="progressbar"
+              ></div>
+            </div>
+
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;">
+              Última sincronización: {{ card.sync }}
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Map section -->
+      <div class="card map-card" style="margin-top: 20px; padding: 20px;">
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:4px;">Vista general del campo</div>
+          <div style="font-size:15px;font-weight:600;color:var(--color-text-primary);">Club de Golf Las Palmas</div>
+        </div>
+
+        <div class="map-container">
+          <app-map-overview 
+            (sectorClick)="onSectorClick($event)" 
+            [muestras]="muestras()" />
+          <app-map-legend />
+        </div>
+      </div>
+
+      <!-- Report card -->
+      <div class="card report-card">
+        <div class="report-icon" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" x2="8" y1="13" y2="13"/>
+            <line x1="16" x2="8" y1="17" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div class="report-info">
+          <div class="report-title">Reporte general semanal</div>
+          <div class="report-meta">Resumen general · Desde: 19/05/2025 · Hasta: 26/05/2025</div>
+        </div>
+        <div class="report-actions">
+          <button class="btn-outline" id="download-report-btn" (click)="showDownloadModal = true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Descargar
+          </button>
+          <button class="btn-primary" id="view-report-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            Ver
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal de descarga -->
+      @if (showDownloadModal) {
+        <div class="modal-overlay" (click)="showDownloadModal = false" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <div class="modal-card" (click)="$event.stopPropagation()">
+            <div style="width:56px;height:56px;background:#E6F4EC;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C3D2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <h3 id="modal-title" style="font-family:var(--font-display);font-size:18px;margin-bottom:8px;">¡Descarga exitosa!</h3>
+            <p style="font-size:13px;color:var(--color-text-muted);margin-bottom:20px;">Se ha descargado el archivo <strong>reporte_semanal_2025.pdf</strong></p>
+            <button class="btn-primary w-100" id="modal-back-btn" (click)="showDownloadModal = false">Volver</button>
+          </div>
+        </div>
+      }
+    </div>
+  

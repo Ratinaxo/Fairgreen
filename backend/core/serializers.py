@@ -1,18 +1,28 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto
+from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
     """
     Serializador para el modelo Usuario.
-    Solo expone campos públicos del perfil. Los campos sensibles heredados
-    de AbstractBaseUser (password, is_staff, is_superuser, last_login,
-    groups, user_permissions) se excluyen al no estar en la lista de 'fields'.
+    Solo expone campos públicos del perfil. El password es write-only.
     """
+    password = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = Usuario
-        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active']
+        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active', 'password']
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = Usuario(**validated_data)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
+        user.save()
+        return user
 
 
 class SeccionSerializer(GeoFeatureModelSerializer):
@@ -89,3 +99,29 @@ class MuestraSerializer(GeoFeatureModelSerializer):
             'fotos',
         ]
         read_only_fields = ['id_muestra', 'fecha_hora_captura']
+
+
+class NotificacionSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo Notificacion.
+    Expone todos los campos necesarios para el panel de alertas del frontend.
+    El destinatario se muestra de forma anidada para facilitar la visualización.
+    """
+    rut_usuario = UsuarioSerializer(read_only=True)
+    rut_usuario_id = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = Notificacion
+        fields = [
+            'id_notificacion',
+            'rut_usuario',
+            'rut_usuario_id',
+            'titulo',
+            'mensaje',
+            'tipo',
+            'leida',
+            'fecha_hora',
+            'id_seccion',
+            'id_muestra',
+        ]
+        read_only_fields = ['id_notificacion', 'fecha_hora']
