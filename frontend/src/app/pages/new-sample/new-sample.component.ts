@@ -35,7 +35,7 @@ import { DataService, SeccionFeature } from '../../services/data.service';
             <div class="form-group">
               <label for="zona-select" class="form-label">Zona</label>
               <div class="select-wrapper">
-                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true">
+                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true" (ngModelChange)="onZonaSectorChange()">
                   <option value="">Seleccionar zona</option>
                   <option value="GREEN">Green</option>
                   <option value="FAIRWAY">Fairway</option>
@@ -45,17 +45,11 @@ import { DataService, SeccionFeature } from '../../services/data.service';
             <div class="form-group">
               <label for="sector-select" class="form-label">Sector seleccionado</label>
               <div class="select-wrapper">
-                <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true">
+                <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true" (ngModelChange)="onZonaSectorChange()">
                   <option value="">Seleccionar sector</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                  <option value="9">9</option>
+                  @for (s of availableSectors; track s) {
+                    <option [value]="s">{{ s }}</option>
+                  }
                 </select>
               </div>
             </div>
@@ -75,6 +69,7 @@ import { DataService, SeccionFeature } from '../../services/data.service';
                 [initialLat]="form.lat ? +form.lat : null"
                 [initialLon]="form.lng ? +form.lng : null"
                 [secciones]="secciones"
+                [selectedSeccion]="getSelectedSeccion()"
                 (coordinateSelect)="onCoordinateSelected($event)"
               />
             </div>
@@ -296,7 +291,43 @@ export class NewSampleComponent implements OnInit {
 
 
 
+  /** Sectors available for the currently selected zona */
+  get availableSectors(): number[] {
+    if (!this.form.zona) return [];
+    return this.secciones
+      .filter(s => s.properties.tipo_de_tierra === this.form.zona)
+      .map(s => s.properties.numero_de_hoyo)
+      .sort((a, b) => a - b);
+  }
+
+  /** Finds the SeccionFeature matching the current zona + sector */
+  getSelectedSeccion(): SeccionFeature | null {
+    if (!this.form.zona || !this.form.sector) return null;
+    const hoyo = parseInt(this.form.sector, 10);
+    return this.secciones.find(
+      s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === hoyo
+    ) ?? null;
+  }
+
+  /** Called when zona or sector changes — reset map and coordinates */
+  onZonaSectorChange(): void {
+    this.mostrarMapa = false;
+    this.form.lat = '';
+    this.form.lng = '';
+  }
+
   toggleMap(): void {
+    if (!this.mostrarMapa) {
+      // Validate zona + sector are selected before opening the map
+      if (!this.form.zona || !this.form.sector) {
+        alert('Selecciona la zona y el sector antes de marcar en el mapa.');
+        return;
+      }
+      if (!this.getSelectedSeccion()) {
+        alert('La combinación de zona y sector seleccionada no existe.');
+        return;
+      }
+    }
     this.mostrarMapa = !this.mostrarMapa;
   }
 
