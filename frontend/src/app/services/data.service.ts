@@ -182,6 +182,11 @@ export class DataService {
     return this.http.post<MuestraFeature>(`${this.api}/muestras/`, payload);
   }
 
+  /** Actualiza una muestra por su ID. */
+  updateMuestra(id: number, payload: any): Observable<MuestraFeature> {
+    return this.http.patch<MuestraFeature>(`${this.api}/muestras/${id}/`, payload);
+  }
+
   /** Elimina una muestra por su ID. */
   deleteMuestra(id: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/muestras/${id}/`);

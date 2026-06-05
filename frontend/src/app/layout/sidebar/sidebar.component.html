@@ -42,22 +42,24 @@
         }
 
 
-        <div class="sb-divider"></div>
-        <div class="sb-section-label">ANÁLISIS</div>
+        @if (filteredSecondaryNav().length > 0) {
+          <div class="sb-divider"></div>
+          <div class="sb-section-label">ANÁLISIS</div>
 
-        @for (item of filteredSecondaryNav(); track item.route) {
-          <a
-            [routerLink]="item.route"
-            routerLinkActive="active"
-            class="sb-link"
-            [attr.aria-label]="item.label"
-            (click)="closeOnMobile()"
-          >
-            <span class="sb-link-indicator"></span>
-            <i class="bi" [ngClass]="item.icon"></i>
-            <span class="sb-link-label">{{ item.label }}</span>
-            <span class="sb-tooltip">{{ item.label }}</span>
-          </a>
+          @for (item of filteredSecondaryNav(); track item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              class="sb-link"
+              [attr.aria-label]="item.label"
+              (click)="closeOnMobile()"
+            >
+              <span class="sb-link-indicator"></span>
+              <i class="bi" [ngClass]="item.icon"></i>
+              <span class="sb-link-label">{{ item.label }}</span>
+              <span class="sb-tooltip">{{ item.label }}</span>
+            </a>
+          }
         }
       </nav>
 
