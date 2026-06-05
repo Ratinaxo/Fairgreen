@@ -124,7 +124,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
             if (m.properties.conductividad > 3.5 || m.properties.salinidad > 2.5) color = '#EF4444'; // Critico
             else if (m.properties.conductividad > 2.0 || m.properties.salinidad > 1.5) color = '#F59E0B'; // Atencion
             
-            point.setProperties({ ...m.properties, color });
+            point.setProperties({ ...m.properties, id_muestra: m.id || m.properties?.id_muestra, color });
             this.pointsSource.addFeature(point);
         }
     }

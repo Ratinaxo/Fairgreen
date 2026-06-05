@@ -41,6 +41,13 @@ export const routes: Routes = [
         canActivate: [roleGuard(['ADMIN', 'AGRO'])], // Canchero NO puede registrar
       },
       {
+        path: 'samples/edit/:id',
+        loadComponent: () =>
+          import('./pages/edit-sample/edit-sample.component').then(m => m.EditSampleComponent),
+        title: 'Editar Muestra — FairGreen',
+        canActivate: [roleGuard(['ADMIN', 'AGRO'])], // Canchero NO puede editar
+      },
+      {
         path: 'samples/history',
         loadComponent: () =>
           import('./pages/sample-history/sample-history.component').then(m => m.SampleHistoryComponent),

@@ -1,27 +1,32 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgClass } from '@angular/common';
+import { NgClass, CommonModule } from '@angular/common';
 import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
 import { DataService, SeccionFeature } from '../../services/data.service';
 
 @Component({
-  selector: 'app-new-sample',
+  selector: 'app-edit-sample',
   standalone: true,
-  imports: [FormsModule, NgClass, MapPointPickerComponent],
-  templateUrl: './new-sample.component.html',
-  styleUrl: './new-sample.component.css'
+  imports: [FormsModule, NgClass, CommonModule, MapPointPickerComponent],
+  templateUrl: './edit-sample.component.html',
+  styleUrl: './edit-sample.component.css'
 })
-export class NewSampleComponent implements OnInit {
+export class EditSampleComponent implements OnInit {
   private dataService = inject(DataService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
+  sampleId = signal<number | null>(null);
   isDragging = false;
   uploadedFile = '';
+  currentPhotoUrl = '';
   selectedFile: File | null = null;
-  showSuccess = false;
+  showSuccess = signal(false);
   mostrarMapa = false;
-  isLoading = false;
+  
+  isInitialLoading = signal(true);
+  isSaving = signal(false);
 
   secciones: SeccionFeature[] = [];
 
@@ -38,37 +43,79 @@ export class NewSampleComponent implements OnInit {
   };
 
   ngOnInit() {
+    this.isInitialLoading.set(true);
     this.dataService.getSecciones().subscribe({
       next: (data) => {
         this.secciones = data.features ?? [];
+        
+        // Cargar datos de la muestra tras obtener las secciones
+        this.route.paramMap.subscribe(params => {
+          const idStr = params.get('id');
+          if (idStr) {
+            this.sampleId.set(parseInt(idStr, 10));
+            this.loadSampleData(this.sampleId()!);
+          } else {
+            this.isInitialLoading.set(false);
+          }
+        });
+      },
+      error: () => {
+        this.isInitialLoading.set(false);
+        alert('Error al cargar secciones del sistema.');
       }
     });
   }
 
+  loadSampleData(id: number) {
+    this.dataService.getMuestra(id).subscribe({
+      next: (muestra) => {
+        console.log('Muestra cargada:', muestra);
+        try {
+          const p = muestra.properties;
+          const coords = muestra.geometry ? muestra.geometry.coordinates : [0, 0];
+          
+          let zona = '';
+          let sector = '';
+          if (p.id_seccion) {
+            const sec = p.id_seccion as any;
+            if (sec.properties) {
+              zona = sec.properties.tipo_de_tierra || '';
+              sector = String(sec.properties.numero_de_hoyo || '');
+            } else {
+              zona = sec.tipo_de_tierra || '';
+              sector = String(sec.numero_de_hoyo || '');
+            }
+          }
 
+          this.form = {
+            zona: zona,
+            sector: sector,
+            lat: String(coords[1] ?? ''),
+            lng: String(coords[0] ?? ''),
+            humidity: String(p.humedad ?? ''),
+            temperature: String(p.temperatura ?? ''),
+            salinity: String(p.salinidad ?? ''),
+            conductivity: String(p.conductividad ?? ''),
+            notes: p.recomendaciones || '',
+          };
 
-  /** Sectors available for the currently selected zona */
-  get availableSectors(): number[] {
-    if (!this.form.zona) return [];
-    return this.secciones
-      .filter(s => s.properties.tipo_de_tierra === this.form.zona)
-      .map(s => s.properties.numero_de_hoyo)
-      .sort((a, b) => a - b);
-  }
-
-  /** Finds the SeccionFeature matching the current zona + sector */
-  getSelectedSeccion(): SeccionFeature | null {
-    if (!this.form.zona || !this.form.sector) return null;
-    const hoyo = parseInt(this.form.sector, 10);
-    return this.secciones.find(
-      s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === hoyo
-    ) ?? null;
-  }
-
-  /** Called when zona or sector changes — reset map and coordinates */
-  onZonaSectorChange(): void {
-    this.form.lat = '';
-    this.form.lng = '';
+          if (p.fotos && p.fotos.length > 0) {
+            this.currentPhotoUrl = p.fotos[0].ruta_archivo;
+            this.uploadedFile = p.fotos[0].ruta_archivo.split('/').pop() || 'Foto de evidencia';
+          }
+          this.isInitialLoading.set(false);
+        } catch (err) {
+          console.error('Error al procesar datos de la muestra:', err);
+          this.isInitialLoading.set(false);
+        }
+      },
+      error: (err) => {
+        console.error('Error al descargar la muestra:', err);
+        this.isInitialLoading.set(false);
+        alert('No se pudo cargar la muestra seleccionada.');
+        this.router.navigate(['/samples/history']);
+      }
+    });
   }
 
   toggleMap(): void {
@@ -111,10 +158,8 @@ export class NewSampleComponent implements OnInit {
       return;
     }
 
-    if (parseFloat(this.form.salinity) < 0 || parseFloat(this.form.conductivity) < 0) {
-      alert('La salinidad y la conductividad no pueden ser valores negativos.');
-      return;
-    }
+    const currentId = this.sampleId();
+    if (!currentId) return;
 
     // Auto-mapear Green 4 a Green 2
     if (this.form.zona === 'GREEN' && this.form.sector === '4') {
@@ -128,7 +173,7 @@ export class NewSampleComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
+    this.isSaving.set(true);
     const payload = {
       id_seccion_id: sec.id,
       salinidad: parseFloat(this.form.salinity),
@@ -142,16 +187,17 @@ export class NewSampleComponent implements OnInit {
       }
     };
 
-    this.dataService.createMuestra(payload).subscribe({
+    this.dataService.updateMuestra(currentId, payload).subscribe({
       next: (muestra) => {
+        // Subir foto si se seleccionó una nueva
         if (this.selectedFile) {
           this.dataService.uploadFoto(muestra.id, this.selectedFile).subscribe({
             next: () => {
               this.onSaveSuccess();
             },
             error: () => {
-              this.isLoading = false;
-              alert('Muestra registrada, pero hubo un error al subir la imagen.');
+              this.isSaving.set(false);
+              alert('Muestra actualizada, pero hubo un error al subir la nueva imagen.');
               this.router.navigate(['/samples/history']);
             }
           });
@@ -160,17 +206,17 @@ export class NewSampleComponent implements OnInit {
         }
       },
       error: () => {
-        this.isLoading = false;
-        alert('Ocurrió un error al guardar la muestra.');
+        this.isSaving.set(false);
+        alert('Ocurrió un error al actualizar la muestra.');
       }
     });
   }
 
   private onSaveSuccess() {
-    this.isLoading = false;
-    this.showSuccess = true;
+    this.isSaving.set(false);
+    this.showSuccess.set(true);
     setTimeout(() => {
-      this.showSuccess = false;
+      this.showSuccess.set(false);
       this.router.navigate(['/samples/history']);
     }, 1200);
   }

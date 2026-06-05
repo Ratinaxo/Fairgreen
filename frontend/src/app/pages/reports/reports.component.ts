@@ -25,6 +25,10 @@ export class ReportsComponent {
   @ViewChild('chartSvg') chartSvgRef!: ElementRef;
 
   filtersApplied = signal(false);
+  appliedComponent = signal('Humedad');
+  appliedDateFrom = signal('');
+  appliedDateTo = signal('');
+  appliedZona = signal('');
 
   filters = {
     dateFrom: '',
@@ -48,10 +52,9 @@ export class ReportsComponent {
   avgFairway = signal(0);
 
   // Chart properties dinámicos
-  yAxisValues: number[] = [5, 4, 3, 2, 1, 0];
+  yAxisValues: number[] = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0];
   yAxisMax = 5;
-  yAxisMinThreshold = 2;
-  yFactor = 38; // (200px height / 5 units)
+  yFactor = 40; // (200px height / 5 units)
 
   get chartPoints() {
     return this.rawData.map((v, i) => ({
@@ -87,8 +90,8 @@ export class ReportsComponent {
   reportRows: ReportRow[] = [];
 
   displayDateFrom(): string {
-    if (this.filters.dateFrom) {
-      return new Date(this.filters.dateFrom).toLocaleDateString('es-CL');
+    if (this.appliedDateFrom()) {
+      return new Date(this.appliedDateFrom()).toLocaleDateString('es-CL');
     }
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -96,8 +99,8 @@ export class ReportsComponent {
   }
 
   displayDateTo(): string {
-    if (this.filters.dateTo) {
-      return new Date(this.filters.dateTo).toLocaleDateString('es-CL');
+    if (this.appliedDateTo()) {
+      return new Date(this.appliedDateTo()).toLocaleDateString('es-CL');
     }
     return new Date().toLocaleDateString('es-CL');
   }
@@ -110,17 +113,20 @@ export class ReportsComponent {
   applyFilters() {
     this.dataService.getMuestras(1, 500).subscribe({
       next: (geoJson) => {
+        // Set applied values first
+        this.appliedComponent.set(this.filters.component);
+        this.appliedDateFrom.set(this.filters.dateFrom);
+        this.appliedDateTo.set(this.filters.dateTo);
+        this.appliedZona.set(this.filters.zona);
+
         let features = geoJson.features ?? [];
         
         // 1. Filtrar por fecha
         if (this.filters.dateFrom) {
-          const from = new Date(this.filters.dateFrom);
-          features = features.filter(f => new Date(f.properties.fecha_hora_captura) >= from);
+          features = features.filter(f => f.properties.fecha_hora_captura.substring(0, 10) >= this.filters.dateFrom);
         }
         if (this.filters.dateTo) {
-          const to = new Date(this.filters.dateTo);
-          to.setHours(23, 59, 59, 999);
-          features = features.filter(f => new Date(f.properties.fecha_hora_captura) <= to);
+          features = features.filter(f => f.properties.fecha_hora_captura.substring(0, 10) <= this.filters.dateTo);
         }
 
         // 2. Filtrar por sector
@@ -142,10 +148,11 @@ export class ReportsComponent {
   private _processData(features: MuestraFeature[]) {
     // Definir configuración del gráfico según componente
     let propKey: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad' = 'humedad';
-    if (this.filters.component === 'Humedad') { propKey = 'humedad'; this.yAxisMax = 5; this.yAxisMinThreshold = 2; this.yAxisValues = [5,4,3,2,1,0]; }
-    else if (this.filters.component === 'Temperatura') { propKey = 'temperatura'; this.yAxisMax = 40; this.yAxisMinThreshold = 15; this.yAxisValues = [40,32,24,16,8,0]; }
-    else if (this.filters.component === 'Salinidad') { propKey = 'salinidad'; this.yAxisMax = 5; this.yAxisMinThreshold = 1.5; this.yAxisValues = [5,4,3,2,1,0]; }
-    else if (this.filters.component === 'Conductividad') { propKey = 'conductividad'; this.yAxisMax = 6; this.yAxisMinThreshold = 2; this.yAxisValues = [6,5,4,3,2,1,0]; }
+    const comp = this.appliedComponent();
+    if (comp === 'Humedad') { propKey = 'humedad'; this.yAxisMax = 5; this.yAxisValues = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
+    else if (comp === 'Temperatura') { propKey = 'temperatura'; this.yAxisMax = 40; this.yAxisValues = [40, 35, 30, 25, 20, 15, 10, 5, 0]; }
+    else if (comp === 'Salinidad') { propKey = 'salinidad'; this.yAxisMax = 5; this.yAxisValues = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
+    else if (comp === 'Conductividad') { propKey = 'conductividad'; this.yAxisMax = 6; this.yAxisValues = [6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
     
     this.yFactor = 200 / this.yAxisMax;
 
@@ -166,31 +173,133 @@ export class ReportsComponent {
         date: new Date(p.fecha_hora_captura).toLocaleDateString('es-CL'),
         sector: `Sector ${p.id_seccion?.properties?.numero_de_hoyo ?? 0}`,
         point: `${p.id_seccion?.properties?.tipo_de_tierra ?? 'Z'}`,
-        component: this.filters.component,
+        component: comp,
         level: val,
         status: status
       };
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Generar 12 puntos equitativos para el gráfico (mock simple agrupado por tiempo)
+    // Generar puntos equitativos para el gráfico basados en el tiempo real transcurrido
     if (features.length === 0) {
       this.rawData = Array(12).fill(0);
+      this.xLabels = Array.from({ length: 12 }, (_, i) => ({ x: 60 + i * 55, text: '' }));
       return;
     }
-    
+
     // Ordenamos cronológicamente
     features.sort((a, b) => new Date(a.properties.fecha_hora_captura).getTime() - new Date(b.properties.fecha_hora_captura).getTime());
-    
-    // Dividir en 12 buckets y sacar promedio
-    const buckets = Array.from({ length: 12 }, () => [] as number[]);
-    const bucketSize = Math.max(1, Math.floor(features.length / 12));
-    
-    for (let i = 0; i < features.length; i++) {
-      const bucketIdx = Math.min(11, Math.floor(i / bucketSize));
-      buckets[bucketIdx].push(features[i].properties[propKey]);
+
+    // 1. Determinar rango de tiempo
+    let startStr = this.appliedDateFrom();
+    let endStr = this.appliedDateTo();
+
+    if (!startStr && features.length) {
+      startStr = features[0].properties.fecha_hora_captura.substring(0, 10);
     }
+    if (!endStr && features.length) {
+      endStr = features[features.length - 1].properties.fecha_hora_captura.substring(0, 10);
+    }
+
+    let startTime = new Date(startStr + 'T00:00:00').getTime();
+    let endTime = new Date(endStr + 'T23:59:59').getTime();
+
+    if (endTime <= startTime) {
+      endTime = startTime + 24 * 3600 * 1000 - 1000;
+    }
+
+    const totalDays = (endTime - startTime) / (24 * 3600 * 1000);
+
+    // Definición de los buckets (intervalos de tiempo específicos)
+    interface TimeBucket {
+      start: number;
+      end: number;
+      label: string;
+      showLabel: boolean;
+    }
+    let bucketsConfig: TimeBucket[] = [];
+
+    if (totalDays <= 1.5) {
+      // 1. Agrupar por hora (cada 2 horas)
+      for (let hour = 0; hour < 24; hour += 2) {
+        const start = new Date(startStr + 'T00:00:00');
+        start.setHours(hour, 0, 0, 0);
+        const end = new Date(start.getTime() + 2 * 3600 * 1000 - 1);
+        const label = start.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+        bucketsConfig.push({ start: start.getTime(), end: end.getTime(), label, showLabel: true });
+      }
+    } else if (totalDays <= 31) {
+      // 2. Agrupar por día
+      const start = new Date(startStr + 'T00:00:00');
+      const endLimit = new Date(endStr + 'T23:59:59');
+      let curr = new Date(start.getTime());
+      while (curr.getTime() <= endLimit.getTime()) {
+        const s = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate(), 0, 0, 0, 0).getTime();
+        const e = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate(), 23, 59, 59, 999).getTime();
+        const label = curr.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
+        bucketsConfig.push({ start: s, end: e, label, showLabel: true });
+        curr.setDate(curr.getDate() + 1);
+      }
+      
+      // Ocultar etiquetas intermedias si son demasiados días
+      if (bucketsConfig.length > 12) {
+        const step = Math.ceil(bucketsConfig.length / 8);
+        bucketsConfig.forEach((b, idx) => {
+          if (idx % step !== 0 && idx !== bucketsConfig.length - 1) {
+            b.showLabel = false;
+          }
+        });
+      }
+    } else {
+      // 3. Agrupar por mes calendario (evita duplicados de meses en rangos largos)
+      const start = new Date(startStr + 'T00:00:00');
+      const endLimit = new Date(endStr + 'T23:59:59');
+      let curr = new Date(start.getFullYear(), start.getMonth(), 1, 0, 0, 0, 0);
+      
+      while (curr.getTime() <= endLimit.getTime()) {
+        const s = new Date(curr.getFullYear(), curr.getMonth(), 1, 0, 0, 0, 0).getTime();
+        const e = new Date(curr.getFullYear(), curr.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+        const label = curr.toLocaleDateString('es-CL', { month: 'short' }).replace('.', '');
+        bucketsConfig.push({ start: s, end: e, label, showLabel: true });
+        curr.setMonth(curr.getMonth() + 1);
+      }
+
+      // Ocultar etiquetas intermedias si son demasiados meses (rango multi-año)
+      if (bucketsConfig.length > 12) {
+        const step = Math.ceil(bucketsConfig.length / 12);
+        bucketsConfig.forEach((b, idx) => {
+          if (idx % step !== 0 && idx !== bucketsConfig.length - 1) {
+            b.showLabel = false;
+          }
+        });
+      }
+    }
+
+    const N = bucketsConfig.length;
     
-    this.rawData = buckets.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
+    // 2. Generar las coordenadas X y etiquetas dinámicamente
+    const newLabels = [];
+    for (let i = 0; i < N; i++) {
+      const x = N > 1 ? 60 + i * (605 / (N - 1)) : 362.5;
+      newLabels.push({
+        x: x,
+        text: bucketsConfig[i].showLabel ? bucketsConfig[i].label : ''
+      });
+    }
+    this.xLabels = newLabels;
+
+    // 3. Agrupar muestras en los buckets correspondientes
+    const bucketsData = Array.from({ length: N }, () => [] as number[]);
+    for (const f of features) {
+      const t = new Date(f.properties.fecha_hora_captura).getTime();
+      for (let i = 0; i < N; i++) {
+        if (t >= bucketsConfig[i].start && t <= bucketsConfig[i].end) {
+          bucketsData[i].push(f.properties[propKey]);
+          break;
+        }
+      }
+    }
+
+    this.rawData = bucketsData.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
 
     // Calcular promedios para Green vs Fairway
     const greenFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN');
