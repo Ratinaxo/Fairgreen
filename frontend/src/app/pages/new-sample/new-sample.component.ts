@@ -105,6 +105,11 @@ export class NewSampleComponent implements OnInit {
       return;
     }
 
+    if (parseFloat(this.form.salinity) < 0 || parseFloat(this.form.conductivity) < 0) {
+      alert('La salinidad y la conductividad no pueden ser valores negativos.');
+      return;
+    }
+
     // Auto-mapear Green 4 a Green 2
     if (this.form.zona === 'GREEN' && this.form.sector === '4') {
       this.form.sector = '2';

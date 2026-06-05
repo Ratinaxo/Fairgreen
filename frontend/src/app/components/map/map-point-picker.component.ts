@@ -17,7 +17,7 @@ import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 import BingMaps from 'ol/source/BingMaps.js';
 import OSM from 'ol/source/OSM';
-import { Style, Circle, Fill, Stroke } from 'ol/style.js';
+import { Style, Circle, Fill, Stroke, Text } from 'ol/style.js';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import { FeatureLike } from 'ol/Feature.js';
@@ -189,21 +189,34 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
             style: (feature) => {
                 const props = feature.getProperties();
                 const tipo = props['tipo_de_tierra'];
+                const hoyo = props['numero_de_hoyo'];
 
                 let fillColor = 'rgba(255, 255, 255, 0.2)';
                 let strokeColor = 'rgba(255, 255, 255, 0.5)';
+                let textColor = '#666666';
 
                 if (tipo === 'GREEN') {
                     fillColor = 'rgba(76, 175, 125, 0.4)';
                     strokeColor = '#4CAF7D';
+                    textColor = '#2E7D32'; // Verde más oscuro
                 } else if (tipo === 'FAIRWAY') {
                     fillColor = 'rgba(245, 158, 11, 0.4)';
                     strokeColor = '#F59E0B';
+                    textColor = '#B45309'; // Naranja/Ambar más oscuro
                 }
 
                 return new Style({
                     fill: new Fill({ color: fillColor }),
-                    stroke: new Stroke({ color: strokeColor, width: 2.5 })
+                    stroke: new Stroke({ color: strokeColor, width: 2.5 }),
+                    text: new Text({
+                        text: hoyo != null ? hoyo.toString() : '',
+                        font: 'bold 16px "Inter", "Segoe UI", sans-serif',
+                        fill: new Fill({ color: textColor }),
+                        // Agregamos un contorno blanco semitransparente para que resalte más y sea legible
+                        stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.7)', width: 3 }),
+                        overflow: true,
+                        placement: 'point',
+                    })
                 });
             }
         });
