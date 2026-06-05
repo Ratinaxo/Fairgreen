@@ -1,9 +1,10 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { DataService, MuestraFeature } from '../../services/data.service';
+import { DataService, MuestraFeature, SeccionFeature } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
+import { MapGeorefComponent } from '../../components/map/map-georef.component';
 
 interface SampleRow {
   id: number;
@@ -21,16 +22,18 @@ interface SampleRow {
 @Component({
   selector: 'app-sample-history',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, MapGeorefComponent],
   templateUrl: './sample-history.component.html',
   styleUrl: './sample-history.component.css'
 })
-export class SampleHistoryComponent implements OnInit {
+export class SampleHistoryComponent implements OnInit, OnDestroy {
   private dataService = inject(DataService);
   private router = inject(Router);
   private authService = inject(AuthService);
 
-  canDelete = computed(() => {
+  secciones = signal<SeccionFeature[]>([]);
+
+  canEdit = computed(() => {
     const rol = this.authService.rol();
     return rol === 'ADMIN' || rol === 'AGRO';
   });
@@ -64,7 +67,16 @@ export class SampleHistoryComponent implements OnInit {
   selectedFeature = signal<MuestraFeature | null>(null);
 
   ngOnInit() {
+    this.dataService.getSecciones().subscribe({
+      next: (data) => {
+        this.secciones.set(data.features ?? []);
+      }
+    });
     this.loadPage(1);
+  }
+
+  ngOnDestroy() {
+    document.body.classList.remove('modal-open');
   }
 
   loadPage(page: number) {
@@ -97,30 +109,18 @@ export class SampleHistoryComponent implements OnInit {
     this.loadPage(1);
   }
 
-  deleteSample(id: number) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta muestra?')) {
-      this.dataService.deleteMuestra(id).subscribe({
-        next: () => {
-          this.loadPage(this.currentPage());
-        },
-        error: (err) => {
-          console.error(err);
-          alert('Error al eliminar la muestra');
-        }
-      });
-    }
-  }
-
-  viewInMap(id: number) {
-    this.router.navigate(['/geomap'], { queryParams: { muestraId: id } });
+  editSample(id: number) {
+    this.router.navigate(['/samples/edit', id]);
   }
 
   openDetailModal(feature: MuestraFeature) {
     this.selectedFeature.set(feature);
+    document.body.classList.add('modal-open');
   }
 
   closeDetailModal() {
     this.selectedFeature.set(null);
+    document.body.classList.remove('modal-open');
   }
 
   formatFecha(fechaIso: string): string {
@@ -139,7 +139,7 @@ export class SampleHistoryComponent implements OnInit {
       const fecha = new Date(p.fecha_hora_captura);
       const tipo = p.id_seccion.properties.tipo_de_tierra ?? '—';
       return {
-        id: p.id_muestra,
+        id: f.id,
         date: fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         humidity: p.humedad,
         temperature: p.temperatura,
