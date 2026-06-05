@@ -144,8 +144,9 @@ export class NewSampleComponent implements OnInit {
 
     this.dataService.createMuestra(payload).subscribe({
       next: (muestra) => {
-        if (this.selectedFile) {
-          this.dataService.uploadFoto(muestra.id, this.selectedFile).subscribe({
+        const muestraId = muestra.properties?.id_muestra ?? muestra.id;
+        if (this.selectedFile && muestraId) {
+          this.dataService.uploadFoto(muestraId, this.selectedFile).subscribe({
             next: () => {
               this.onSaveSuccess();
             },

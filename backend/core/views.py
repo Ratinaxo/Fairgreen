@@ -90,6 +90,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all().order_by('nombre')
     serializer_class = UsuarioSerializer
     permission_classes = [EsAdmin]
+    pagination_class = None
 
 
 class FotoViewSet(viewsets.ModelViewSet):

@@ -55,11 +55,39 @@ class PuntoCriticoSerializer(GeoFeatureModelSerializer):
 class FotoSerializer(serializers.ModelSerializer):
     """
     Serializador para el modelo Foto.
-    Devuelve la URL del archivo en S3 y la fecha de subida.
+    Acepta subida de archivos y guarda la URL resultante en ruta_archivo.
     """
+    ruta_archivo = serializers.FileField(write_only=True)
+    url = serializers.CharField(source='ruta_archivo', read_only=True)
+
     class Meta:
         model = Foto
-        fields = ['id_foto', 'ruta_archivo', 'fecha_hora_subida']
+        fields = ['id_foto', 'id_muestra', 'ruta_archivo', 'url', 'fecha_hora_subida']
+        read_only_fields = ['id_foto', 'fecha_hora_subida']
+
+    def create(self, validated_data):
+        import os
+        from django.conf import settings
+
+        archivo = validated_data.pop('ruta_archivo')
+        muestra = validated_data['id_muestra']
+
+        # Guardar archivo en media/fotos/
+        fotos_dir = os.path.join(settings.BASE_DIR, 'media', 'fotos')
+        os.makedirs(fotos_dir, exist_ok=True)
+
+        nombre = f"muestra_{muestra.pk}_{archivo.name}"
+        ruta = os.path.join(fotos_dir, nombre)
+
+        with open(ruta, 'wb+') as dest:
+            for chunk in archivo.chunks():
+                dest.write(chunk)
+
+        foto = Foto.objects.create(
+            id_muestra=muestra,
+            ruta_archivo=f"/media/fotos/{nombre}",
+        )
+        return foto
 
 
 class MuestraSerializer(GeoFeatureModelSerializer):
