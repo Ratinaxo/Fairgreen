@@ -66,23 +66,11 @@ export class NewSampleComponent implements OnInit {
 
   /** Called when zona or sector changes — reset map and coordinates */
   onZonaSectorChange(): void {
-    this.mostrarMapa = false;
     this.form.lat = '';
     this.form.lng = '';
   }
 
   toggleMap(): void {
-    if (!this.mostrarMapa) {
-      // Validate zona + sector are selected before opening the map
-      if (!this.form.zona || !this.form.sector) {
-        alert('Selecciona la zona y el sector antes de marcar en el mapa.');
-        return;
-      }
-      if (!this.getSelectedSeccion()) {
-        alert('La combinación de zona y sector seleccionada no existe.');
-        return;
-      }
-    }
     this.mostrarMapa = !this.mostrarMapa;
   }
 

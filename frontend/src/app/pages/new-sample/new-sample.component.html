@@ -24,7 +24,7 @@
             <div class="form-group">
               <label for="zona-select" class="form-label">Zona</label>
               <div class="select-wrapper">
-                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true">
+                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true" (change)="onZonaSectorChange()">
                   <option value="">Seleccionar zona</option>
                   <option value="GREEN">Green</option>
                   <option value="FAIRWAY">Fairway</option>
@@ -34,7 +34,7 @@
             <div class="form-group">
               <label for="sector-select" class="form-label">Sector seleccionado</label>
               <div class="select-wrapper">
-                <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true">
+                <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true" (change)="onZonaSectorChange()">
                   <option value="">Seleccionar sector</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -64,17 +64,9 @@
                 [initialLat]="form.lat ? +form.lat : null"
                 [initialLon]="form.lng ? +form.lng : null"
                 [secciones]="secciones"
+                [selectedSeccion]="getSelectedSeccion()"
                 (coordinateSelect)="onCoordinateSelected($event)"
               />
-              @if (form.zona && form.lat) {
-                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:8px 12px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.3);border-radius:8px;font-size:12px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                  <span style="color:#1a2e22;font-weight:500;">
-                    Zona y sector detectados automáticamente:
-                    <strong>{{ form.zona === 'GREEN' ? 'Green' : 'Fairway' }} — Hoyo {{ form.sector }}</strong>
-                  </span>
-                </div>
-              }
             </div>
           }
 
