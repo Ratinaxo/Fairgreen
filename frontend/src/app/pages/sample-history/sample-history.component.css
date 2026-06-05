@@ -1,0 +1,38 @@
+
+    .history-page { animation: fadeSlideUp 250ms ease; }
+
+    .filter-card { padding: 14px 16px; margin-bottom: 0; }
+
+    .page-btn {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+
+      &:hover:not(:disabled) {
+        background: var(--color-surface-alt);
+        border-color: var(--color-primary);
+      }
+
+      &.active {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+      }
+
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+    }
+  

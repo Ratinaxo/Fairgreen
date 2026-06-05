@@ -89,6 +89,27 @@ export interface FotoItem {
   fecha_hora_subida: string;
 }
 
+export type TipoNotificacion = 'PUNTO_CRITICO' | 'SISTEMA';
+
+export interface Notificacion {
+  id_notificacion: number;
+  rut_usuario: UsuarioResumen;
+  titulo: string;
+  mensaje: string;
+  tipo: TipoNotificacion;
+  leida: boolean;
+  fecha_hora: string; // ISO 8601
+  id_seccion: number | null;
+  id_muestra: number | null;
+}
+
+export interface NotificacionesResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Notificacion[];
+}
+
 export interface CreateMuestraPayload {
   id_seccion_id: number;
   id_punto_critico?: number | null;
@@ -140,10 +161,14 @@ export class DataService {
    * @param page  Número de página (1-indexed)
    * @param size  Resultados por página (por defecto usa el global: 50)
    */
-  getMuestras(page = 1, size = 20): Observable<MuestraGeoJSON> {
-    const params = new HttpParams()
+  getMuestras(page = 1, size = 20, fechaDesde?: string, fechaHasta?: string): Observable<MuestraGeoJSON> {
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('page_size', size.toString());
+
+    if (fechaDesde) params = params.set('fecha_desde', fechaDesde);
+    if (fechaHasta) params = params.set('fecha_hasta', fechaHasta);
+
     return this.http.get<MuestraGeoJSON>(`${this.api}/muestras/`, { params });
   }
 
@@ -184,9 +209,9 @@ export class DataService {
     return this.http.post<UsuarioResumen>(`${this.api}/usuarios/`, data);
   }
 
-  /** Actualiza un usuario. */
+  /** Actualiza un usuario (parcial). */
   updateUsuario(rut: string, data: Partial<UsuarioResumen>): Observable<UsuarioResumen> {
-    return this.http.put<UsuarioResumen>(`${this.api}/usuarios/${rut}/`, data);
+    return this.http.patch<UsuarioResumen>(`${this.api}/usuarios/${rut}/`, data);
   }
 
   /** Toggle de acceso del usuario (activa/desactiva). */
@@ -202,5 +227,22 @@ export class DataService {
     fd.append('id_muestra', muestraId.toString());
     fd.append('ruta_archivo', archivo);
     return this.http.post<FotoItem>(`${this.api}/fotos/`, fd);
+  }
+
+  // ── Notificaciones ───────────────────────────────────────────────────────────────────
+
+  /** Lista las notificaciones del usuario autenticado. */
+  getNotificaciones(): Observable<NotificacionesResponse> {
+    return this.http.get<NotificacionesResponse>(`${this.api}/notificaciones/`);
+  }
+
+  /** Marca una notificación individual como leída. */
+  marcarLeida(id: number): Observable<Notificacion> {
+    return this.http.post<Notificacion>(`${this.api}/notificaciones/${id}/marcar_leida/`, {});
+  }
+
+  /** Marca todas las notificaciones del usuario como leídas. */
+  marcarTodasLeidas(): Observable<{ marcadas: number }> {
+    return this.http.post<{ marcadas: number }>(`${this.api}/notificaciones/marcar_todas_leidas/`, {});
   }
 }

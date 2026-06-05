@@ -20,8 +20,12 @@ import OSM from 'ol/source/OSM';
 import { Style, Circle, Fill, Stroke } from 'ol/style.js';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON.js';
+import { FeatureLike } from 'ol/Feature.js';
+import { Layer } from 'ol/layer.js';
 import { CAMPO_CENTER, CAMPO_ZOOM_PICKER } from '../../services/map.service';
 import { SeccionFeature } from '../../services/data.service';
+
+
 
 const markerStyle = new Style({
     image: new Circle({
@@ -36,21 +40,7 @@ const BING_MAPS_KEY = '';
 @Component({
     selector: 'app-map-point-picker',
     standalone: true,
-    template: `
-    <div
-      class="map-picker-container"
-      role="img"
-      aria-label="Seleccionar punto en el mapa"
-    >
-      <!-- Feedback toast for invalid click -->
-      @if (showOutOfBounds) {
-        <div class="oob-toast" role="alert" aria-live="polite">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
-          Debes marcar dentro de la zona seleccionada
-        </div>
-      }
-    </div>
-  `,
+    templateUrl: './map-point-picker.component.html',
     styles: [
         `
       .map-picker-container {
@@ -96,8 +86,8 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
     /** Longitud inicial (opcional) */
     initialLon = input<number | null>(null);
 
-    /** Emite { lat, lon } cuando el usuario hace click */
-    coordinateSelect = output<{ lat: number; lon: number }>();
+    /** Emite { lat, lon, seccion? } cuando el usuario hace click */
+    coordinateSelect = output<{ lat: number; lon: number; seccion: SeccionFeature | null }>();
 
     /** Secciones (polígonos) opcionales a dibujar */
     secciones = input<SeccionFeature[]>([]);
@@ -269,9 +259,33 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
             this.markerSource.clear();
             this.markerSource.addFeature(new Feature(new Point(e.coordinate)));
 
+            // Detectar en qué sección cae el punto usando hit-test sobre el layer
+            let seccionDetectada: SeccionFeature | null = null;
+            
+            map.forEachFeatureAtPixel(
+                e.pixel,
+                (feature: FeatureLike) => {
+                    if (seccionDetectada) return;
+                    const props = feature.getProperties();
+                    const idSec = props['id_seccion'];
+                    const tipo  = props['tipo_de_tierra'];
+                    const hoyo  = props['numero_de_hoyo'];
+                    if (tipo && hoyo != null) {
+                        // Buscar la SeccionFeature original para pasar el id correcto
+                        const match = this.secciones().find(
+                            s => s.properties.tipo_de_tierra === tipo
+                              && s.properties.numero_de_hoyo === hoyo
+                        );
+                        if (match) seccionDetectada = match;
+                    }
+                },
+                { layerFilter: (l: Layer) => l === sectionsLayer }
+            );
+
             this.coordinateSelect.emit({
                 lat: parseFloat(lat.toFixed(6)),
                 lon: parseFloat(lon.toFixed(6)),
+                seccion: seccionDetectada,
             });
         });
 

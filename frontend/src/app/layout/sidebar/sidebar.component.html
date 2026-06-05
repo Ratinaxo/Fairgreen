@@ -1,0 +1,77 @@
+
+    <!-- Overlay for mobile drawer -->
+    <div
+      class="sb-overlay"
+      [class.visible]="isOpen()"
+      (click)="isOpen.set(false)"
+    ></div>
+
+    <aside
+      class="sb"
+      [class.collapsed]="isCollapsed()"
+      [class.open]="isOpen()"
+    >
+      <!-- Logo zone -->
+      <div class="sb-logo">
+        <div class="sb-logo-mark">
+          <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" width="32" height="32" priority style="border-radius:8px; object-fit: contain;">
+        </div>
+        <span class="sb-logo-text">Fairgreen</span>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sb-nav" aria-label="Navegación principal">
+        <div class="sb-section-label">MENÚ</div>
+
+        @for (item of filteredMainNav(); track item.route) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            class="sb-link"
+            [attr.aria-label]="item.label"
+            (click)="closeOnMobile()"
+          >
+            <span class="sb-link-indicator"></span>
+            <i class="bi" [ngClass]="item.icon"></i>
+            <span class="sb-link-label">{{ item.label }}</span>
+            @if (item.route === '/notifications' && noLeidas() > 0) {
+              <span class="sb-badge">{{ noLeidas() > 99 ? '99+' : noLeidas() }}</span>
+            }
+            <span class="sb-tooltip">{{ item.label }}</span>
+          </a>
+        }
+
+
+        <div class="sb-divider"></div>
+        <div class="sb-section-label">ANÁLISIS</div>
+
+        @for (item of filteredSecondaryNav(); track item.route) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            class="sb-link"
+            [attr.aria-label]="item.label"
+            (click)="closeOnMobile()"
+          >
+            <span class="sb-link-indicator"></span>
+            <i class="bi" [ngClass]="item.icon"></i>
+            <span class="sb-link-label">{{ item.label }}</span>
+            <span class="sb-tooltip">{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+
+      <!-- Bottom zone -->
+      <div class="sb-footer">
+        <!-- Collapse toggle -->
+        <button
+          class="sb-toggle"
+          (click)="toggleCollapse()"
+          [attr.aria-label]="isCollapsed() ? 'Expandir sidebar' : 'Colapsar sidebar'"
+        >
+          <i class="bi" [ngClass]="isCollapsed() ? 'bi-chevron-right' : 'bi-chevron-left'"></i>
+        </button>
+      </div>
+    </aside>
+
+  

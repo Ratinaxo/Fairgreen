@@ -29,14 +29,7 @@ import {
 @Component({
     selector: 'app-map-overview',
     standalone: true,
-    template: `
-    <div
-      #mapContainer
-      class="map-overview-container"
-      role="img"
-      aria-label="Vista general del campo de golf"
-    ></div>
-  `,
+    templateUrl: './map-overview.component.html',
     styles: [
         `
       .map-overview-container {

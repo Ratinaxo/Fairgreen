@@ -10,6 +10,7 @@ Crea:
   - 2 puntos críticos por sección (10 en total)
   - 25 muestras distribuidas en las secciones
   - 5 fotos de ejemplo vinculadas a muestras
+  - Notificaciones de demo para el admin y agrónoma
 
 Si los datos ya existen, los omite (idempotente).
 """
@@ -19,7 +20,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point, Polygon
 from django.utils import timezone
-from core.models import Usuario, Seccion, PuntoCritico, Muestra, Foto
+from core.models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +54,7 @@ class Command(BaseCommand):
         secciones = self._seed_secciones()
         puntos = self._seed_puntos_criticos(secciones)
         self._seed_muestras(secciones, puntos)
+        self._seed_notificaciones()
         self.stdout.write(self.style.SUCCESS('\n✅ Seed completado exitosamente.\n'))
 
     # -------------------------------------------------------------------------
@@ -76,7 +78,7 @@ class Command(BaseCommand):
                 'rut': '98765432-1',
                 'nombre': 'María',
                 'apellido': 'González',
-                'correo_electronico': 'agronoma@fairgreen.com',
+                'correo_electronico': 'agro@fairgreen.com',
                 'rol': 'AGRO',
                 'password': 'agro1234',
                 'is_staff': False,
@@ -304,6 +306,59 @@ class Command(BaseCommand):
         self.stdout.write(f'   • Muestras: {Muestra.objects.count()}')
         self.stdout.write(f'   • Fotos: {Foto.objects.count()}')
         self.stdout.write('\n🔑 Credenciales de acceso:')
-        self.stdout.write('   • ADMIN:    admin@fairgreen.com     / admin1234')
-        self.stdout.write('   • AGRO:     agronoma@fairgreen.com  / agro1234')
-        self.stdout.write('   • CANCHERO: canchero@fairgreen.com  / canchero1234')
+        self.stdout.write('   • ADMIN:    admin@fairgreen.com    / admin1234')
+        self.stdout.write('   • AGRO:     agro@fairgreen.com     / agro1234')
+        self.stdout.write('   • CANCHERO: canchero@fairgreen.com / canchero1234')
+
+    # -------------------------------------------------------------------------
+    # 6. Notificaciones de demo
+    # -------------------------------------------------------------------------
+    def _seed_notificaciones(self):
+        self.stdout.write('\n🔔 Creando notificaciones de demo...')
+
+        if Notificacion.objects.count() >= 3:
+            self.stdout.write('   ⏭  Ya existen notificaciones, omitiendo.')
+            return
+
+        # Buscar muestras con punto crítico para referenciar
+        muestras_pc = list(Muestra.objects.filter(id_punto_critico__isnull=False)[:3])
+        destinatarios = list(Usuario.objects.filter(rol__in=['ADMIN', 'AGRO']))
+
+        if not destinatarios:
+            self.stdout.write('   ⚠️  No hay usuarios ADMIN/AGRO, omitiendo notificaciones.')
+            return
+
+        notifs_data = [
+            {
+                'titulo': 'Punto Crítico Registrado',
+                'mensaje': 'Se registró un nuevo punto crítico en el Fairway del Hoyo 3. Requiere atención inmediata.',
+                'tipo': 'PUNTO_CRITICO',
+                'id_muestra': muestras_pc[0] if len(muestras_pc) > 0 else None,
+            },
+            {
+                'titulo': 'Punto Crítico Registrado',
+                'mensaje': 'Se detectó un punto crítico con exceso de humedad en el Green del Hoyo 7.',
+                'tipo': 'PUNTO_CRITICO',
+                'id_muestra': muestras_pc[1] if len(muestras_pc) > 1 else None,
+            },
+            {
+                'titulo': 'Aviso del Sistema',
+                'mensaje': 'Bienvenido al sistema FairGreen. Este es el panel de notificaciones donde recibirás alertas importantes.',
+                'tipo': 'SISTEMA',
+                'id_muestra': None,
+            },
+        ]
+
+        count = 0
+        for user in destinatarios:
+            for nd in notifs_data:
+                Notificacion.objects.create(
+                    rut_usuario=user,
+                    titulo=nd['titulo'],
+                    mensaje=nd['mensaje'],
+                    tipo=nd['tipo'],
+                    id_muestra=nd['id_muestra'],
+                )
+                count += 1
+
+        self.stdout.write(f'   ✅ {count} notificaciones creadas.')

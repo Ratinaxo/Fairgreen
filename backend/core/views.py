@@ -1,9 +1,11 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_gis.pagination import GeoJsonPagination
-from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto
-from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer, UsuarioSerializer, FotoSerializer
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto, Notificacion
+from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer, UsuarioSerializer, FotoSerializer, NotificacionSerializer
 from .permissions import EsAdmin, EsAdminOAgronoma
 
 
@@ -42,11 +44,21 @@ class MuestraViewSet(viewsets.ModelViewSet):
     - Administradores ('ADMIN') y Agrónomas ('AGRO') pueden registrar, editar o eliminar muestras.
     - Cancheros ('CANCHERO') solo lectura.
     - Enlaza automáticamente la muestra al usuario logueado mediante el token JWT.
+    - Filtros opcionales: fecha_desde, fecha_hasta (formato YYYY-MM-DD).
     """
-    queryset = Muestra.objects.all().order_by('-fecha_hora_captura')
     serializer_class = MuestraSerializer
     permission_classes = [EsAdminOAgronoma]
     pagination_class = GeoJsonPagination
+
+    def get_queryset(self):
+        qs = Muestra.objects.all().order_by('-fecha_hora_captura')
+        fecha_desde = self.request.query_params.get('fecha_desde')
+        fecha_hasta = self.request.query_params.get('fecha_hasta')
+        if fecha_desde:
+            qs = qs.filter(fecha_hora_captura__date__gte=fecha_desde)
+        if fecha_hasta:
+            qs = qs.filter(fecha_hora_captura__date__lte=fecha_hasta)
+        return qs
 
     def perform_create(self, serializer):
         """
@@ -69,6 +81,7 @@ class MuestraViewSet(viewsets.ModelViewSet):
         return Response({'deleted': count})
 
 
+
 class UsuarioViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar Usuarios.
@@ -87,3 +100,82 @@ class FotoViewSet(viewsets.ModelViewSet):
     queryset = Foto.objects.all().order_by('-fecha_hora_subida')
     serializer_class = FotoSerializer
     permission_classes = [EsAdminOAgronoma]
+
+
+class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet de solo lectura para las notificaciones del usuario autenticado.
+    - GET /api/notificaciones/          → Lista las notificaciones del usuario
+    - GET /api/notificaciones/{id}/     → Detalle de una notificación
+    - POST /api/notificaciones/{id}/marcar_leida/  → Marca una como leída
+    - POST /api/notificaciones/marcar_todas_leidas/ → Marca todas como leídas
+    """
+    serializer_class = NotificacionSerializer
+
+    def get_queryset(self):
+        """Filtra siempre las notificaciones al usuario autenticado."""
+        return Notificacion.objects.filter(
+            rut_usuario=self.request.user
+        ).select_related('rut_usuario', 'id_seccion', 'id_muestra')
+
+    @action(detail=True, methods=['post'], url_path='marcar_leida')
+    def marcar_leida(self, request, pk=None):
+        """Marca una notificación individual como leída."""
+        notif = self.get_object()
+        notif.leida = True
+        notif.save(update_fields=['leida'])
+        return Response(self.get_serializer(notif).data)
+
+    @action(detail=False, methods=['post'], url_path='marcar_todas_leidas')
+    def marcar_todas_leidas(self, request):
+        """Marca todas las notificaciones del usuario como leídas."""
+        updated = Notificacion.objects.filter(
+            rut_usuario=request.user,
+            leida=False,
+        ).update(leida=True)
+        return Response({'marcadas': updated})
+
+
+# =============================================================================
+# Señal: genera notificaciones automáticas al crear una Muestra con PC
+# =============================================================================
+@receiver(post_save, sender=Muestra)
+def notificar_punto_critico(sender, instance, created, **kwargs):
+    """
+    Cuando se crea una nueva Muestra,
+    genera una notificación para todos los usuarios ADMIN y AGRO.
+    """
+    if not created:
+        return
+
+    destinatarios = Usuario.objects.filter(rol__in=['ADMIN', 'AGRO'], is_active=True)
+    seccion = instance.id_seccion
+
+    if instance.id_punto_critico:
+        pc = instance.id_punto_critico
+        titulo = 'Punto Crítico Registrado'
+        mensaje = (
+            f'Se registró un nuevo punto crítico en «{seccion}». '
+            f'Descripción: {pc.descripcion}. '
+            f'Muestra ID: {instance.id_muestra}.'
+        )
+    else:
+        titulo = 'Nueva Muestra Registrada'
+        mensaje = (
+            f'Se registró una nueva muestra en «{seccion}». '
+            f'Muestra ID: {instance.id_muestra}.'
+        )
+
+    notifs = [
+        Notificacion(
+            rut_usuario=user,
+            titulo=titulo,
+            mensaje=mensaje,
+            tipo='PUNTO_CRITICO' if instance.id_punto_critico else 'SISTEMA',
+            id_seccion=seccion,
+            id_muestra=instance,
+        )
+        for user in destinatarios
+    ]
+    if notifs:
+        Notificacion.objects.bulk_create(notifs)

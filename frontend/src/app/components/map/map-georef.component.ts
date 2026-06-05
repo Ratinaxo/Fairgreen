@@ -25,14 +25,7 @@ import { firstValueFrom } from 'rxjs';
 @Component({
     selector: 'app-map-georef',
     standalone: true,
-    template: `
-    <div
-      #mapContainer
-      class="map-georef-container"
-      role="img"
-      aria-label="Mapa de georreferenciación del campo"
-    ></div>
-  `,
+    templateUrl: './map-georef.component.html',
     styles: [
         `
       .map-georef-container {

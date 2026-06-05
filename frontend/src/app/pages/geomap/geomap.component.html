@@ -1,0 +1,102 @@
+
+    <div class="geomap-layout">
+      <!-- Map area -->
+      <div class="map-area">
+        <!-- OpenLayers Map -->
+        <app-map-georef 
+            (zoneSelect)="onZoneSelect($event)" 
+            [muestras]="muestras()"
+            [secciones]="secciones()"
+            [focusId]="focusId()" />
+
+        <!-- Map legend -->
+        <app-map-legend />
+
+        @if (selectedMuestra()) {
+          <button class="panel-toggle-btn" (click)="togglePanel()">
+            {{ isPanelOpen() ? 'Ocultar Detalles' : 'Ver Detalles' }}
+          </button>
+        }
+      </div>
+
+      <!-- Right panel -->
+      <aside class="geo-panel" [class.panel-visible]="isPanelOpen()" aria-label="Detalles de muestra seleccionada">
+        @if (selectedMuestra(); as muestra) {
+          <!-- Zone header -->
+          <div style="margin-bottom: 20px; position: relative;">
+            <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
+              Muestra Seleccionada
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span class="badge" [ngClass]="'badge-' + muestra.health">
+                {{ zoneHealthLabel[muestra.health] }}
+              </span>
+            </div>
+            <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
+              {{ muestra.zonaName }}
+            </div>
+          </div>
+
+          <!-- Maintenance status -->
+          <div class="maintenance-card" style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;background:var(--color-surface);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Capturada el</div>
+                <div style="font-size:11px;color:var(--color-text-muted);">{{ muestra.fechaStr }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metrics 2x2 -->
+          <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Mediciones</div>
+            <div class="metrics-grid">
+              <div class="metric-cell">
+                <div class="metric-label">Humedad</div>
+                <div class="metric-value">{{ muestra.humedad }}<span class="metric-unit"> /5</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(muestra.humedad / 5 * 100) + '%'"></div></div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-label">Temperatura</div>
+                <div class="metric-value">{{ muestra.temperatura }}<span class="metric-unit">°C</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-warning" [style.width]="(muestra.temperatura / 40 * 100) + '%'"></div></div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-label">Salinidad</div>
+                <div class="metric-value">{{ muestra.salinidad }}<span class="metric-unit"> dS</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(muestra.salinidad / 5 * 100) + '%'"></div></div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-label">Conductividad</div>
+                <div class="metric-value">{{ muestra.conductividad }}<span class="metric-unit"> dS</span></div>
+                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-danger" [style.width]="(muestra.conductividad / 5 * 100) + '%'"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image & Notes -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Evidencia e Indicaciones</div>
+            @if (muestra.foto) {
+              <img [src]="muestra.foto" alt="Foto de muestra" style="width:100%;border-radius:8px;margin-bottom:10px;border:1px solid #dde5df;" />
+            }
+            <div style="background:#f9fbf9;border:1px solid #dde5df;padding:12px;border-radius:8px;font-size:12px;color:var(--color-text-secondary);line-height:1.5;">
+              {{ muestra.recomendaciones || 'Sin indicaciones registradas para esta muestra.' }}
+            </div>
+          </div>
+
+        } @else {
+          <div class="empty-panel">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+            <p>Selecciona una muestra en el mapa para ver sus detalles</p>
+          </div>
+        }
+      </aside>
+    </div>
+  

@@ -3,22 +3,7 @@ import { Component } from '@angular/core';
 @Component({
     selector: 'app-map-legend',
     standalone: true,
-    template: `
-    <div class="map-legend" role="note" aria-label="Leyenda del mapa">
-      <span class="legend-item">
-        <span class="legend-dot" style="background: #4CAF7D;"></span>
-        ÓPTIMO
-      </span>
-      <span class="legend-item">
-        <span class="legend-dot" style="background: #F59E0B;"></span>
-        ATENCIÓN
-      </span>
-      <span class="legend-item">
-        <span class="legend-dot" style="background: #EF4444;"></span>
-        CRÍTICO
-      </span>
-    </div>
-  `,
+    templateUrl: './map-legend.component.html',
     styles: [
         `
       .map-legend {
