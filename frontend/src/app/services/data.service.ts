@@ -35,7 +35,8 @@ export interface PuntoCriticoFeature {
   properties: {
     id_punto_critico: number;
     descripcion: string;
-    id_seccion_id: number;
+    id_seccion_id?: number;
+    id_seccion?: SeccionFeature;
   };
 }
 
@@ -85,7 +86,8 @@ export interface MuestraGeoJSON {
 
 export interface FotoItem {
   id_foto: number;
-  ruta_archivo: string;
+  ruta_archivo?: string;
+  url: string;
   fecha_hora_subida: string;
 }
 
@@ -149,6 +151,11 @@ export class DataService {
     return this.http.get<PuntoCriticoGeoJSON>(`${this.api}/puntos-criticos/?id_seccion=${seccionId}`);
   }
 
+  /** Crea un nuevo punto crítico. */
+  createPuntoCritico(payload: { id_seccion_id: number, descripcion: string, ubicacion: { type: 'Point', coordinates: [number, number] } }): Observable<PuntoCriticoFeature> {
+    return this.http.post<PuntoCriticoFeature>(`${this.api}/puntos-criticos/`, payload);
+  }
+
   /** Lista todos los puntos críticos. */
   getTodosPuntosCriticos(): Observable<PuntoCriticoGeoJSON> {
     return this.http.get<PuntoCriticoGeoJSON>(`${this.api}/puntos-criticos/`);
@@ -182,7 +189,7 @@ export class DataService {
     return this.http.post<MuestraFeature>(`${this.api}/muestras/`, payload);
   }
 
-  /** Actualiza una muestra existente (parcial). */
+  /** Actualiza una muestra existente. */
   updateMuestra(id: number, payload: Partial<CreateMuestraPayload>): Observable<MuestraFeature> {
     return this.http.patch<MuestraFeature>(`${this.api}/muestras/${id}/`, payload);
   }

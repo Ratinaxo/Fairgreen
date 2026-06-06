@@ -15,16 +15,6 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="zona-select" class="form-label">Zona</label>
-              <div class="select-wrapper">
-                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true" (change)="onZonaSectorChange()">
-                  <option value="">Seleccionar zona</option>
-                  <option value="GREEN">Green</option>
-                  <option value="FAIRWAY">Fairway</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
               <label for="sector-select" class="form-label">Sector seleccionado</label>
               <div class="select-wrapper">
                 <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true" (change)="onZonaSectorChange()">
@@ -40,6 +30,41 @@
                   <option value="9">9</option>
                 </select>
               </div>
+            </div>
+            <div class="form-group">
+              <label for="zona-select" class="form-label">Zona</label>
+              <div class="select-wrapper">
+                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true" (change)="onZonaSectorChange()">
+                  <option value="">Seleccionar zona</option>
+                  <option value="GREEN">Green</option>
+                  <option value="FAIRWAY">Fairway</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" style="align-items: flex-end;">
+            <div class="form-group" style="flex: 1;">
+              <label for="punto-critico-select" class="form-label">Punto Crítico (Opcional)</label>
+              <div class="select-wrapper">
+                <select id="punto-critico-select" class="form-control" [(ngModel)]="form.puntoCriticoId" name="puntoCriticoId" (change)="onPuntoCriticoChange()" [disabled]="form.esNuevoPuntoCritico">
+                  <option value="">Ninguno (Muestra regular)</option>
+                  @for (pc of puntosCriticosMapa; track pc.id) {
+                    <option [value]="pc.id">
+                      Punto {{ pc.id }}
+                      @if (pc.properties?.id_seccion?.properties) {
+                        ({{ pc.properties.id_seccion!.properties.tipo_de_tierra }} {{ pc.properties.id_seccion!.properties.numero_de_hoyo }})
+                      }
+                    </option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 8px; padding-bottom: 10px;">
+              <input type="checkbox" id="es-nuevo-pc" [(ngModel)]="form.esNuevoPuntoCritico" name="esNuevoPuntoCritico" style="width: 16px; height: 16px; cursor: pointer;" [disabled]="!!form.puntoCriticoId">
+              <label for="es-nuevo-pc" style="font-size: 13px; color: var(--color-text-secondary); cursor: pointer; user-select: none;" [style.opacity]="form.puntoCriticoId ? 0.5 : 1">
+                Guardar como nuevo <strong>Punto Crítico</strong>
+              </label>
             </div>
           </div>
 
@@ -58,8 +83,9 @@
                 [initialLon]="form.lng ? +form.lng : null"
                 [secciones]="secciones"
                 [selectedSeccion]="getSelectedSeccion()"
+                [puntosCriticos]="puntosCriticosMapa"
                 (coordinateSelect)="onCoordinateSelected($event)"
-              />
+              ></app-map-point-picker>
             </div>
           }
 
@@ -67,13 +93,14 @@
           <div class="form-row">
             <div class="form-group">
               <label for="lat-input" class="form-label">Latitud</label>
-              <input id="lat-input" type="text" class="form-control" placeholder="-33.0150" [(ngModel)]="form.lat" name="lat" readonly aria-label="Latitud geográfica"/>
+              <input id="lat-input" type="text" class="form-control" [(ngModel)]="form.lat" name="lat" readonly aria-label="Latitud geográfica"/>
             </div>
             <div class="form-group">
               <label for="lng-input" class="form-label">Longitud</label>
-              <input id="lng-input" type="text" class="form-control" placeholder="-71.5068" [(ngModel)]="form.lng" name="lng" readonly aria-label="Longitud geográfica"/>
+              <input id="lng-input" type="text" class="form-control" [(ngModel)]="form.lng" name="lng" readonly aria-label="Longitud geográfica"/>
             </div>
           </div>
+
         </div>
 
         <!-- Sección 2: Métricas -->
@@ -112,30 +139,49 @@
 
           <div class="evidence-row">
             <!-- Drop zone -->
-            <div
-              class="drop-zone"
-              [ngClass]="{'drag-over': isDragging}"
-              (dragover)="isDragging = true; $event.preventDefault()"
-              (dragleave)="isDragging = false"
-              (drop)="onDrop($event)"
-              (click)="fileInput.click()"
-              id="drop-zone-area"
-              role="button"
-              aria-label="Área de carga de archivo. Click para seleccionar"
-              tabindex="0"
-              (keydown.enter)="fileInput.click()"
-            >
-              <input #fileInput type="file" accept=".svg,.png,.jpg,.jpeg,.dif" style="display:none;" (change)="onFileChange($event)" aria-label="Seleccionar archivo de evidencia"/>
-              <div>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);margin-bottom:8px;" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-                @if (uploadedFile) {
-                  <div style="font-size:13px;font-weight:600;color:var(--color-primary);">{{ uploadedFile }}</div>
-                  <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Click para cambiar</div>
-                } @else {
-                  <div style="font-size:13px;font-weight:500;color:var(--color-text-secondary);">Click para Cargar Archivo o Soltar</div>
-                  <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">SVG, PNG, JPG, DIF (máx. 10MB)</div>
-                }
+            <div class="upload-col">
+              <div
+                class="drop-zone"
+                [ngClass]="{'drag-over': isDragging}"
+                (dragover)="isDragging = true; $event.preventDefault()"
+                (dragleave)="isDragging = false"
+                (drop)="onDrop($event)"
+                (click)="fileInput.click()"
+                id="drop-zone-area"
+                role="button"
+                aria-label="Área de carga de archivos. Click para seleccionar"
+                tabindex="0"
+                (keydown.enter)="fileInput.click()"
+              >
+                <input #fileInput type="file" accept=".svg,.png,.jpg,.jpeg" multiple style="display:none;" (change)="onFileChange($event)" aria-label="Seleccionar archivos de evidencia"/>
+                <div>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);margin-bottom:8px;" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                  @if (selectedFiles.length > 0) {
+                    <div style="font-size:13px;font-weight:600;color:var(--color-primary);">{{ selectedFiles.length }} archivo(s) seleccionado(s)</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Click para agregar más</div>
+                  } @else {
+                    <div style="font-size:13px;font-weight:500;color:var(--color-text-secondary);">Click para Cargar Fotos o Soltar</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">PNG, JPG (múltiples archivos permitidos)</div>
+                  }
+                </div>
               </div>
+
+              <!-- Selected files list -->
+              @if (selectedFiles.length > 0) {
+                <div class="file-previews">
+                  @for (file of selectedFiles; track file.name; let i = $index) {
+                    <div class="file-preview-item">
+                      <div class="file-preview-name">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        <span>{{ file.name }}</span>
+                      </div>
+                      <button type="button" class="file-remove-btn" (click)="removeFile(i)" [attr.aria-label]="'Eliminar ' + file.name">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
             </div>
 
             <!-- Indicaciones textarea -->

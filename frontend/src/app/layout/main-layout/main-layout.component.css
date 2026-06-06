@@ -12,6 +12,9 @@
       overflow: hidden;
       transition: margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
     }
+    .shell-main.sidebar-collapsed {
+      margin-left: 60px;
+    }
     .content-area {
       flex: 1;
       overflow-y: auto;
@@ -21,8 +24,10 @@
 
     @media (max-width: 1199px) {
       .shell-main { margin-left: 60px; }
+      .shell-main.sidebar-collapsed { margin-left: 60px; }
     }
 
     @media (max-width: 1023px) {
       .shell-main { margin-left: 0; }
-    }
+      .shell-main.sidebar-collapsed { margin-left: 0; }
+    }

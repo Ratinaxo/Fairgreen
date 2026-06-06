@@ -1,0 +1,219 @@
+<div class="detail-page">
+  <div class="page-animate-wrapper">
+
+    <!-- Breadcrumb / Back Button -->
+    <div class="page-header">
+      <button class="btn-back" (click)="goBack()" id="back-btn" aria-label="Volver al historial">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        Volver al historial
+      </button>
+      <div class="header-actions">
+        @if (!isLoading() && !error()) {
+          @if (canEdit()) {
+            <button class="btn-outline" id="edit-sample-btn" (click)="editSample()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Editar
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Loading Skeleton -->
+    @if (isLoading()) {
+      <div class="detail-grid">
+        <div class="card media-card">
+          <div class="skeleton-shimmer" style="width:100%;aspect-ratio:4/3;border-radius:12px;"></div>
+          <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;">
+            @for (i of [1,2,3]; track i) {
+              <div class="skeleton-shimmer" style="width:48px;height:48px;border-radius:8px;flex-shrink:0;"></div>
+            }
+          </div>
+        </div>
+        <div class="info-col">
+          <div class="card" style="padding:24px;">
+            @for (i of [1,2,3,4,5]; track i) {
+              <div class="skeleton-shimmer" style="height:20px;border-radius:4px;margin-bottom:16px;width:80%;"></div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (error()) {
+      <div class="card" style="padding:48px;text-align:center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger,#ef4444)" stroke-width="1.5" style="margin:0 auto 16px;display:block;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+        <p style="color:var(--color-text-secondary);font-size:15px;">{{ error() }}</p>
+        <button class="btn-primary" style="margin-top:16px;" (click)="goBack()">Volver al historial</button>
+      </div>
+    }
+
+    <!-- Main Content -->
+    @if (!isLoading() && !error() && muestra()) {
+      <div class="detail-grid">
+
+        <!-- LEFT: Photo Carousel + Map -->
+        <div class="media-col">
+
+          <!-- Photo Carousel -->
+          <div class="card carousel-card">
+            <div class="carousel-header">
+              <span style="font-size:13px;font-weight:600;color:var(--color-text-secondary);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                Evidencia Fotográfica
+              </span>
+              @if (fotos().length > 0) {
+                <span class="photo-counter">{{ currentPhotoIndex() + 1 }} / {{ fotos().length }}</span>
+              }
+            </div>
+
+            @if (fotos().length === 0) {
+              <div class="no-photo-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color:var(--color-text-muted);margin-bottom:12px;" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <p style="color:var(--color-text-muted);font-size:13px;margin:0;">Sin fotos registradas</p>
+              </div>
+            } @else {
+              <div class="carousel-viewport">
+                <img
+                  [src]="fotos()[currentPhotoIndex()].url"
+                  [alt]="'Foto ' + (currentPhotoIndex() + 1) + ' de muestra'"
+                  class="carousel-image"
+                />
+
+                @if (fotos().length > 1) {
+                  <button class="carousel-btn carousel-btn--prev" (click)="prevPhoto()" aria-label="Foto anterior">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                  <button class="carousel-btn carousel-btn--next" (click)="nextPhoto()" aria-label="Foto siguiente">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                }
+              </div>
+
+              <!-- Thumbnails -->
+              @if (fotos().length > 1) {
+                <div class="thumbnails-row">
+                  @for (foto of fotos(); track foto.id_foto; let i = $index) {
+                    <button
+                      class="thumb-btn"
+                      [class.active]="i === currentPhotoIndex()"
+                      (click)="goToPhoto(i)"
+                      [attr.aria-label]="'Ver foto ' + (i + 1)"
+                    >
+                      <img [src]="foto.url" [alt]="'Miniatura ' + (i + 1)" class="thumb-img" />
+                    </button>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Map -->
+          <div class="card map-card">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span style="font-size:13px;font-weight:600;color:var(--color-text-secondary);">Ubicación de la Muestra</span>
+            </div>
+            <div class="map-container">
+              <app-map-georef
+                [muestras]="[muestra()!]"
+                [secciones]="secciones()"
+                [focusId]="muestra()!.id.toString()"
+              ></app-map-georef>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Info -->
+        <div class="info-col">
+
+          <!-- Identity Card -->
+          <div class="card info-card">
+            <div class="info-card-header">
+              <div class="identity-title">
+                <h1 class="sample-title">Muestra en {{ zona() }} - Sector {{ sector() }}</h1>
+                <span class="health-badge" [ngClass]="'health-' + health()">{{ healthLabel() }}</span>
+              </div>
+              <div class="identity-meta">
+                <div class="meta-item">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <span>{{ zona() }} — Sector {{ sector() }}</span>
+                </div>
+                <div class="meta-item">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                  <span>{{ formatFecha(muestra()!.properties.fecha_hora_captura) }}</span>
+                </div>
+                <div class="meta-item">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>{{ responsable() }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div class="metrics-section">
+              <h2 class="section-title">Métricas del Suelo</h2>
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <div class="metric-icon metric-icon--humidity">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                  </div>
+                  <div class="metric-value">{{ muestra()!.properties.humedad.toFixed(1) }}</div>
+                  <div class="metric-label">Humedad (1–5)</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon metric-icon--temp">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+                  </div>
+                  <div class="metric-value">{{ muestra()!.properties.temperatura.toFixed(1) }}°</div>
+                  <div class="metric-label">Temperatura (°C)</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon metric-icon--salinity" [ngClass]="{'metric-icon--warn': muestra()!.properties.salinidad > 1.5, 'metric-icon--danger': muestra()!.properties.salinidad > 2.5}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  </div>
+                  <div class="metric-value" [class.value--warn]="muestra()!.properties.salinidad > 1.5" [class.value--danger]="muestra()!.properties.salinidad > 2.5">{{ muestra()!.properties.salinidad.toFixed(2) }}</div>
+                  <div class="metric-label">Salinidad (dS/m)</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon metric-icon--cond" [ngClass]="{'metric-icon--warn': muestra()!.properties.conductividad > 2.0, 'metric-icon--danger': muestra()!.properties.conductividad > 3.5}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  </div>
+                  <div class="metric-value" [class.value--warn]="muestra()!.properties.conductividad > 2.0" [class.value--danger]="muestra()!.properties.conductividad > 3.5">{{ muestra()!.properties.conductividad.toFixed(2) }}</div>
+                  <div class="metric-label">Conductividad (dS/m)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Observations -->
+            <div class="observations-section">
+              <h2 class="section-title">Observaciones y Recomendaciones</h2>
+              <div class="observations-body">
+                {{ muestra()!.properties.recomendaciones || 'Sin observaciones registradas para esta muestra.' }}
+              </div>
+            </div>
+
+            <!-- Coordinates -->
+            <div class="coords-section">
+              <h2 class="section-title">Coordenadas de Captura</h2>
+              <div class="coords-row">
+                <div class="coord-item">
+                  <span class="coord-label">Latitud</span>
+                  <span class="coord-value">{{ muestra()!.geometry.coordinates[1].toFixed(6) }}</span>
+                </div>
+                <div class="coord-item">
+                  <span class="coord-label">Longitud</span>
+                  <span class="coord-value">{{ muestra()!.geometry.coordinates[0].toFixed(6) }}</span>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /info-card -->
+        </div><!-- /info-col -->
+
+      </div><!-- /detail-grid -->
+    }
+
+  </div>
+</div>

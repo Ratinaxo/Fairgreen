@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -22,16 +22,14 @@ interface SampleRow {
 @Component({
   selector: 'app-sample-history',
   standalone: true,
-  imports: [FormsModule, CommonModule, MapGeorefComponent],
+  imports: [FormsModule, CommonModule],
   templateUrl: './sample-history.component.html',
   styleUrl: './sample-history.component.css'
 })
-export class SampleHistoryComponent implements OnInit, OnDestroy {
+export class SampleHistoryComponent implements OnInit {
   private dataService = inject(DataService);
   private router = inject(Router);
   private authService = inject(AuthService);
-
-  secciones = signal<SeccionFeature[]>([]);
 
   canEdit = computed(() => {
     const rol = this.authService.rol();
@@ -64,19 +62,8 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
     return range;
   });
 
-  selectedFeature = signal<MuestraFeature | null>(null);
-
   ngOnInit() {
-    this.dataService.getSecciones().subscribe({
-      next: (data) => {
-        this.secciones.set(data.features ?? []);
-      }
-    });
     this.loadPage(1);
-  }
-
-  ngOnDestroy() {
-    document.body.classList.remove('modal-open');
   }
 
   loadPage(page: number) {
@@ -113,14 +100,8 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
     this.router.navigate(['/samples/edit', id]);
   }
 
-  openDetailModal(feature: MuestraFeature) {
-    this.selectedFeature.set(feature);
-    document.body.classList.add('modal-open');
-  }
-
-  closeDetailModal() {
-    this.selectedFeature.set(null);
-    document.body.classList.remove('modal-open');
+  viewDetail(id: number) {
+    this.router.navigate(['/samples/detail', id]);
   }
 
   formatFecha(fechaIso: string): string {
