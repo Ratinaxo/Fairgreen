@@ -1,0 +1,60 @@
+
+    .dashboard { animation: fadeSlideUp 250ms ease; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+
+    .kpi-card { transition: box-shadow var(--transition-fast); }
+    .kpi-card:hover { box-shadow: var(--shadow-panel); }
+
+    .map-card { }
+    .map-container { position: relative; }
+
+    .report-card {
+      margin-top: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .report-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--color-primary);
+    }
+
+    .report-info { flex: 1; }
+    .report-title { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+    .report-meta { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+
+    .report-actions { display: flex; gap: 10px; }
+
+    .w-100 { width: 100%; justify-content: center; }
+
+    @media (max-width: 1200px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .report-card { flex-direction: column; align-items: flex-start; }
+      .report-actions { width: 100%; display: flex; }
+      .report-actions button { flex: 1; justify-content: center; }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .page-header h1 { font-size: 20px !important; }
+    }
+  

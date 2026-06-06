@@ -1,0 +1,250 @@
+.history-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.page-animate-wrapper {
+  animation: fadeSlideUp 250ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.filter-card {
+  padding: 14px 16px;
+  margin-bottom: 0;
+}
+
+.page-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-alt);
+    border-color: var(--color-primary);
+  }
+
+  &.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--color-surface-alt) 25%, var(--color-border) 37%, var(--color-surface-alt) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.detail-modal-card {
+  width: 960px;
+  max-width: 90vw;
+  max-height: 85vh;
+  text-align: left;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
+  animation: scaleIn var(--transition-normal);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.detail-modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.detail-info-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.detail-map-pane {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  height: 100%;
+  min-height: 400px;
+  background: var(--color-surface-alt);
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .detail-modal-card {
+    max-width: 95vw;
+    max-height: 90vh;
+    padding: var(--space-md);
+  }
+
+  .detail-modal-body {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  .detail-map-pane {
+    min-height: 280px;
+    height: 280px;
+  }
+
+  ::ng-deep .map-georef-container {
+    min-height: 280px !important;
+    height: 280px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+}
+
+.filters-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pagination-text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .filters-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .filter-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .filter-item label {
+    font-size: 11px;
+  }
+
+  .filter-item .select-wrapper,
+  .filter-item input {
+    width: 100% !important;
+  }
+
+  .filter-buttons {
+    grid-column: span 2;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .pagination-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .filters-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-buttons {
+    grid-column: span 1;
+    justify-content: stretch;
+  }
+
+  .filter-buttons button {
+    flex: 1;
+    justify-content: center;
+  }
+}

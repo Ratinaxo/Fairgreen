@@ -1,0 +1,54 @@
+
+    <header class="topbar" role="banner">
+      <!-- Botón hamburguesa (móvil) -->
+      <button
+        class="hamburger-btn"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="sidebarOpen ? 'Cerrar menú' : 'Abrir menú'"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="topbar-left">
+        <img ngSrc="assets/logo-fairgreen.png" alt="FairGreen" class="topbar-logo" width="28" height="28" priority style="object-fit: contain;">
+        <span class="club-name">FairGreen</span>
+        @if (currentRoute && currentRoute !== '/dashboard') {
+          <span class="breadcrumb-sep" aria-hidden="true">›</span>
+          <span class="breadcrumb-page">{{ routeLabel }}</span>
+        }
+      </div>
+      <div class="topbar-right">
+        <a
+          routerLink="/notifications"
+          class="notif-bell-btn"
+          id="topbar-notifications-btn"
+          title="Notificaciones"
+          aria-label="Ver notificaciones"
+        >
+          <i class="bi bi-bell"></i>
+          @if (noLeidas() > 0) {
+            <span class="notif-bell-badge">{{ noLeidas() > 99 ? '99+' : noLeidas() }}</span>
+          }
+        </a>
+        <div class="user-chip">
+          <div class="user-avatar" aria-hidden="true">{{ iniciales() }}</div>
+          <div class="user-meta">
+            <span class="user-name">{{ nombreCompleto() }}</span>
+            <span class="user-role">{{ rolLabel() }}</span>
+          </div>
+        </div>
+        <button class="logout-btn" (click)="logout()" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+  

@@ -1,0 +1,62 @@
+[
+    {
+        "id": "sample-001",
+        "zone_id": "green-1",
+        "sector": 1,
+        "zona": "Green",
+        "coordenadas": {
+            "lat": -32.9914,
+            "lon": -71.5435
+        },
+        "metricas": {
+            "humedad": 4.0,
+            "temperatura": 18.5,
+            "salinidad": 0.8,
+            "conductividad": 1.5
+        },
+        "fecha": "2026-04-16T08:30:00Z",
+        "responsable": "J. Pérez",
+        "evidencia_url": null,
+        "indicaciones": "Niveles dentro del rango. Humedad levemente baja."
+    },
+    {
+        "id": "sample-002",
+        "zone_id": "green-2",
+        "sector": 2,
+        "zona": "Green",
+        "coordenadas": {
+            "lat": -32.9916,
+            "lon": -71.5429
+        },
+        "metricas": {
+            "humedad": 2.8,
+            "temperatura": 26.4,
+            "salinidad": 1.2,
+            "conductividad": 2.3
+        },
+        "fecha": "2026-04-16T07:00:00Z",
+        "responsable": "A. García",
+        "evidencia_url": null,
+        "indicaciones": "Temperatura elevada. Revisar sistema de riego."
+    },
+    {
+        "id": "sample-003",
+        "zone_id": "green-3",
+        "sector": 3,
+        "zona": "Green",
+        "coordenadas": {
+            "lat": -32.9924,
+            "lon": -71.5433
+        },
+        "metricas": {
+            "humedad": 1.5,
+            "temperatura": 31.2,
+            "salinidad": 2.8,
+            "conductividad": 4.1
+        },
+        "fecha": "2026-04-16T06:15:00Z",
+        "responsable": "L. Muñoz",
+        "evidencia_url": null,
+        "indicaciones": "URGENTE: Conductividad y salinidad críticas. Aplicar lavado de suelo."
+    }
+]
