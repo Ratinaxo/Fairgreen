@@ -86,7 +86,8 @@ export interface MuestraGeoJSON {
 
 export interface FotoItem {
   id_foto: number;
-  ruta_archivo: string;
+  ruta_archivo?: string;
+  url: string;
   fecha_hora_subida: string;
 }
 
@@ -190,6 +191,8 @@ export class DataService {
 
   /** Actualiza una muestra por su ID. */
   updateMuestra(id: number, payload: any): Observable<MuestraFeature> {
+  /** Actualiza una muestra existente. */
+  updateMuestra(id: number, payload: Partial<CreateMuestraPayload>): Observable<MuestraFeature> {
     return this.http.patch<MuestraFeature>(`${this.api}/muestras/${id}/`, payload);
   }
 

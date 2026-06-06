@@ -219,5 +219,10 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
         });
 
         this.mapInstance = map;
+
+        // Si el componente se inicializó con un focusId, centrar la vista en él
+        if (this.focusId) {
+            setTimeout(() => this.zoomToSample(this.focusId!), 100);
+        }
     }
 }

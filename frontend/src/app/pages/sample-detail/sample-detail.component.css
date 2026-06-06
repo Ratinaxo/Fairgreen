@@ -1,0 +1,352 @@
+/* ══════════════════════════════════════════
+   Sample Detail Page
+   ══════════════════════════════════════════ */
+
+.detail-page {
+  width: 100%;
+  min-width: 0;
+  animation: fadeSlideUp 250ms ease;
+}
+
+.page-animate-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Header ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 150ms ease;
+}
+.btn-back:hover { color: var(--color-primary); }
+
+.header-actions { display: flex; gap: 10px; }
+
+/* ── Two-column layout ── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.media-col,
+.info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ── Carousel Card ── */
+.carousel-card {
+  padding: 16px;
+  overflow: hidden;
+}
+
+.carousel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.photo-counter {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+}
+
+.no-photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  background: var(--color-surface-alt);
+  border-radius: 12px;
+  border: 1px dashed var(--color-border);
+}
+
+.carousel-viewport {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+  aspect-ratio: 4 / 3;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 200ms ease;
+}
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: background 150ms ease, transform 150ms ease;
+  z-index: 2;
+}
+.carousel-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: translateY(-50%) scale(1.08);
+}
+.carousel-btn--prev { left: 10px; }
+.carousel-btn--next { right: 10px; }
+
+/* Thumbnails */
+.thumbnails-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.thumbnails-row::-webkit-scrollbar { height: 3px; }
+.thumbnails-row::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.thumb-btn {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: none;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.thumb-btn.active { border-color: var(--color-primary); }
+.thumb-btn:hover { transform: scale(1.05); }
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Map Card ── */
+.map-card { overflow: hidden; padding: 0; }
+
+.map-container { height: 320px; }
+
+/* ── Info Card ── */
+.info-card { overflow: hidden; padding: 0; }
+
+.info-card-header {
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.identity-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.sample-title {
+  font-family: var(--font-display, 'DM Serif Display', serif);
+  font-size: 24px;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/* Health badge */
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.health-optimo   { background: rgba(74, 222, 128, 0.15); color: #15803d; border: 1px solid rgba(74, 222, 128, 0.4); }
+.health-atencion { background: rgba(251, 191, 36, 0.15); color: #92400e; border: 1px solid rgba(251, 191, 36, 0.4); }
+.health-critico  { background: rgba(239, 68, 68, 0.12);  color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+.identity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.meta-item svg { flex-shrink: 0; color: var(--color-text-muted); }
+
+/* ── Metrics ── */
+.metrics-section,
+.observations-section,
+.coords-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.coords-section { border-bottom: none; }
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 14px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.metric-card {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 150ms ease;
+}
+.metric-card:hover { border-color: var(--color-primary); }
+
+.metric-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--color-primary, #4ADE80);
+}
+.metric-icon--humidity { background: rgba(56, 189, 248, 0.12); color: #0284c7; }
+.metric-icon--temp     { background: rgba(251, 146, 60, 0.12); color: #ea580c; }
+.metric-icon--salinity { background: rgba(74, 222, 128, 0.12); color: #16a34a; }
+.metric-icon--cond     { background: rgba(74, 222, 128, 0.12); color: #16a34a; }
+.metric-icon--warn     { background: rgba(251, 191, 36, 0.15); color: #d97706; }
+.metric-icon--danger   { background: rgba(239, 68, 68, 0.12);  color: #dc2626; }
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+.value--warn   { color: #d97706; }
+.value--danger { color: #dc2626; }
+
+.metric-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* ── Observations ── */
+.observations-body {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+/* ── Coordinates ── */
+.coords-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.coord-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.coord-label { font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.coord-value { font-size: 14px; font-family: monospace; color: var(--color-text-primary); }
+
+/* ── Skeleton ── */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--color-surface-alt) 25%, var(--color-border) 37%, var(--color-surface-alt) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+@keyframes skeleton-loading {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+/* ══════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .media-col { order: 2; }
+  .info-col  { order: 1; }
+  .map-container { height: 280px; }
+}
+
+@media (max-width: 600px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .info-card-header { padding: 16px; }
+  .metrics-section,
+  .observations-section,
+  .coords-section { padding: 16px; }
+  .sample-title { font-size: 20px; }
+}

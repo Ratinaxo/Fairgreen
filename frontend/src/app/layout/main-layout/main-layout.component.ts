@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
@@ -10,4 +10,6 @@ import { TopbarComponent } from '../topbar/topbar.component';
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.css'
 })
-export class MainLayoutComponent {}
+export class MainLayoutComponent {
+  @ViewChild('sidebar') sidebar!: SidebarComponent;
+}

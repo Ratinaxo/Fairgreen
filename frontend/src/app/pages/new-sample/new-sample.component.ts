@@ -18,8 +18,7 @@ export class NewSampleComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   isDragging = false;
-  uploadedFile = '';
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
   showSuccess = false;
   mostrarMapa = false;
   isLoading = false;
@@ -144,20 +143,24 @@ export class NewSampleComponent implements OnInit {
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files?.[0]) {
-      const file = input.files[0];
-      this.selectedFile = file;
-      this.uploadedFile = file.name;
+    if (input.files && input.files.length > 0) {
+      const newFiles = Array.from(input.files);
+      this.selectedFiles = [...this.selectedFiles, ...newFiles];
     }
+    // Reset input so same file can be re-added after removal
+    input.value = '';
+  }
+
+  removeFile(index: number): void {
+    this.selectedFiles = this.selectedFiles.filter((_, i) => i !== index);
   }
 
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging = false;
-    const file = event.dataTransfer?.files[0];
-    if (file) {
-      this.selectedFile = file;
-      this.uploadedFile = file.name;
+    if (event.dataTransfer?.files) {
+      const newFiles = Array.from(event.dataTransfer.files);
+      this.selectedFiles = [...this.selectedFiles, ...newFiles];
     }
   }
 
@@ -232,6 +235,28 @@ export class NewSampleComponent implements OnInit {
         ubicacion: {
           type: 'Point' as const,
           coordinates: [parseFloat(this.form.lng), parseFloat(this.form.lat)] as [number, number]
+    this.dataService.createMuestra(payload).subscribe({
+      next: (muestra) => {
+        const muestraId = muestra.properties?.id_muestra ?? muestra.id;
+        if (this.selectedFiles.length > 0 && muestraId) {
+          // Upload all photos sequentially
+          const uploadNext = (index: number) => {
+            if (index >= this.selectedFiles.length) {
+              this.onSaveSuccess();
+              return;
+            }
+            this.dataService.uploadFoto(muestraId, this.selectedFiles[index]).subscribe({
+              next: () => uploadNext(index + 1),
+              error: () => {
+                this.isLoading = false;
+                alert(`Muestra registrada, pero hubo un error al subir la imagen ${index + 1}.`);
+                this.router.navigate(['/samples/history']);
+              }
+            });
+          };
+          uploadNext(0);
+        } else {
+          this.onSaveSuccess();
         }
       };
       this.dataService.createPuntoCritico(pcPayload).subscribe({
