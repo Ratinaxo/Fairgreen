@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
 import { MapLegendComponent } from '../../components/map/map-legend.component';
@@ -22,7 +22,7 @@ interface Zone {
 @Component({
   selector: 'app-geomap',
   standalone: true,
-  imports: [NgClass, RouterLink, MapGeorefComponent, MapLegendComponent],
+  imports: [NgClass, MapGeorefComponent, MapLegendComponent],
   templateUrl: './geomap.component.html',
   styleUrl: './geomap.component.css'
 })
@@ -178,7 +178,7 @@ export class GeomapComponent implements OnInit {
     const seccionProps = props['id_seccion']?.properties;
     const zonaName = seccionProps ? `${seccionProps.tipo_de_tierra} #${seccionProps.numero_de_hoyo}` : 'Zona Desconocida';
 
-    const foto = props['fotos'] && props['fotos'].length > 0 ? props['fotos'][0].ruta_archivo : null;
+    const fotos = props['fotos'] || [];
 
     this.selectedMuestra.set({
       id: props['id_muestra'],
@@ -190,7 +190,8 @@ export class GeomapComponent implements OnInit {
       salinidad: props['salinidad']?.toFixed(2) || '0.00',
       conductividad: props['conductividad']?.toFixed(2) || '0.00',
       recomendaciones: props['recomendaciones'],
-      foto
+      fotos,
+      currentPhotoIndex: 0
     });
 
     this.isPanelOpen.set(true);
@@ -198,5 +199,34 @@ export class GeomapComponent implements OnInit {
 
   togglePanel() {
     this.isPanelOpen.set(!this.isPanelOpen());
+  }
+
+  prevPhoto() {
+    const m = this.selectedMuestra();
+    if (!m || !m.fotos || m.fotos.length === 0) return;
+    const total = m.fotos.length;
+    this.selectedMuestra.set({
+      ...m,
+      currentPhotoIndex: (m.currentPhotoIndex - 1 + total) % total
+    });
+  }
+
+  nextPhoto() {
+    const m = this.selectedMuestra();
+    if (!m || !m.fotos || m.fotos.length === 0) return;
+    const total = m.fotos.length;
+    this.selectedMuestra.set({
+      ...m,
+      currentPhotoIndex: (m.currentPhotoIndex + 1) % total
+    });
+  }
+
+  goToPhoto(index: number) {
+    const m = this.selectedMuestra();
+    if (!m) return;
+    this.selectedMuestra.set({
+      ...m,
+      currentPhotoIndex: index
+    });
   }
 }
