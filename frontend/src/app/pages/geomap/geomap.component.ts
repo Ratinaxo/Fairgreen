@@ -46,6 +46,9 @@ export class GeomapComponent implements OnInit {
   private zonesData: Record<string, Zone> = {};
   isLoading = signal(true);
 
+  timeFilter = signal<'7d' | '30d' | '6m' | 'all'>('30d');
+  private allMuestras: MuestraFeature[] = [];
+
   ngOnInit() {
     this._loadRealData();
     this.route.queryParams.subscribe(params => {
@@ -73,11 +76,38 @@ export class GeomapComponent implements OnInit {
         });
       })
     ]).then(([secciones, muestras]) => {
-      this.muestras.set(muestras);
+      this.allMuestras = muestras;
       this.secciones.set(secciones);
-      this._buildZonesData(secciones, muestras);
+      this.applyTimeFilter();
       this.isLoading.set(false);
     });
+  }
+
+  onFilterChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.timeFilter.set(select.value as any);
+    this.applyTimeFilter();
+  }
+
+  private applyTimeFilter() {
+    if (this.allMuestras.length === 0) {
+      this.muestras.set([]);
+      this._buildZonesData(this.secciones(), []);
+      return;
+    }
+
+    let filtered = this.allMuestras;
+    if (this.timeFilter() !== 'all') {
+      const cutoffDate = new Date();
+      if (this.timeFilter() === '7d') cutoffDate.setDate(cutoffDate.getDate() - 7);
+      else if (this.timeFilter() === '30d') cutoffDate.setDate(cutoffDate.getDate() - 30);
+      else if (this.timeFilter() === '6m') cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+      
+      filtered = this.allMuestras.filter(m => new Date(m.properties.fecha_hora_captura) >= cutoffDate);
+    }
+
+    this.muestras.set(filtered);
+    this._buildZonesData(this.secciones(), filtered);
   }
 
   private _buildZonesData(secciones: SeccionFeature[], muestras: MuestraFeature[]) {

@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DataService, MuestraFeature, SeccionFeature } from '../../services/data.service';
@@ -29,6 +29,7 @@ interface SampleRow {
 export class SampleHistoryComponent implements OnInit {
   private dataService = inject(DataService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
 
   canEdit = computed(() => {
@@ -40,6 +41,7 @@ export class SampleHistoryComponent implements OnInit {
   filterZona = '';
   filterFechaDesde = '';
   filterFechaHasta = '';
+  filterIdMuestra = '';
   readonly pageSize = 20;
 
   currentPage = signal(1);
@@ -63,11 +65,35 @@ export class SampleHistoryComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.loadPage(1);
+    this.route.queryParams.subscribe(params => {
+      const page = params['page'] ? parseInt(params['page'], 10) : 1;
+      this.filterSector = params['sector'] || '';
+      this.filterZona = params['zona'] || '';
+      this.filterFechaDesde = params['desde'] || '';
+      this.filterFechaHasta = params['hasta'] || '';
+      this.filterIdMuestra = params['id'] || '';
+      this._fetchData(page);
+    });
   }
 
   loadPage(page: number) {
-    if (page < 1 || page > this.totalPages()) return;
+    if (this.totalCount() > 0 && (page < 1 || page > this.totalPages())) return;
+    
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { 
+        page,
+        sector: this.filterSector || null,
+        zona: this.filterZona || null,
+        desde: this.filterFechaDesde || null,
+        hasta: this.filterFechaHasta || null,
+        id: this.filterIdMuestra || null
+      },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private _fetchData(page: number) {
     this.isLoading.set(true);
     this.currentPage.set(page);
 
@@ -76,6 +102,9 @@ export class SampleHistoryComponent implements OnInit {
       this.pageSize,
       this.filterFechaDesde || undefined,
       this.filterFechaHasta || undefined,
+      this.filterSector || undefined,
+      this.filterZona || undefined,
+      this.filterIdMuestra || undefined
     ).subscribe({
       next: (geoJson) => {
         this.totalCount.set(geoJson.count ?? 0);
@@ -93,6 +122,7 @@ export class SampleHistoryComponent implements OnInit {
     this.filterZona = '';
     this.filterFechaDesde = '';
     this.filterFechaHasta = '';
+    this.filterIdMuestra = '';
     this.loadPage(1);
   }
 

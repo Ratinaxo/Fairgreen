@@ -1,7 +1,18 @@
 
     <div class="geomap-layout">
       <!-- Map area -->
-      <div class="map-area">
+      <div class="map-area" style="position: relative;">
+        <!-- Time Filter Overlay -->
+        <div class="map-time-filter" style="position: absolute; top: 16px; right: 16px; z-index: 1000; background: white; padding: 6px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; border: 1px solid var(--color-border);">
+          <label for="timeFilterGeo" style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin: 0;">Periodo:</label>
+          <select id="timeFilterGeo" (change)="onFilterChange($event)" style="border: none; outline: none; font-size: 13px; color: var(--color-text-primary); font-family: inherit; cursor: pointer; background: transparent;">
+            <option value="7d" [selected]="timeFilter() === '7d'">Últimos 7 días</option>
+            <option value="30d" [selected]="timeFilter() === '30d'">Últimos 30 días</option>
+            <option value="6m" [selected]="timeFilter() === '6m'">Últimos 6 meses</option>
+            <option value="all" [selected]="timeFilter() === 'all'">Todo el tiempo</option>
+          </select>
+        </div>
+
         <!-- OpenLayers Map -->
         <app-map-georef 
             (zoneSelect)="onZoneSelect($event)" 
@@ -28,7 +39,7 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
             <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
-              Muestra Seleccionada
+              Muestra #{{ muestra.id }}
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
               <span class="badge" [ngClass]="'badge-' + muestra.health">

@@ -10,6 +10,18 @@
       <div class="card filter-card">
         <div class="filters-wrapper">
           <div class="filter-item">
+            <label for="filter-id" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">ID Muestra:</label>
+            <input
+              id="filter-id"
+              type="text"
+              class="form-control"
+              style="width:90px;"
+              [(ngModel)]="filterIdMuestra"
+              placeholder="Ej: 42"
+              aria-label="Buscar por ID"
+            />
+          </div>
+          <div class="filter-item">
             <label for="filter-sector" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Sector:</label>
             <div class="select-wrapper" style="width:120px;">
               <select id="filter-sector" class="form-control" [(ngModel)]="filterSector" aria-label="Filtrar por sector">
@@ -79,10 +91,6 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" style="color:var(--color-text-muted);" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
             <span style="font-size:14px;font-weight:600;color:var(--color-text-primary);">Registros Recientes</span>
           </div>
-          <button class="btn-outline" id="export-btn" style="height:32px;font-size:12px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-            Exportar
-          </button>
         </div>
 
         @if (!isLoading() && rows().length === 0) {
@@ -94,6 +102,7 @@
             <table class="data-table" aria-label="Historial de muestras">
               <thead>
                 <tr>
+                  <th scope="col">ID</th>
                   <th scope="col">Fecha</th>
                   <th scope="col">Humedad</th>
                   <th scope="col">Temperatura (°C)</th>
@@ -107,6 +116,7 @@
                 @if (isLoading()) {
                   @for (i of [1, 2, 3, 4, 5]; track i) {
                     <tr>
+                      <td><div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div></td>
                       <td>
                         <div class="skeleton-shimmer" style="width:80px;height:16px;border-radius:4px;"></div>
                         <div class="skeleton-shimmer" style="width:120px;height:12px;margin-top:6px;border-radius:4px;"></div>
@@ -128,6 +138,7 @@
                 } @else {
                   @for (sample of rows(); track sample.id) {
                     <tr>
+                      <td class="mono">#{{ sample.id }}</td>
                       <td>
                         <span style="font-size:13px;font-weight:500;">{{ sample.date }}</span>
                         <div style="font-size:11px;color:var(--color-text-muted);">Sector {{ sample.sector }} · {{ sample.zona }}</div>

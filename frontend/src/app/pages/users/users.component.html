@@ -23,7 +23,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (user of users; track user.rut) {
+                @for (user of users(); track user.rut) {
                   <tr
                     [class.selected-row]="selectedUser()?.rut === user.rut"
                     (click)="selectUser(user)"
@@ -134,9 +134,14 @@
                 </label>
               </div>
 
-              <button class="btn-primary w-full" id="save-user-btn" (click)="saveUser()" style="justify-content:center;margin-bottom:10px;">
-                GUARDAR CAMBIOS
-              </button>
+              <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button class="btn-primary" id="save-user-btn" (click)="saveUser()" style="flex:1; justify-content:center;">
+                  GUARDAR
+                </button>
+                <button class="btn-primary" (click)="deleteUser()" style="flex:1; justify-content:center; background-color: var(--color-danger, #dc3545); border-color: var(--color-danger, #dc3545);">
+                  ELIMINAR
+                </button>
+              </div>
               <button class="btn-text w-full" (click)="closePanel()" style="justify-content:center;">
                 CANCELAR
               </button>
