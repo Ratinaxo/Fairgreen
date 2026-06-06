@@ -141,11 +141,18 @@ export class NewSampleComponent implements OnInit {
     }
   }
 
+  getFileUrl(file: File): string {
+    return URL.createObjectURL(file);
+  }
+
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      const newFiles = Array.from(input.files);
-      this.selectedFiles = [...this.selectedFiles, ...newFiles];
+      const validFiles = Array.from(input.files).filter(file => file.type.startsWith('image/'));
+      if (validFiles.length < input.files.length) {
+        alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
+      }
+      this.selectedFiles = [...this.selectedFiles, ...validFiles];
     }
     // Reset input so same file can be re-added after removal
     input.value = '';
@@ -159,8 +166,13 @@ export class NewSampleComponent implements OnInit {
     event.preventDefault();
     this.isDragging = false;
     if (event.dataTransfer?.files) {
-      const newFiles = Array.from(event.dataTransfer.files);
-      this.selectedFiles = [...this.selectedFiles, ...newFiles];
+      const allFiles = Array.from(event.dataTransfer.files);
+      const validFiles = allFiles.filter(file => file.type.startsWith('image/'));
+      
+      if (validFiles.length < allFiles.length) {
+        alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
+      }
+      this.selectedFiles = [...this.selectedFiles, ...validFiles];
     }
   }
 
