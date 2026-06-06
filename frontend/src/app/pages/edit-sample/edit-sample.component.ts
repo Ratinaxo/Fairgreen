@@ -3,7 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass, CommonModule } from '@angular/common';
 import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
-import { DataService, SeccionFeature } from '../../services/data.service';
+import { DataService, SeccionFeature, MuestraFeature } from '../../services/data.service';
 
 @Component({
   selector: 'app-edit-sample',
@@ -188,7 +188,7 @@ export class EditSampleComponent implements OnInit {
     };
 
     this.dataService.updateMuestra(currentId, payload).subscribe({
-      next: (muestra) => {
+      next: (muestra: MuestraFeature) => {
         // Subir foto si se seleccionó una nueva
         if (this.selectedFile) {
           this.dataService.uploadFoto(muestra.id, this.selectedFile).subscribe({
