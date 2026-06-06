@@ -189,8 +189,6 @@ export class DataService {
     return this.http.post<MuestraFeature>(`${this.api}/muestras/`, payload);
   }
 
-  /** Actualiza una muestra por su ID. */
-  updateMuestra(id: number, payload: any): Observable<MuestraFeature> {
   /** Actualiza una muestra existente. */
   updateMuestra(id: number, payload: Partial<CreateMuestraPayload>): Observable<MuestraFeature> {
     return this.http.patch<MuestraFeature>(`${this.api}/muestras/${id}/`, payload);
