@@ -35,7 +35,8 @@ export interface PuntoCriticoFeature {
   properties: {
     id_punto_critico: number;
     descripcion: string;
-    id_seccion_id: number;
+    id_seccion_id?: number;
+    id_seccion?: SeccionFeature;
   };
 }
 
@@ -147,6 +148,11 @@ export class DataService {
   /** Lista los puntos críticos de una sección. */
   getPuntosDeSeccion(seccionId: number): Observable<PuntoCriticoGeoJSON> {
     return this.http.get<PuntoCriticoGeoJSON>(`${this.api}/puntos-criticos/?id_seccion=${seccionId}`);
+  }
+
+  /** Crea un nuevo punto crítico. */
+  createPuntoCritico(payload: { id_seccion_id: number, descripcion: string, ubicacion: { type: 'Point', coordinates: [number, number] } }): Observable<PuntoCriticoFeature> {
+    return this.http.post<PuntoCriticoFeature>(`${this.api}/puntos-criticos/`, payload);
   }
 
   /** Lista todos los puntos críticos. */

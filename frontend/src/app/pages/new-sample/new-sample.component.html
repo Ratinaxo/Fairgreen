@@ -15,16 +15,6 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="zona-select" class="form-label">Zona</label>
-              <div class="select-wrapper">
-                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true" (change)="onZonaSectorChange()">
-                  <option value="">Seleccionar zona</option>
-                  <option value="GREEN">Green</option>
-                  <option value="FAIRWAY">Fairway</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
               <label for="sector-select" class="form-label">Sector seleccionado</label>
               <div class="select-wrapper">
                 <select id="sector-select" class="form-control" [(ngModel)]="form.sector" name="sector" required aria-required="true" (change)="onZonaSectorChange()">
@@ -40,6 +30,41 @@
                   <option value="9">9</option>
                 </select>
               </div>
+            </div>
+            <div class="form-group">
+              <label for="zona-select" class="form-label">Zona</label>
+              <div class="select-wrapper">
+                <select id="zona-select" class="form-control" [(ngModel)]="form.zona" name="zona" required aria-required="true" (change)="onZonaSectorChange()">
+                  <option value="">Seleccionar zona</option>
+                  <option value="GREEN">Green</option>
+                  <option value="FAIRWAY">Fairway</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" style="align-items: flex-end;">
+            <div class="form-group" style="flex: 1;">
+              <label for="punto-critico-select" class="form-label">Punto Crítico (Opcional)</label>
+              <div class="select-wrapper">
+                <select id="punto-critico-select" class="form-control" [(ngModel)]="form.puntoCriticoId" name="puntoCriticoId" (change)="onPuntoCriticoChange()" [disabled]="form.esNuevoPuntoCritico">
+                  <option value="">Ninguno (Muestra regular)</option>
+                  @for (pc of puntosCriticosMapa; track pc.id) {
+                    <option [value]="pc.id">
+                      Punto {{ pc.id }}
+                      @if (pc.properties?.id_seccion?.properties) {
+                        ({{ pc.properties.id_seccion!.properties.tipo_de_tierra }} {{ pc.properties.id_seccion!.properties.numero_de_hoyo }})
+                      }
+                    </option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 8px; padding-bottom: 10px;">
+              <input type="checkbox" id="es-nuevo-pc" [(ngModel)]="form.esNuevoPuntoCritico" name="esNuevoPuntoCritico" style="width: 16px; height: 16px; cursor: pointer;" [disabled]="!!form.puntoCriticoId">
+              <label for="es-nuevo-pc" style="font-size: 13px; color: var(--color-text-secondary); cursor: pointer; user-select: none;" [style.opacity]="form.puntoCriticoId ? 0.5 : 1">
+                Guardar como nuevo <strong>Punto Crítico</strong>
+              </label>
             </div>
           </div>
 
@@ -58,6 +83,7 @@
                 [initialLon]="form.lng ? +form.lng : null"
                 [secciones]="secciones"
                 [selectedSeccion]="getSelectedSeccion()"
+                [puntosCriticos]="puntosCriticosMapa"
                 (coordinateSelect)="onCoordinateSelected($event)"
               />
             </div>
@@ -67,13 +93,14 @@
           <div class="form-row">
             <div class="form-group">
               <label for="lat-input" class="form-label">Latitud</label>
-              <input id="lat-input" type="text" class="form-control" placeholder="-33.0150" [(ngModel)]="form.lat" name="lat" readonly aria-label="Latitud geográfica"/>
+              <input id="lat-input" type="text" class="form-control" [(ngModel)]="form.lat" name="lat" readonly aria-label="Latitud geográfica"/>
             </div>
             <div class="form-group">
               <label for="lng-input" class="form-label">Longitud</label>
-              <input id="lng-input" type="text" class="form-control" placeholder="-71.5068" [(ngModel)]="form.lng" name="lng" readonly aria-label="Longitud geográfica"/>
+              <input id="lng-input" type="text" class="form-control" [(ngModel)]="form.lng" name="lng" readonly aria-label="Longitud geográfica"/>
             </div>
           </div>
+
         </div>
 
         <!-- Sección 2: Métricas -->

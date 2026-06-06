@@ -35,6 +35,14 @@ const markerStyle = new Style({
     }),
 });
 
+const criticalPointStyle = new Style({
+    image: new Circle({
+        radius: 7,
+        fill: new Fill({ color: '#EF4444' }), // Red
+        stroke: new Stroke({ color: '#FFFFFF', width: 2 }),
+    }),
+});
+
 const BING_MAPS_KEY = '';
 
 @Component({
@@ -95,12 +103,16 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
     /** Sección seleccionada */
     selectedSeccion = input<SeccionFeature | null>(null);
 
+    /** Puntos Críticos (opcional) */
+    puntosCriticos = input<import('../../services/data.service').PuntoCriticoFeature[]>([]);
+
     showOutOfBounds = false;
     private oobTimeout: ReturnType<typeof setTimeout> | null = null;
 
     private mapInstance: Map | null = null;
     private markerSource = new VectorSource();
     private sectionsSource = new VectorSource();
+    private criticalPointsSource = new VectorSource();
 
     constructor(
         private el: ElementRef,
@@ -113,6 +125,23 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
             this.markerSource.clear();
             if (lat != null && lon != null) {
                 this.markerSource.addFeature(new Feature(new Point(fromLonLat([lon, lat]))));
+            }
+        });
+
+        // Reactively update critical points layer
+        effect(() => {
+            const pcs = this.puntosCriticos();
+            this.criticalPointsSource.clear();
+            if (pcs && pcs.length > 0) {
+                const geojsonFormat = new GeoJSON();
+                const features = geojsonFormat.readFeatures({
+                    type: 'FeatureCollection',
+                    features: pcs
+                }, {
+                    dataProjection: 'EPSG:4326',
+                    featureProjection: 'EPSG:3857'
+                });
+                this.criticalPointsSource.addFeatures(features);
             }
         });
 
@@ -221,9 +250,15 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
             }
         });
 
+        const criticalPointsLayer = new VectorLayer({
+            source: this.criticalPointsSource,
+            style: criticalPointStyle,
+            zIndex: 20,
+        });
+
         const map = new Map({
             target: container,
-            layers: [satelliteLayer, sectionsLayer, markerLayer],
+            layers: [satelliteLayer, sectionsLayer, criticalPointsLayer, markerLayer],
             view: new View({
                 center: fromLonLat([initialLon ?? -71.54305513777648, initialLat ?? -32.99195765675922]),
                 zoom: CAMPO_ZOOM_PICKER,
@@ -231,16 +266,40 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
             controls: [],
         });
 
-        // If we have a selectedSeccion at init time, fit to it
-        const selected = this.selectedSeccion();
-        if (selected && this.sectionsSource.getFeatures().length > 0) {
-            const extent = this.sectionsSource.getExtent();
-            if (extent) {
-                map.getView().fit(extent, {
-                    padding: [50, 50, 50, 50],
-                    maxZoom: 19,
-                    duration: 0,
+        // Centering logic on init
+        if (initialLat != null && initialLon != null) {
+            // Map is already centered via the view constructor, just set a close zoom
+            map.getView().setZoom(19);
+        } else {
+            const selected = this.selectedSeccion();
+            if (selected) {
+                const geojsonFormat = new GeoJSON();
+                const features = geojsonFormat.readFeatures({
+                    type: 'FeatureCollection',
+                    features: [selected]
+                }, {
+                    dataProjection: 'EPSG:4326',
+                    featureProjection: 'EPSG:3857'
                 });
+                if (features.length > 0) {
+                    const extent = features[0].getGeometry()?.getExtent();
+                    if (extent) {
+                        map.getView().fit(extent, {
+                            padding: [50, 50, 50, 50],
+                            maxZoom: 19,
+                            duration: 0,
+                        });
+                    }
+                }
+            } else if (this.sectionsSource.getFeatures().length > 0) {
+                const extent = this.sectionsSource.getExtent();
+                if (extent) {
+                    map.getView().fit(extent, {
+                        padding: [50, 50, 50, 50],
+                        maxZoom: 19,
+                        duration: 0,
+                    });
+                }
             }
         }
 
@@ -249,13 +308,27 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
 
             // Detectar en qué sección cae el punto usando hit-test sobre el layer
             let seccionDetectada: SeccionFeature | null = null;
+            let pcDetectado: number | undefined = undefined;
             
+            // 1. Detectar si hicimos clic en un punto crítico
+            map.forEachFeatureAtPixel(
+                e.pixel,
+                (feature: FeatureLike) => {
+                    if (pcDetectado !== undefined) return;
+                    // En GeoJSON el ID suele estar en feature.getId() o en feature.get('id')
+                    let id = feature.getId();
+                    if (!id) id = feature.getProperties()['id'];
+                    if (id != null) pcDetectado = Number(id);
+                },
+                { layerFilter: (l: Layer) => l === criticalPointsLayer }
+            );
+
+            // 2. Detectar sección
             map.forEachFeatureAtPixel(
                 e.pixel,
                 (feature: FeatureLike) => {
                     if (seccionDetectada) return;
                     const props = feature.getProperties();
-                    const idSec = props['id_seccion'];
                     const tipo  = props['tipo_de_tierra'];
                     const hoyo  = props['numero_de_hoyo'];
                     if (tipo && hoyo != null) {
@@ -288,6 +361,7 @@ export class MapPointPickerComponent implements AfterViewInit, OnDestroy {
                 lat: parseFloat(lat.toFixed(6)),
                 lon: parseFloat(lon.toFixed(6)),
                 seccion: seccionDetectada,
+                ...(pcDetectado !== undefined ? { puntoCriticoId: pcDetectado } : {})
             });
         });
 
