@@ -108,7 +108,7 @@ export class NewSampleComponent implements OnInit {
     if (pc && pc.geometry.type === 'Point') {
       this.form.lng = String(pc.geometry.coordinates[0]);
       this.form.lat = String(pc.geometry.coordinates[1]);
-      
+
       // Auto-rellenar zona y sector si está disponible
       if (pc.properties?.id_seccion?.properties) {
         this.form.zona = pc.properties.id_seccion.properties.tipo_de_tierra;
@@ -131,7 +131,7 @@ export class NewSampleComponent implements OnInit {
       const prevSector = this.form.sector;
       this.form.zona = coords.seccion.properties.tipo_de_tierra;
       this.form.sector = String(coords.seccion.properties.numero_de_hoyo);
-      
+
       // Si cambió la sección, el desplegable se filtrará solo por el getter
       if (coords.puntoCriticoId) {
         this.form.puntoCriticoId = String(coords.puntoCriticoId);
@@ -168,7 +168,7 @@ export class NewSampleComponent implements OnInit {
     if (event.dataTransfer?.files) {
       const allFiles = Array.from(event.dataTransfer.files);
       const validFiles = allFiles.filter(file => file.type.startsWith('image/'));
-      
+
       if (validFiles.length < allFiles.length) {
         alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
       }
@@ -193,7 +193,7 @@ export class NewSampleComponent implements OnInit {
     }
 
     const sec = this.secciones.find(s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === parseInt(this.form.sector, 10));
-    
+
     if (!sec) {
       alert('La combinación de Zona y Sector no existe en la base de datos del sistema.');
       return;
