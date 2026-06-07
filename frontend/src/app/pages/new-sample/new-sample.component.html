@@ -52,7 +52,7 @@
                   @for (pc of puntosCriticosMapa; track pc.id) {
                     <option [value]="pc.id">
                       Punto {{ pc.id }}
-                      @if (pc.properties?.id_seccion?.properties) {
+                      @if (pc.properties.id_seccion?.properties) {
                         ({{ pc.properties.id_seccion!.properties.tipo_de_tierra }} {{ pc.properties.id_seccion!.properties.numero_de_hoyo }})
                       }
                     </option>

@@ -132,7 +132,7 @@
           <div class="card info-card">
             <div class="info-card-header">
               <div class="identity-title">
-                <h1 class="sample-title">Muestra en {{ zona() }} - Sector {{ sector() }}</h1>
+                <h1 class="sample-title">Muestra #{{ muestra()!.id }} en {{ zona() }} - Sector {{ sector() }}</h1>
                 <span class="health-badge" [ngClass]="'health-' + health()">{{ healthLabel() }}</span>
               </div>
               <div class="identity-meta">

@@ -31,7 +31,6 @@ interface Sector {
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit {
-  showDownloadModal = false;
   isLoading = signal(true);
   muestras = signal<MuestraFeature[]>([]);
 

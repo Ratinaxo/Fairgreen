@@ -1,9 +1,9 @@
 
-    <div class="shell">
+    <div class="shell" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
       <app-sidebar #sidebar />
       <div class="shell-main" [class.sidebar-collapsed]="sidebar.isCollapsed()">
         <app-topbar (toggleSidebarEvent)="sidebar.isOpen.set(!sidebar.isOpen())" />
-        <main class="content-area">
+        <main class="content-area" #contentArea>
           <router-outlet />
         </main>
       </div>
