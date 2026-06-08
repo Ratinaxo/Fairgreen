@@ -42,6 +42,16 @@
               </select>
             </div>
           </div>
+          <div class="filter-item">
+            <label for="filter-pc" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Pto. Crítico:</label>
+            <div class="select-wrapper" style="width:140px;">
+              <select id="filter-pc" class="form-control" [(ngModel)]="filterPuntoCritico" aria-label="Filtrar por punto crítico">
+                <option value="">Todos</option>
+                <option value="si">Solo asociados (Sí)</option>
+                <option value="no">No asociados (No)</option>
+              </select>
+            </div>
+          </div>
           <!-- Filtro de fechas -->
           <div class="filter-item">
             <label for="filter-fecha-desde" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Desde:</label>
@@ -108,6 +118,7 @@
                   <th scope="col">Temperatura (°C)</th>
                   <th scope="col">Conductividad</th>
                   <th scope="col">Salinidad</th>
+                  <th scope="col">Pto. Crítico</th>
                   <th scope="col">Responsable</th>
                   <th scope="col"><span class="sr-only">Acción</span></th>
                 </tr>
@@ -125,6 +136,7 @@
                       <td><div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div></td>
                       <td><div class="skeleton-shimmer" style="width:40px;height:16px;border-radius:4px;"></div></td>
                       <td><div class="skeleton-shimmer" style="width:40px;height:16px;border-radius:4px;"></div></td>
+                      <td><div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div></td>
                       <td><div class="skeleton-shimmer" style="width:100px;height:16px;border-radius:4px;"></div></td>
                       <td style="vertical-align:middle;padding:8px 16px;">
                         <div style="display:flex;gap:6px;align-items:center;justify-content:flex-start;height:30px;">
@@ -147,6 +159,11 @@
                       <td class="mono">{{ sample.temperature != null ? sample.temperature.toFixed(1) : '—' }}</td>
                       <td class="mono">{{ sample.conductivity != null ? sample.conductivity.toFixed(2) : '—' }}</td>
                       <td class="mono">{{ sample.salinity != null ? sample.salinity.toFixed(2) : '—' }}</td>
+                      <td>
+                        <span class="pc-status-badge" [class.associated]="sample.hasPuntoCritico">
+                          {{ sample.hasPuntoCritico ? 'Sí' : 'No' }}
+                        </span>
+                      </td>
                       <td style="color:var(--color-text-secondary);">{{ sample.responsible }}</td>
                       <td style="vertical-align:middle;padding:8px 16px;">
                         <div style="display:flex;gap:6px;align-items:center;justify-content:flex-start;height:30px;">

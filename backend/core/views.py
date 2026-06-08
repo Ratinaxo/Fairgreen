@@ -68,6 +68,14 @@ class MuestraViewSet(viewsets.ModelViewSet):
             qs = qs.filter(id_seccion__tipo_de_tierra__iexact=zona)
         if id_muestra:
             qs = qs.filter(id_muestra=id_muestra)
+        
+        punto_critico = self.request.query_params.get('punto_critico')
+        if punto_critico:
+            if punto_critico.lower() == 'si':
+                qs = qs.filter(id_punto_critico__isnull=False)
+            elif punto_critico.lower() == 'no':
+                qs = qs.filter(id_punto_critico__isnull=True)
+
         return qs
 
     def perform_create(self, serializer):

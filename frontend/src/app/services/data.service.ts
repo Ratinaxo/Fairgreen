@@ -168,7 +168,7 @@ export class DataService {
    * @param page  Número de página (1-indexed)
    * @param size  Resultados por página (por defecto usa el global: 50)
    */
-  getMuestras(page = 1, size = 20, fechaDesde?: string, fechaHasta?: string, sector?: string, zona?: string, idMuestra?: string): Observable<MuestraGeoJSON> {
+  getMuestras(page = 1, size = 20, fechaDesde?: string, fechaHasta?: string, sector?: string, zona?: string, idMuestra?: string, puntoCritico?: string): Observable<MuestraGeoJSON> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('page_size', size.toString());
@@ -178,6 +178,7 @@ export class DataService {
     if (sector) params = params.set('sector', sector);
     if (zona) params = params.set('zona', zona);
     if (idMuestra) params = params.set('id_muestra', idMuestra);
+    if (puntoCritico) params = params.set('punto_critico', puntoCritico);
 
     return this.http.get<MuestraGeoJSON>(`${this.api}/muestras/`, { params });
   }

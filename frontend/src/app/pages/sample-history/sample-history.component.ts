@@ -16,6 +16,7 @@ interface SampleRow {
   responsible: string;
   zona: string;
   sector: number;
+  hasPuntoCritico: boolean;
   rawFeature: MuestraFeature;
 }
 
@@ -42,6 +43,7 @@ export class SampleHistoryComponent implements OnInit {
   filterFechaDesde = '';
   filterFechaHasta = '';
   filterIdMuestra = '';
+  filterPuntoCritico = '';
   readonly pageSize = 20;
 
   currentPage = signal(1);
@@ -72,6 +74,7 @@ export class SampleHistoryComponent implements OnInit {
       this.filterFechaDesde = params['desde'] || '';
       this.filterFechaHasta = params['hasta'] || '';
       this.filterIdMuestra = params['id'] || '';
+      this.filterPuntoCritico = params['punto_critico'] || '';
       this._fetchData(page);
     });
   }
@@ -87,7 +90,8 @@ export class SampleHistoryComponent implements OnInit {
         zona: this.filterZona || null,
         desde: this.filterFechaDesde || null,
         hasta: this.filterFechaHasta || null,
-        id: this.filterIdMuestra || null
+        id: this.filterIdMuestra || null,
+        punto_critico: this.filterPuntoCritico || null
       },
       queryParamsHandling: 'merge'
     });
@@ -104,7 +108,8 @@ export class SampleHistoryComponent implements OnInit {
       this.filterFechaHasta || undefined,
       this.filterSector || undefined,
       this.filterZona || undefined,
-      this.filterIdMuestra || undefined
+      this.filterIdMuestra || undefined,
+      this.filterPuntoCritico || undefined
     ).subscribe({
       next: (geoJson) => {
         this.totalCount.set(geoJson.count ?? 0);
@@ -123,6 +128,7 @@ export class SampleHistoryComponent implements OnInit {
     this.filterFechaDesde = '';
     this.filterFechaHasta = '';
     this.filterIdMuestra = '';
+    this.filterPuntoCritico = '';
     this.loadPage(1);
   }
 
@@ -161,6 +167,7 @@ export class SampleHistoryComponent implements OnInit {
           : '—',
         zona: zonaMap[tipo] ?? tipo,
         sector: p.id_seccion.properties.numero_de_hoyo ?? 0,
+        hasPuntoCritico: p.id_punto_critico !== null && p.id_punto_critico !== undefined,
         rawFeature: f
       };
     });
