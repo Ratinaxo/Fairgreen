@@ -104,7 +104,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
         if (!this.sectionsSource) return;
         this.sectionsSource.clear();
         if (!this.secciones || this.secciones.length === 0) return;
-        
+
         const geojsonFormat = new GeoJSON();
         const features = geojsonFormat.readFeatures({
             type: 'FeatureCollection',
@@ -113,7 +113,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
             dataProjection: 'EPSG:4326',
             featureProjection: 'EPSG:3857'
         });
-        
+
         this.sectionsSource.addFeatures(features);
     }
 
@@ -123,14 +123,14 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
         for (const m of this.muestras) {
             const coords = m.geometry.coordinates;
             const point = new Feature({ geometry: new Point(fromLonLat([coords[0], coords[1]])) });
-            
+
             // Determinar color según estado (salinidad/conductividad)
             let color = '#4CAF7D'; // Optimo
             const cond = m.properties.conductividad ?? 0;
             const sal = m.properties.salinidad ?? 0;
             if (cond > 3.5 || sal > 2.5) color = '#EF4444'; // Critico
             else if (cond > 2.0 || sal > 1.5) color = '#F59E0B'; // Atencion
-            
+
             point.setProperties({ ...m.properties, id_muestra: m.id || m.properties?.id_muestra, color });
             this.pointsSource.addFeature(point);
         }
@@ -141,7 +141,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
 
         this.pointsSource = new VectorSource();
         this.updatePoints();
-        
+
         this.sectionsSource = new VectorSource();
         this.updateSections();
 
@@ -159,19 +159,19 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                 });
             }
         });
-        
+
         this.sectionsLayer = new VectorLayer({
             source: this.sectionsSource,
             style: (feature) => {
                 const props = feature.getProperties();
                 const tipo = props['tipo_de_tierra'];
                 const isSelected = String(feature.getId()) === this.selectedSectorId;
-                
+
                 let fillColor = 'rgba(255, 255, 255, 0.2)';
                 let strokeColor = 'rgba(255, 255, 255, 0.5)';
                 let strokeWidth = isSelected ? 4 : 2;
                 let zIndex = isSelected ? 10 : 1;
-                
+
                 if (tipo === 'GREEN') {
                     fillColor = isSelected ? 'rgba(52, 211, 153, 0.7)' : 'rgba(76, 175, 125, 0.4)'; // Más chillón al seleccionar
                     strokeColor = isSelected ? '#10B981' : '#4CAF7D';
@@ -179,7 +179,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                     fillColor = isSelected ? 'rgba(251, 191, 36, 0.7)' : 'rgba(245, 158, 11, 0.4)'; // Más chillón al seleccionar
                     strokeColor = isSelected ? '#F59E0B' : '#F59E0B';
                 }
-                
+
                 return new Style({
                     fill: new Fill({ color: fillColor }),
                     stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
@@ -223,7 +223,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
             }, {
                 layerFilter: (layer) => layer === this.pointsLayer
             });
-            
+
             if (!clickedMuestra) {
                 let clickedSector = false;
                 map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
