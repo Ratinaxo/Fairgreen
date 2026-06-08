@@ -177,7 +177,7 @@
             <td>{{ row.component }}</td>
             <td>
               <span class="badge" [class]="'badge-' + row.status" style="font-family:var(--font-mono);">{{
-                row.level.toFixed(1) }}</span>
+                row.level != null ? row.level.toFixed(1) : '—' }}</span>
             </td>
           </tr>
           }

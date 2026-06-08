@@ -18,6 +18,7 @@ db.sqlite3-journal
 # Entornos y credenciales
 .env
 .env.docker
+.env.prod
 
 # Docker
 docker-compose.override.yml

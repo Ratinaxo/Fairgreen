@@ -131,10 +131,15 @@ export class GeomapComponent implements OnInit {
         secMuestras.sort((a, b) => new Date(b.properties.fecha_hora_captura).getTime() - new Date(a.properties.fecha_hora_captura).getTime());
 
         const mProps = secMuestras.map(m => m.properties);
-        avgH = mProps.reduce((acc, m) => acc + m.humedad, 0) / mProps.length;
-        avgT = mProps.reduce((acc, m) => acc + m.temperatura, 0) / mProps.length;
-        avgS = mProps.reduce((acc, m) => acc + m.salinidad, 0) / mProps.length;
-        avgC = mProps.reduce((acc, m) => acc + m.conductividad, 0) / mProps.length;
+        const humVals = mProps.map(m => m.humedad).filter((v): v is number => v !== null && v !== undefined);
+        const tempVals = mProps.map(m => m.temperatura).filter((v): v is number => v !== null && v !== undefined);
+        const salVals = mProps.map(m => m.salinidad).filter((v): v is number => v !== null && v !== undefined);
+        const condVals = mProps.map(m => m.conductividad).filter((v): v is number => v !== null && v !== undefined);
+
+        avgH = humVals.length > 0 ? humVals.reduce((acc, v) => acc + v, 0) / humVals.length : 0;
+        avgT = tempVals.length > 0 ? tempVals.reduce((acc, v) => acc + v, 0) / tempVals.length : 0;
+        avgS = salVals.length > 0 ? salVals.reduce((acc, v) => acc + v, 0) / salVals.length : 0;
+        avgC = condVals.length > 0 ? condVals.reduce((acc, v) => acc + v, 0) / condVals.length : 0;
 
         const ultimaFecha = new Date(mProps[0].fecha_hora_captura);
         lastRecord = ultimaFecha.toLocaleDateString('es-CL') + ' ' + ultimaFecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
@@ -152,12 +157,17 @@ export class GeomapComponent implements OnInit {
         for (const m of secMuestras.slice(0, 3)) {
           const f = new Date(m.properties.fecha_hora_captura);
           let mHealth: 'optimo' | 'atencion' | 'critico' = 'optimo';
-          if (m.properties.conductividad > 3.5) mHealth = 'critico';
-          else if (m.properties.conductividad > 2.0) mHealth = 'atencion';
+          const cond = m.properties.conductividad ?? 0;
+          const sal = m.properties.salinidad ?? 0;
+          if (cond > 3.5) mHealth = 'critico';
+          else if (cond > 2.0) mHealth = 'atencion';
+
+          const condStr = m.properties.conductividad != null ? m.properties.conductividad.toFixed(1) : '—';
+          const salStr = m.properties.salinidad != null ? m.properties.salinidad.toFixed(1) : '—';
 
           timeline.push({
             time: f.toLocaleDateString('es-CL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            desc: `Registro (C:${m.properties.conductividad.toFixed(1)}, S:${m.properties.salinidad.toFixed(1)})`,
+            desc: `Registro (C:${condStr}, S:${salStr})`,
             status: mHealth
           });
         }
@@ -215,10 +225,10 @@ export class GeomapComponent implements OnInit {
       zonaName,
       fechaStr,
       health,
-      humedad: props['humedad']?.toFixed(1) || '0.0',
-      temperatura: props['temperatura']?.toFixed(1) || '0.0',
-      salinidad: props['salinidad']?.toFixed(2) || '0.00',
-      conductividad: props['conductividad']?.toFixed(2) || '0.00',
+      humedad: props['humedad'] != null ? props['humedad'].toFixed(1) : '—',
+      temperatura: props['temperatura'] != null ? props['temperatura'].toFixed(1) : '—',
+      salinidad: props['salinidad'] != null ? props['salinidad'].toFixed(2) : '—',
+      conductividad: props['conductividad'] != null ? props['conductividad'].toFixed(2) : '—',
       recomendaciones: props['recomendaciones'],
       fotos,
       currentPhotoIndex: 0

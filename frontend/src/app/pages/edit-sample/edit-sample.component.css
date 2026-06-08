@@ -140,3 +140,19 @@
       .metrics-form-grid { grid-template-columns: repeat(2, 1fr); }
       .evidence-row { grid-template-columns: 1fr; }
     }
+
+    .error-msg {
+      color: #ef4444;
+      font-size: 11px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .input-error {
+      border-color: #ef4444 !important;
+      background-color: rgba(239, 68, 68, 0.02) !important;
+    }
+    
+    .input-error:focus {
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+    }
