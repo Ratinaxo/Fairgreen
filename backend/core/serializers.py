@@ -181,6 +181,15 @@ class MuestraSerializer(GeoFeatureModelSerializer):
         ]
         read_only_fields = ['id_muestra', 'fecha_hora_captura']
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.id_punto_critico:
+            ret['properties']['id_punto_critico'] = {
+                'id_punto_critico': instance.id_punto_critico.id_punto_critico,
+                'descripcion': instance.id_punto_critico.descripcion
+            }
+        return ret
+
 
 class NotificacionSerializer(serializers.ModelSerializer):
     """

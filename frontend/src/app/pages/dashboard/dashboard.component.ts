@@ -33,6 +33,7 @@ interface Sector {
 export class DashboardComponent implements OnInit {
   isLoading = signal(true);
   muestras = signal<MuestraFeature[]>([]);
+  latestMeasurementTime = signal<string>('Cargando...');
 
   private dataService = inject(DataService);
 
@@ -162,6 +163,7 @@ export class DashboardComponent implements OnInit {
 
     const ultima = props.length > 0 ? new Date(props[0].fecha_hora_captura) : null;
     const agoStr = ultima ? this._tiempoRelativo(ultima) : 'Sin registros';
+    this.latestMeasurementTime.set(agoStr);
 
     // Humedad (escala 1-5, óptimo > 3)
     this.kpiCards[0].value = avgHumedad.toFixed(1);

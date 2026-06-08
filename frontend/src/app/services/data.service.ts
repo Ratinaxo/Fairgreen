@@ -59,7 +59,7 @@ export interface MuestraProperties {
   id_muestra: number;
   rut_usuario: UsuarioResumen;
   id_seccion: SeccionFeature;
-  id_punto_critico: number | null;
+  id_punto_critico: { id_punto_critico: number; descripcion: string; } | null;
   salinidad?: number | null;
   humedad?: number | null;
   conductividad?: number | null;
