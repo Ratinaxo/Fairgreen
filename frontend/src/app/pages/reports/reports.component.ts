@@ -212,6 +212,18 @@ export class ReportsComponent {
     });
   }
 
+  validateDates(type: 'filter' | 'export') {
+    if (type === 'filter') {
+      if (this.filters.dateFrom && this.filters.dateTo && this.filters.dateFrom > this.filters.dateTo) {
+        this.filters.dateTo = this.filters.dateFrom;
+      }
+    } else {
+      if (this.exportConfig.dateFrom && this.exportConfig.dateTo && this.exportConfig.dateFrom > this.exportConfig.dateTo) {
+        this.exportConfig.dateTo = this.exportConfig.dateFrom;
+      }
+    }
+  }
+
   openExportModal() {
     this.exportConfig = {
       format: 'pdf',

@@ -50,6 +50,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
     private sectionsSource: VectorSource | null = null;
     private sectionsLayer: VectorLayer | null = null;
     private selectedId: string | null = null;
+    private selectedSectorId: string | null = null;
 
     constructor(
         private el: ElementRef,
@@ -78,6 +79,10 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                 }
             }
             if (changes['focusId'] && this.focusId) {
+                this.selectedId = this.focusId;
+                this.selectedSectorId = null;
+                this.pointsLayer?.changed();
+                this.sectionsLayer?.changed();
                 this.zoomToSample(this.focusId);
             }
         }
@@ -158,21 +163,25 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
             style: (feature) => {
                 const props = feature.getProperties();
                 const tipo = props['tipo_de_tierra'];
+                const isSelected = String(feature.getId()) === this.selectedSectorId;
                 
                 let fillColor = 'rgba(255, 255, 255, 0.2)';
                 let strokeColor = 'rgba(255, 255, 255, 0.5)';
+                let strokeWidth = isSelected ? 4 : 2;
+                let zIndex = isSelected ? 10 : 1;
                 
                 if (tipo === 'GREEN') {
-                    fillColor = 'rgba(76, 175, 125, 0.4)'; // Verde translúcido
-                    strokeColor = '#4CAF7D';
+                    fillColor = isSelected ? 'rgba(52, 211, 153, 0.7)' : 'rgba(76, 175, 125, 0.4)'; // Más chillón al seleccionar
+                    strokeColor = isSelected ? '#10B981' : '#4CAF7D';
                 } else if (tipo === 'FAIRWAY') {
-                    fillColor = 'rgba(245, 158, 11, 0.4)'; // Naranja translúcido
-                    strokeColor = '#F59E0B';
+                    fillColor = isSelected ? 'rgba(251, 191, 36, 0.7)' : 'rgba(245, 158, 11, 0.4)'; // Más chillón al seleccionar
+                    strokeColor = isSelected ? '#F59E0B' : '#F59E0B';
                 }
                 
                 return new Style({
                     fill: new Fill({ color: fillColor }),
-                    stroke: new Stroke({ color: strokeColor, width: 2 })
+                    stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+                    zIndex: zIndex
                 });
             }
         });
@@ -188,33 +197,53 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
             controls: [new Zoom()],
         });
 
-        // Cursor pointer sobre zonas (solo para puntos de muestras)
+        // Cursor pointer sobre zonas (muestras y secciones)
         map.on('pointermove', (e) => {
             const hit = map.hasFeatureAtPixel(e.pixel, {
-                layerFilter: (layer) => layer === this.pointsLayer
+                layerFilter: (layer) => layer === this.pointsLayer || layer === this.sectionsLayer
             });
             const target = map.getTargetElement() as HTMLElement;
             target.style.cursor = hit ? 'pointer' : '';
         });
 
-        // Selección de muestra
+        // Selección de muestra o sector
         map.on('click', (e) => {
-            let clicked = false;
+            let clickedMuestra = false;
             map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
-                if (clicked || layer === this.sectionsLayer) return;
-                clicked = true;
+                if (clickedMuestra) return;
+                clickedMuestra = true;
                 const props = feature.getProperties() as Record<string, unknown>;
                 this.selectedId = String(props['id_muestra']);
-                this.zoneSelect.emit(props);
+                this.selectedSectorId = null;
+                this.zoneSelect.emit({ ...props, type: 'muestra' });
                 this.pointsLayer?.changed();
+                this.sectionsLayer?.changed();
             }, {
                 layerFilter: (layer) => layer === this.pointsLayer
             });
             
-            if (!clicked) {
-                this.selectedId = null;
-                this.zoneSelect.emit(null);
-                this.pointsLayer?.changed();
+            if (!clickedMuestra) {
+                let clickedSector = false;
+                map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
+                    if (clickedSector) return;
+                    clickedSector = true;
+                    const props = feature.getProperties() as Record<string, unknown>;
+                    this.selectedId = null;
+                    this.selectedSectorId = String(feature.getId());
+                    this.zoneSelect.emit({ ...props, type: 'sector', featureId: feature.getId() });
+                    this.pointsLayer?.changed();
+                    this.sectionsLayer?.changed();
+                }, {
+                    layerFilter: (layer) => layer === this.sectionsLayer
+                });
+
+                if (!clickedSector) {
+                    this.selectedId = null;
+                    this.selectedSectorId = null;
+                    this.zoneSelect.emit(null);
+                    this.pointsLayer?.changed();
+                    this.sectionsLayer?.changed();
+                }
             }
         });
 

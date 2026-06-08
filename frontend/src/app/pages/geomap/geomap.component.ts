@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { NgClass } from '@angular/common';
+import { NgClass, DatePipe, DecimalPipe } from '@angular/common';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
 import { MapLegendComponent } from '../../components/map/map-legend.component';
 import { DataService, SeccionFeature, MuestraFeature } from '../../services/data.service';
@@ -22,7 +22,7 @@ interface Zone {
 @Component({
   selector: 'app-geomap',
   standalone: true,
-  imports: [NgClass, MapGeorefComponent, MapLegendComponent],
+  imports: [NgClass, MapGeorefComponent, MapLegendComponent, DatePipe, DecimalPipe],
   templateUrl: './geomap.component.html',
   styleUrl: './geomap.component.css'
 })
@@ -31,6 +31,7 @@ export class GeomapComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   selectedMuestra = signal<any | null>(null);
+  selectedSector = signal<any | null>(null);
   isPanelOpen = signal(false);
   zonesHealth = signal<Record<string, string>>({});
   muestras = signal<MuestraFeature[]>([]);
@@ -188,13 +189,37 @@ export class GeomapComponent implements OnInit {
     this.zonesHealth.set(healthMap);
   }
 
-  /** Recibe las properties de la muestra desde el mapa OpenLayers */
+  /** Recibe las properties de la muestra o sector desde el mapa OpenLayers */
   onZoneSelect(props: Record<string, any> | null): void {
     if (!props) {
       this.selectedMuestra.set(null);
+      this.selectedSector.set(null);
+      this.isPanelOpen.set(false);
       return;
     }
 
+    if (props['type'] === 'sector') {
+      this.selectedMuestra.set(null);
+      
+      const zoneId = String(props['featureId'] || props['id']); 
+      const zoneData = this.zonesData[zoneId];
+      
+      if (zoneData) {
+        // Filtrar las muestras de este sector y ordenarlas
+        const secMuestras = this.muestras().filter(m => String(m.properties.id_seccion.id) === zoneId);
+        secMuestras.sort((a,b) => new Date(b.properties.fecha_hora_captura).getTime() - new Date(a.properties.fecha_hora_captura).getTime());
+        
+        this.selectedSector.set({
+           zoneData: zoneData,
+           muestras: secMuestras
+        });
+      }
+      this.isPanelOpen.set(true);
+      return;
+    }
+
+    // Es una muestra
+    this.selectedSector.set(null);
     const fecha = new Date(props['fecha_hora_captura']);
     const fechaStr = fecha.toLocaleDateString('es-CL') + ' ' + fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 
@@ -225,6 +250,11 @@ export class GeomapComponent implements OnInit {
     });
 
     this.isPanelOpen.set(true);
+  }
+
+  focusOnSample(m: MuestraFeature) {
+     this.focusId.set(String(m.id || m.properties.id_muestra));
+     this.onZoneSelect({ ...m.properties, id_muestra: m.id || m.properties.id_muestra, type: 'muestra' });
   }
 
   togglePanel() {
