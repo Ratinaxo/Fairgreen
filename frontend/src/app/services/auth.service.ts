@@ -25,6 +25,12 @@ export interface Usuario {
 const TOKEN_KEY = 'fg_access';
 const REFRESH_KEY = 'fg_refresh';
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  'user_not_found': 'El correo electrónico ingresado no está registrado.',
+  'incorrect_password': 'La contraseña ingresada es incorrecta. Inténtalo de nuevo.',
+  'user_inactive': 'Tu cuenta de usuario está desactivada. Contacta al administrador.',
+};
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = environment.apiUrl;
@@ -121,7 +127,10 @@ export class AuthService {
   private _handleError(err: HttpErrorResponse) {
     let message = 'Error de conexión con el servidor.';
     if (err.status === 401) {
-      if (err.error?.detail) {
+      const code = err.error?.code;
+      if (code && AUTH_ERROR_MESSAGES[code]) {
+        message = AUTH_ERROR_MESSAGES[code];
+      } else if (err.error?.detail) {
         const detailStr = String(err.error.detail);
         if (detailStr.includes('No active account') || detailStr.includes('inactiva') || detailStr.includes('disabled')) {
           message = 'Tu cuenta de usuario está desactivada. Contacta al administrador.';

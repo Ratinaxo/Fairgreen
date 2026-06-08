@@ -22,6 +22,7 @@ export class NewSampleComponent implements OnInit {
   showSuccess = false;
   mostrarMapa = false;
   isLoading = false;
+  submitted = false;
 
   secciones: SeccionFeature[] = [];
   todosPuntosCriticos: PuntoCriticoFeature[] = [];
@@ -78,6 +79,12 @@ export class NewSampleComponent implements OnInit {
       .filter(s => s.properties.tipo_de_tierra === this.form.zona)
       .map(s => s.properties.numero_de_hoyo)
       .sort((a, b) => a - b);
+  }
+
+  get isHumidityInvalid(): boolean {
+    if (this.form.humidity === '') return false;
+    const val = parseFloat(this.form.humidity);
+    return isNaN(val) || val < 1 || val > 5;
   }
 
   /** Finds the SeccionFeature matching the current zona + sector */
@@ -177,12 +184,14 @@ export class NewSampleComponent implements OnInit {
   }
 
   saveSample(): void {
-    if (!this.form.zona || !this.form.sector || !this.form.lat || !this.form.lng || !this.form.humidity || !this.form.temperature || !this.form.salinity || !this.form.conductivity) {
-      alert('Por favor complete los campos obligatorios.');
+    this.submitted = true;
+
+    if (!this.form.zona || !this.form.sector || !this.form.lat || !this.form.lng || this.isHumidityInvalid) {
       return;
     }
 
-    if (parseFloat(this.form.salinity) < 0 || parseFloat(this.form.conductivity) < 0) {
+    if ((this.form.salinity !== '' && parseFloat(this.form.salinity) < 0) || 
+        (this.form.conductivity !== '' && parseFloat(this.form.conductivity) < 0)) {
       alert('La salinidad y la conductividad no pueden ser valores negativos.');
       return;
     }
@@ -203,10 +212,10 @@ export class NewSampleComponent implements OnInit {
       const payload = {
         id_seccion_id: sec.id,
         id_punto_critico: pcId,
-        salinidad: parseFloat(this.form.salinity),
-        humedad: parseFloat(this.form.humidity),
-        conductividad: parseFloat(this.form.conductivity),
-        temperatura: parseFloat(this.form.temperature),
+        salinidad: this.form.salinity !== '' ? parseFloat(this.form.salinity) : null,
+        humedad: this.form.humidity !== '' ? parseFloat(this.form.humidity) : null,
+        conductividad: this.form.conductivity !== '' ? parseFloat(this.form.conductivity) : null,
+        temperatura: this.form.temperature !== '' ? parseFloat(this.form.temperature) : null,
         recomendaciones: this.form.notes,
         ubicacion_exacta: {
           type: 'Point' as const,

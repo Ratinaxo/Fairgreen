@@ -80,8 +80,10 @@ export class MapOverviewComponent implements AfterViewInit, OnDestroy, OnChanges
             const point = new Feature({ geometry: new Point(fromLonLat([coords[0], coords[1]])) });
             
             let color = '#4CAF7D';
-            if (m.properties.conductividad > 3.5 || m.properties.salinidad > 2.5) color = '#EF4444';
-            else if (m.properties.conductividad > 2.0 || m.properties.salinidad > 1.5) color = '#F59E0B';
+            const cond = m.properties.conductividad ?? 0;
+            const sal = m.properties.salinidad ?? 0;
+            if (cond > 3.5 || sal > 2.5) color = '#EF4444';
+            else if (cond > 2.0 || sal > 1.5) color = '#F59E0B';
             
             point.setProperties({ ...m.properties, color });
             this.pointsSource.addFeature(point);

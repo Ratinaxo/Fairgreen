@@ -33,6 +33,7 @@ interface Sector {
 export class DashboardComponent implements OnInit {
   isLoading = signal(true);
   muestras = signal<MuestraFeature[]>([]);
+  latestMeasurementTime = signal<string>('Cargando...');
 
   private dataService = inject(DataService);
 
@@ -153,15 +154,16 @@ export class DashboardComponent implements OnInit {
 
   private _calcularKPIs(features: MuestraFeature[]) {
     const props = features.map(f => f.properties);
-    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
-    const avgHumedad = avg(props.map(p => p.humedad));
-    const avgTemp = avg(props.map(p => p.temperatura));
-    const avgSalinidad = avg(props.map(p => p.salinidad));
-    const avgConduct = avg(props.map(p => p.conductividad));
+    const avgHumedad = avg(props.map(p => p.humedad).filter((v): v is number => v !== null && v !== undefined));
+    const avgTemp = avg(props.map(p => p.temperatura).filter((v): v is number => v !== null && v !== undefined));
+    const avgSalinidad = avg(props.map(p => p.salinidad).filter((v): v is number => v !== null && v !== undefined));
+    const avgConduct = avg(props.map(p => p.conductividad).filter((v): v is number => v !== null && v !== undefined));
 
-    const ultima = new Date(props[0].fecha_hora_captura);
-    const agoStr = this._tiempoRelativo(ultima);
+    const ultima = props.length > 0 ? new Date(props[0].fecha_hora_captura) : null;
+    const agoStr = ultima ? this._tiempoRelativo(ultima) : 'Sin registros';
+    this.latestMeasurementTime.set(agoStr);
 
     // Humedad (escala 1-5, óptimo > 3)
     this.kpiCards[0].value = avgHumedad.toFixed(1);

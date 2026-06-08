@@ -159,32 +159,54 @@
                   <div class="metric-icon metric-icon--humidity">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
                   </div>
-                  <div class="metric-value">{{ muestra()!.properties.humedad.toFixed(1) }}</div>
+                  <div class="metric-value">{{ muestra()?.properties?.humedad?.toFixed(1) ?? '—' }}</div>
                   <div class="metric-label">Humedad (1–5)</div>
                 </div>
                 <div class="metric-card">
                   <div class="metric-icon metric-icon--temp">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
                   </div>
-                  <div class="metric-value">{{ muestra()!.properties.temperatura.toFixed(1) }}°</div>
+                  <div class="metric-value">{{ muestra()?.properties?.temperatura != null ? (muestra()?.properties?.temperatura?.toFixed(1) + '°') : '—' }}</div>
                   <div class="metric-label">Temperatura (°C)</div>
                 </div>
                 <div class="metric-card">
-                  <div class="metric-icon metric-icon--salinity" [ngClass]="{'metric-icon--warn': muestra()!.properties.salinidad > 1.5, 'metric-icon--danger': muestra()!.properties.salinidad > 2.5}">
+                  <div class="metric-icon metric-icon--salinity" [ngClass]="{'metric-icon--warn': muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 1.5, 'metric-icon--danger': muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 2.5}">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   </div>
-                  <div class="metric-value" [class.value--warn]="muestra()!.properties.salinidad > 1.5" [class.value--danger]="muestra()!.properties.salinidad > 2.5">{{ muestra()!.properties.salinidad.toFixed(2) }}</div>
+                  <div class="metric-value" [class.value--warn]="muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 1.5" [class.value--danger]="muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 2.5">
+                    {{ muestra()?.properties?.salinidad?.toFixed(2) ?? '—' }}
+                  </div>
                   <div class="metric-label">Salinidad (dS/m)</div>
                 </div>
                 <div class="metric-card">
-                  <div class="metric-icon metric-icon--cond" [ngClass]="{'metric-icon--warn': muestra()!.properties.conductividad > 2.0, 'metric-icon--danger': muestra()!.properties.conductividad > 3.5}">
+                  <div class="metric-icon metric-icon--cond" [ngClass]="{'metric-icon--warn': muestra()?.properties?.conductividad && muestra()!.properties.conductividad! > 2.0, 'metric-icon--danger': muestra()?.properties?.conductividad && muestra()!.properties.conductividad! > 3.5}">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                   </div>
-                  <div class="metric-value" [class.value--warn]="muestra()!.properties.conductividad > 2.0" [class.value--danger]="muestra()!.properties.conductividad > 3.5">{{ muestra()!.properties.conductividad.toFixed(2) }}</div>
+                  <div class="metric-value" [class.value--warn]="muestra()?.properties?.conductividad && muestra()!.properties.conductividad! > 2.0" [class.value--danger]="muestra()?.properties?.conductividad && muestra()!.properties.conductividad! > 3.5">
+                    {{ muestra()?.properties?.conductividad?.toFixed(2) ?? '—' }}
+                  </div>
                   <div class="metric-label">Conductividad (dS/m)</div>
                 </div>
               </div>
             </div>
+
+            <!-- Critical Point Association -->
+            @if (muestra()?.properties?.id_punto_critico) {
+              <div class="pc-section">
+                <h2 class="section-title">Punto Crítico Asociado</h2>
+                <div class="pc-body">
+                  <div class="pc-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" style="vertical-align:middle;margin-right:6px;" aria-hidden="true">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>Esta muestra fue capturada sobre el <strong>Punto Crítico #{{ muestra()?.properties?.id_punto_critico?.id_punto_critico }}</strong></span>
+                  </div>
+                  <p class="pc-description">{{ muestra()?.properties?.id_punto_critico?.descripcion }}</p>
+                </div>
+              </div>
+            }
 
             <!-- Observations -->
             <div class="observations-section">

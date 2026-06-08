@@ -292,6 +292,39 @@
   color: var(--color-text-muted);
   font-weight: 500;
 }
+/* ── Critical Point ── */
+.pc-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pc-body {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.pc-badge {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b91c1c;
+  margin-bottom: 6px;
+}
+
+.pc-badge svg {
+  color: #b91c1c;
+  flex-shrink: 0;
+}
+
+.pc-description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
 
 /* ── Observations ── */
 .observations-body {

@@ -1,7 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import UsuarioSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Vista personalizada para obtener el par de tokens JWT,
+    utilizando el serializador CustomTokenObtainPairSerializer.
+    """
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class AuthMeView(APIView):

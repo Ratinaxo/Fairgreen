@@ -141,10 +141,95 @@
             </div>
           </div>
 
+        } @else if (selectedSector(); as sectorInfo) {
+          <!-- Sector header -->
+          <div style="margin-bottom: 20px; position: relative;">
+            <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
+              Sector
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span class="badge" [ngClass]="'badge-' + sectorInfo.zoneData.health">
+                {{ zoneHealthLabel[sectorInfo.zoneData.health] }}
+              </span>
+            </div>
+            <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
+              {{ sectorInfo.zoneData.name }}
+            </div>
+          </div>
+          
+          <!-- Averages -->
+          <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Promedios del Sector</div>
+            <div class="metrics-grid">
+              <div class="metric-cell">
+                <div class="metric-label">Humedad</div>
+                <div class="metric-value">{{ sectorInfo.zoneData.humidity }}<span class="metric-unit"> /5</span></div>
+                @if (sectorInfo.zoneData.humidity !== '--') {
+                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(sectorInfo.zoneData.humidity / 5 * 100) + '%'"></div></div>
+                }
+              </div>
+              <div class="metric-cell">
+                <div class="metric-label">Temperatura</div>
+                <div class="metric-value">{{ sectorInfo.zoneData.temperature }}<span class="metric-unit">°C</span></div>
+                @if (sectorInfo.zoneData.temperature !== '--') {
+                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-warning" [style.width]="(sectorInfo.zoneData.temperature / 40 * 100) + '%'"></div></div>
+                }
+              </div>
+              <div class="metric-cell">
+                <div class="metric-label">Salinidad</div>
+                <div class="metric-value">{{ sectorInfo.zoneData.salinity }}<span class="metric-unit"> dS</span></div>
+                @if (sectorInfo.zoneData.salinity !== '--') {
+                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(sectorInfo.zoneData.salinity / 5 * 100) + '%'"></div></div>
+                }
+              </div>
+              <div class="metric-cell">
+                <div class="metric-label">Conductividad</div>
+                <div class="metric-value">{{ sectorInfo.zoneData.conductivity }}<span class="metric-unit"> dS</span></div>
+                @if (sectorInfo.zoneData.conductivity !== '--') {
+                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-danger" [style.width]="(sectorInfo.zoneData.conductivity / 5 * 100) + '%'"></div></div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- List of points -->
+          <div style="margin-bottom: 16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Puntos (Muestras)</div>
+            @if (sectorInfo.muestras.length === 0) {
+               <div style="font-size:12px;color:var(--color-text-muted);">No hay muestras en este sector para el periodo seleccionado.</div>
+            } @else {
+               <div style="display:flex; flex-direction:column; gap:8px;">
+                 @for (m of sectorInfo.muestras; track m.id) {
+                   <div class="maintenance-card hover-card" style="cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; padding:10px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface);" (click)="focusOnSample(m)" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                     <div style="display:flex;justify-content:space-between;align-items:center;">
+                       <div>
+                         <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);">Muestra #{{ m.id || m.properties.id_muestra }}</div>
+                         <div style="font-size:11px;color:var(--color-text-muted);">{{ m.properties.fecha_hora_captura | date:'dd/MM/yyyy HH:mm' }}</div>
+                       </div>
+                       <div style="display:flex; gap:10px; font-size:11px; color:var(--color-text-secondary); background:#f9fbf9; padding:4px 8px; border-radius:6px;">
+                          <div style="display:flex;flex-direction:column;align-items:center;">
+                             <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.humedad | number:'1.1-1' }}</span>
+                             <span style="font-size:9px;">Hum</span>
+                          </div>
+                          <div style="display:flex;flex-direction:column;align-items:center;">
+                             <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.conductividad | number:'1.1-1' }}</span>
+                             <span style="font-size:9px;">Cond</span>
+                          </div>
+                       </div>
+                     </div>
+                   </div>
+                 }
+               </div>
+            }
+          </div>
+
         } @else {
           <div class="empty-panel">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
-            <p>Selecciona una muestra en el mapa para ver sus detalles</p>
+            <p>Selecciona un sector o una muestra en el mapa para ver sus detalles</p>
           </div>
         }
       </aside>

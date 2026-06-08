@@ -1,6 +1,49 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializador de SimpleJWT modificado para proporcionar mensajes de error
+    detallados según el fallo específico (usuario inexistente, inactivo o clave errónea).
+    """
+    def validate(self, attrs):
+        username = attrs.get(self.username_field)
+        password = attrs.get('password')
+
+        try:
+            user = Usuario.objects.get(correo_electronico=username)
+        except Usuario.DoesNotExist:
+            raise AuthenticationFailed(
+                {
+                    'detail': 'El correo electrónico no está registrado.',
+                    'code': 'user_not_found'
+                },
+                code='user_not_found'
+            )
+
+        if not user.is_active:
+            raise AuthenticationFailed(
+                {
+                    'detail': 'Tu cuenta de usuario está desactivada. Contacta al administrador.',
+                    'code': 'user_inactive'
+                },
+                code='user_inactive'
+            )
+
+        if not user.check_password(password):
+            raise AuthenticationFailed(
+                {
+                    'detail': 'Contraseña incorrecta. Por favor intente nuevamente.',
+                    'code': 'incorrect_password'
+                },
+                code='incorrect_password'
+            )
+
+        return super().validate(attrs)
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -137,6 +180,15 @@ class MuestraSerializer(GeoFeatureModelSerializer):
             'fotos',
         ]
         read_only_fields = ['id_muestra', 'fecha_hora_captura']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.id_punto_critico:
+            ret['properties']['id_punto_critico'] = {
+                'id_punto_critico': instance.id_punto_critico.id_punto_critico,
+                'descripcion': instance.id_punto_critico.descripcion
+            }
+        return ret
 
 
 class NotificacionSerializer(serializers.ModelSerializer):
