@@ -13,12 +13,12 @@ interface ReportRow {
   sector: string;
   point: string;
   component: string;
-  level: number;
+  level: number | null | undefined;
   status: 'optimo' | 'atencion' | 'critico';
-  humedad?: number;
-  temperatura?: number;
-  salinidad?: number;
-  conductividad?: number;
+  humedad?: number | null;
+  temperatura?: number | null;
+  salinidad?: number | null;
+  conductividad?: number | null;
 }
 
 @Component({
@@ -298,12 +298,14 @@ export class ReportsComponent {
       const p = f.properties;
       const val = p[propKey];
       let status: 'optimo' | 'atencion' | 'critico' = 'optimo';
-      if (propKey === 'conductividad' || propKey === 'salinidad') {
-        if (val > (this.yAxisMax * 0.6)) status = 'critico';
-        else if (val > (this.yAxisMax * 0.4)) status = 'atencion';
-      } else {
-        if (val < (this.yAxisMax * 0.2)) status = 'critico';
-        else if (val < (this.yAxisMax * 0.4)) status = 'atencion';
+      if (val !== null && val !== undefined) {
+        if (propKey === 'conductividad' || propKey === 'salinidad') {
+          if (val > (this.yAxisMax * 0.6)) status = 'critico';
+          else if (val > (this.yAxisMax * 0.4)) status = 'atencion';
+        } else {
+          if (val < (this.yAxisMax * 0.2)) status = 'critico';
+          else if (val < (this.yAxisMax * 0.4)) status = 'atencion';
+        }
       }
 
       return {
@@ -431,7 +433,10 @@ export class ReportsComponent {
       const t = new Date(f.properties.fecha_hora_captura).getTime();
       for (let i = 0; i < N; i++) {
         if (t >= bucketsConfig[i].start && t <= bucketsConfig[i].end) {
-          bucketsData[i].push(f.properties[propKey]);
+          const val = f.properties[propKey];
+          if (val !== null && val !== undefined) {
+            bucketsData[i].push(val);
+          }
           break;
         }
       }
@@ -440,15 +445,17 @@ export class ReportsComponent {
     this.rawData = bucketsData.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
 
     // Calcular promedios para Green vs Fairway
-    const greenFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN');
-    const fairwayFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY');
+    const greenVals = features
+      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN')
+      .map(f => f.properties[propKey])
+      .filter((v): v is number => v !== null && v !== undefined);
+    const fairwayVals = features
+      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY')
+      .map(f => f.properties[propKey])
+      .filter((v): v is number => v !== null && v !== undefined);
 
-    const gAvg = greenFeatures.length > 0 
-      ? greenFeatures.reduce((acc, f) => acc + f.properties[propKey], 0) / greenFeatures.length 
-      : 0;
-    const fAvg = fairwayFeatures.length > 0 
-      ? fairwayFeatures.reduce((acc, f) => acc + f.properties[propKey], 0) / fairwayFeatures.length 
-      : 0;
+    const gAvg = greenVals.length > 0 ? greenVals.reduce((acc, v) => acc + v, 0) / greenVals.length : 0;
+    const fAvg = fairwayVals.length > 0 ? fairwayVals.reduce((acc, v) => acc + v, 0) / fairwayVals.length : 0;
 
     this.avgGreen.set(gAvg);
     this.avgFairway.set(fAvg);
@@ -491,12 +498,14 @@ export class ReportsComponent {
       const p = f.properties;
       const val = p[propKey];
       let status: 'optimo' | 'atencion' | 'critico' = 'optimo';
-      if (propKey === 'conductividad' || propKey === 'salinidad') {
-        if (val > (this.exportYAxisMax * 0.6)) status = 'critico';
-        else if (val > (this.exportYAxisMax * 0.4)) status = 'atencion';
-      } else {
-        if (val < (this.exportYAxisMax * 0.2)) status = 'critico';
-        else if (val < (this.exportYAxisMax * 0.4)) status = 'atencion';
+      if (val !== null && val !== undefined) {
+        if (propKey === 'conductividad' || propKey === 'salinidad') {
+          if (val > (this.exportYAxisMax * 0.6)) status = 'critico';
+          else if (val > (this.exportYAxisMax * 0.4)) status = 'atencion';
+        } else {
+          if (val < (this.exportYAxisMax * 0.2)) status = 'critico';
+          else if (val < (this.exportYAxisMax * 0.4)) status = 'atencion';
+        }
       }
       return {
         id: f.id,
@@ -574,7 +583,10 @@ export class ReportsComponent {
       const t = new Date(f.properties.fecha_hora_captura).getTime();
       for (let i = 0; i < N; i++) {
         if (t >= bucketsConfig[i].start && t <= bucketsConfig[i].end) {
-          bucketsData[i].push(f.properties[propKey]);
+          const val = f.properties[propKey];
+          if (val !== null && val !== undefined) {
+            bucketsData[i].push(val);
+          }
           break;
         }
       }
@@ -582,10 +594,17 @@ export class ReportsComponent {
 
     this.exportRawData = bucketsData.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
 
-    const greenFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN');
-    const fairwayFeatures = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY');
-    this.exportAvgGreen = greenFeatures.length > 0 ? greenFeatures.reduce((acc, f) => acc + f.properties[propKey], 0) / greenFeatures.length : 0;
-    this.exportAvgFairway = fairwayFeatures.length > 0 ? fairwayFeatures.reduce((acc, f) => acc + f.properties[propKey], 0) / fairwayFeatures.length : 0;
+    const greenVals = features
+      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN')
+      .map(f => f.properties[propKey])
+      .filter((v): v is number => v !== null && v !== undefined);
+    const fairwayVals = features
+      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY')
+      .map(f => f.properties[propKey])
+      .filter((v): v is number => v !== null && v !== undefined);
+
+    this.exportAvgGreen = greenVals.length > 0 ? greenVals.reduce((acc, v) => acc + v, 0) / greenVals.length : 0;
+    this.exportAvgFairway = fairwayVals.length > 0 ? fairwayVals.reduce((acc, v) => acc + v, 0) / fairwayVals.length : 0;
   }
 
   private async _generateExcel() {
@@ -624,7 +643,7 @@ export class ReportsComponent {
         headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C3D2E' } };
 
         this.exportReportRows.forEach(row => {
-          sheet.addRow([row.id, row.date, row.sector, row.point, row.component, row.level.toFixed(1)]);
+          sheet.addRow([row.id, row.date, row.sector, row.point, row.component, row.level != null ? row.level.toFixed(1) : '-']);
         });
 
         sheet.getColumn(1).width = 10;
@@ -661,10 +680,10 @@ export class ReportsComponent {
       doc.text('Resumen Estadístico', 14, currentY);
       currentY += 8;
       
-      const allLevels = this.exportReportRows.map(r => r.level);
+      const allLevels = this.exportReportRows.map(r => r.level).filter((v): v is number => v !== null && v !== undefined);
       const min = allLevels.length ? Math.min(...allLevels).toFixed(2) : '0.00';
       const max = allLevels.length ? Math.max(...allLevels).toFixed(2) : '0.00';
-      const avg = allLevels.length ? (allLevels.reduce((a,b)=>a+b,0)/allLevels.length).toFixed(2) : '0.00';
+      const avg = allLevels.length ? (allLevels.reduce((a, b) => a + b, 0) / allLevels.length).toFixed(2) : '0.00';
       
       doc.setFontSize(10);
       doc.setTextColor(80);
@@ -690,7 +709,7 @@ export class ReportsComponent {
         autoTable(doc, {
           startY: currentY,
           head: [['ID', 'Fecha', 'Sector', 'Zona', 'Componente', 'Nivel']],
-          body: this.exportReportRows.map(r => [r.id, r.date, r.sector, r.point, r.component, r.level.toFixed(1)]),
+          body: this.exportReportRows.map(r => [r.id, r.date, r.sector, r.point, r.component, r.level != null ? r.level.toFixed(1) : '-']),
           theme: 'striped',
           headStyles: { fillColor: [28, 61, 46] }
         });

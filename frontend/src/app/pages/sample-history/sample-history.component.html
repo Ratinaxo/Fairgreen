@@ -143,10 +143,10 @@
                         <span style="font-size:13px;font-weight:500;">{{ sample.date }}</span>
                         <div style="font-size:11px;color:var(--color-text-muted);">Sector {{ sample.sector }} · {{ sample.zona }}</div>
                       </td>
-                      <td class="mono">{{ sample.humidity.toFixed(1) }}</td>
-                      <td class="mono">{{ sample.temperature.toFixed(1) }}</td>
-                      <td class="mono">{{ sample.conductivity.toFixed(2) }}</td>
-                      <td class="mono">{{ sample.salinity.toFixed(2) }}</td>
+                      <td class="mono">{{ sample.humidity != null ? sample.humidity.toFixed(1) : '—' }}</td>
+                      <td class="mono">{{ sample.temperature != null ? sample.temperature.toFixed(1) : '—' }}</td>
+                      <td class="mono">{{ sample.conductivity != null ? sample.conductivity.toFixed(2) : '—' }}</td>
+                      <td class="mono">{{ sample.salinity != null ? sample.salinity.toFixed(2) : '—' }}</td>
                       <td style="color:var(--color-text-secondary);">{{ sample.responsible }}</td>
                       <td style="vertical-align:middle;padding:8px 16px;">
                         <div style="display:flex;gap:6px;align-items:center;justify-content:flex-start;height:30px;">

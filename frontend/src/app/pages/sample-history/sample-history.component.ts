@@ -9,10 +9,10 @@ import { MapGeorefComponent } from '../../components/map/map-georef.component';
 interface SampleRow {
   id: number;
   date: string;
-  humidity: number;
-  temperature: number;
-  conductivity: number;
-  salinity: number;
+  humidity: number | null | undefined;
+  temperature: number | null | undefined;
+  conductivity: number | null | undefined;
+  salinity: number | null | undefined;
   responsible: string;
   zona: string;
   sector: number;

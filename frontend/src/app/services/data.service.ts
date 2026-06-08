@@ -60,10 +60,10 @@ export interface MuestraProperties {
   rut_usuario: UsuarioResumen;
   id_seccion: SeccionFeature;
   id_punto_critico: number | null;
-  salinidad: number;
-  humedad: number;
-  conductividad: number;
-  temperatura: number;
+  salinidad?: number | null;
+  humedad?: number | null;
+  conductividad?: number | null;
+  temperatura?: number | null;
   recomendaciones: string | null;
   fecha_hora_captura: string; // ISO 8601
   fotos: FotoItem[];
@@ -115,10 +115,10 @@ export interface NotificacionesResponse {
 export interface CreateMuestraPayload {
   id_seccion_id: number;
   id_punto_critico?: number | null;
-  salinidad: number;
-  humedad: number;
-  conductividad: number;
-  temperatura: number;
+  salinidad?: number | null;
+  humedad?: number | null;
+  conductividad?: number | null;
+  temperatura?: number | null;
   ubicacion_exacta: { type: 'Point', coordinates: [number, number] };
   recomendaciones?: string;
 }

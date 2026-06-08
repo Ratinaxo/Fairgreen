@@ -34,8 +34,10 @@ export class SampleDetailComponent implements OnInit {
   health = computed<'optimo' | 'atencion' | 'critico'>(() => {
     const p = this.muestra()?.properties;
     if (!p) return 'optimo';
-    if (p.conductividad > 3.5 || p.salinidad > 2.5) return 'critico';
-    if (p.conductividad > 2.0 || p.salinidad > 1.5) return 'atencion';
+    const c = p.conductividad ?? 0;
+    const s = p.salinidad ?? 0;
+    if (c > 3.5 || s > 2.5) return 'critico';
+    if (c > 2.0 || s > 1.5) return 'atencion';
     return 'optimo';
   });
 

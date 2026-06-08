@@ -126,8 +126,10 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
             
             // Determinar color según estado (salinidad/conductividad)
             let color = '#4CAF7D'; // Optimo
-            if (m.properties.conductividad > 3.5 || m.properties.salinidad > 2.5) color = '#EF4444'; // Critico
-            else if (m.properties.conductividad > 2.0 || m.properties.salinidad > 1.5) color = '#F59E0B'; // Atencion
+            const cond = m.properties.conductividad ?? 0;
+            const sal = m.properties.salinidad ?? 0;
+            if (cond > 3.5 || sal > 2.5) color = '#EF4444'; // Critico
+            else if (cond > 2.0 || sal > 1.5) color = '#F59E0B'; // Atencion
             
             point.setProperties({ ...m.properties, id_muestra: m.id || m.properties?.id_muestra, color });
             this.pointsSource.addFeature(point);
