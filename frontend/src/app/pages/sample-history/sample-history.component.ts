@@ -2,6 +2,8 @@ import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { DataService, MuestraFeature, SeccionFeature } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
@@ -45,6 +47,13 @@ export class SampleHistoryComponent implements OnInit {
   filterIdMuestra = '';
   filterPuntoCritico = '';
   readonly pageSize = 20;
+  
+  showMobileFilters = false;
+  private filterSubject = new Subject<void>();
+
+  toggleMobileFilters() {
+    this.showMobileFilters = !this.showMobileFilters;
+  }
 
   currentPage = signal(1);
   totalCount = signal(0);
@@ -67,6 +76,10 @@ export class SampleHistoryComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.filterSubject.pipe(debounceTime(400)).subscribe(() => {
+      this.loadPage(1);
+    });
+
     this.route.queryParams.subscribe(params => {
       const page = params['page'] ? parseInt(params['page'], 10) : 1;
       this.filterSector = params['sector'] || '';
@@ -129,6 +142,14 @@ export class SampleHistoryComponent implements OnInit {
     this.filterFechaHasta = '';
     this.filterIdMuestra = '';
     this.filterPuntoCritico = '';
+    this.loadPage(1);
+  }
+
+  onFilterChange() {
+    this.filterSubject.next();
+  }
+
+  onSelectChange() {
     this.loadPage(1);
   }
 

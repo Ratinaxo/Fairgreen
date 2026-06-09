@@ -24,7 +24,7 @@ from core.models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificac
 
 
 # ---------------------------------------------------------------------------
-# Coordenadas centrales del campo (Club de Golf Las Palmas, Quillota, Chile)
+# Coordenadas centrales del campo (Club Naval de Campo Las Salinas)
 # SRID 4326: (longitud, latitud)
 # ---------------------------------------------------------------------------
 CAMPO_LON = -71.54305513777648
