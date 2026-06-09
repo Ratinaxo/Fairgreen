@@ -260,7 +260,7 @@ export class GeomapComponent implements OnInit {
     this.selectedSector.set(null);
 
     // Si el filtro de críticos está activo y la muestra pertenece a un punto crítico, mostrar vista de grupo
-    if (this.showOnlyCritical() && props['id_punto_critico'] != null) {
+    if (this.showOnlyCritical() && props['id_punto_critico'] != null && !props['forceSampleView']) {
       this.selectedMuestra.set(null);
 
       const pcObj = props['id_punto_critico'];
@@ -363,7 +363,7 @@ export class GeomapComponent implements OnInit {
 
   focusOnSample(m: MuestraFeature) {
     this.focusId.set(String(m.id || m.properties.id_muestra));
-    this.onZoneSelect({ ...m.properties, id_muestra: m.id || m.properties.id_muestra, type: 'muestra' });
+    this.onZoneSelect({ ...m.properties, id_muestra: m.id || m.properties.id_muestra, type: 'muestra', forceSampleView: true });
   }
 
   togglePanel() {
