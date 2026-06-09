@@ -3,7 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { NgClass, DatePipe, DecimalPipe } from '@angular/common';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
 import { MapLegendComponent } from '../../components/map/map-legend.component';
-import { DataService, SeccionFeature, MuestraFeature } from '../../services/data.service';
+import { DataService, SeccionFeature, MuestraFeature, PuntoCriticoFeature } from '../../services/data.service';
 
 interface Zone {
   id: number;
@@ -32,10 +32,12 @@ export class GeomapComponent implements OnInit {
 
   selectedMuestra = signal<any | null>(null);
   selectedSector = signal<any | null>(null);
+  selectedPuntoCritico = signal<any | null>(null);
   isPanelOpen = signal(false);
   zonesHealth = signal<Record<string, string>>({});
   muestras = signal<MuestraFeature[]>([]);
   secciones = signal<SeccionFeature[]>([]);
+  puntosCriticos = signal<PuntoCriticoFeature[]>([]);
   focusId = signal<string | null>(null);
 
   zoneHealthLabel: Record<string, string> = {
@@ -48,6 +50,7 @@ export class GeomapComponent implements OnInit {
   isLoading = signal(true);
 
   timeFilter = signal<'7d' | '30d' | '6m' | 'all'>('30d');
+  showOnlyCritical = signal(false);
   private allMuestras: MuestraFeature[] = [];
 
   ngOnInit() {
@@ -75,11 +78,18 @@ export class GeomapComponent implements OnInit {
           next: (geoJson) => res(geoJson.features ?? []),
           error: () => res([])
         });
+      }),
+      new Promise<PuntoCriticoFeature[]>((res) => {
+        this.dataService.getTodosPuntosCriticos().subscribe({
+          next: (geoJson) => res(geoJson.features ?? []),
+          error: () => res([])
+        });
       })
-    ]).then(([secciones, muestras]) => {
+    ]).then(([secciones, muestras, puntosCriticos]) => {
       this.allMuestras = muestras;
       this.secciones.set(secciones);
-      this.applyTimeFilter();
+      this.puntosCriticos.set(puntosCriticos);
+      this.applyFilters();
       this.isLoading.set(false);
     });
   }
@@ -87,10 +97,22 @@ export class GeomapComponent implements OnInit {
   onFilterChange(event: Event) {
     const select = event.target as HTMLSelectElement;
     this.timeFilter.set(select.value as any);
-    this.applyTimeFilter();
+    this.applyFilters();
   }
 
-  private applyTimeFilter() {
+  toggleCriticalFilter(event: Event) {
+    const checkbox = event.target as HTMLInputElement;
+    this.showOnlyCritical.set(checkbox.checked);
+    this.applyFilters();
+
+    // Si desactivamos el filtro, ocultamos el panel si estábamos viendo un punto crítico
+    if (!this.showOnlyCritical() && this.selectedPuntoCritico()) {
+      this.selectedPuntoCritico.set(null);
+      this.isPanelOpen.set(false);
+    }
+  }
+
+  private applyFilters() {
     if (this.allMuestras.length === 0) {
       this.muestras.set([]);
       this._buildZonesData(this.secciones(), []);
@@ -103,8 +125,12 @@ export class GeomapComponent implements OnInit {
       if (this.timeFilter() === '7d') cutoffDate.setDate(cutoffDate.getDate() - 7);
       else if (this.timeFilter() === '30d') cutoffDate.setDate(cutoffDate.getDate() - 30);
       else if (this.timeFilter() === '6m') cutoffDate.setMonth(cutoffDate.getMonth() - 6);
-      
-      filtered = this.allMuestras.filter(m => new Date(m.properties.fecha_hora_captura) >= cutoffDate);
+
+      filtered = filtered.filter(m => new Date(m.properties.fecha_hora_captura) >= cutoffDate);
+    }
+
+    if (this.showOnlyCritical()) {
+      filtered = filtered.filter(m => m.properties.id_punto_critico != null);
     }
 
     this.muestras.set(filtered);
@@ -204,24 +230,26 @@ export class GeomapComponent implements OnInit {
     if (!props) {
       this.selectedMuestra.set(null);
       this.selectedSector.set(null);
+      this.selectedPuntoCritico.set(null);
       this.isPanelOpen.set(false);
       return;
     }
 
     if (props['type'] === 'sector') {
       this.selectedMuestra.set(null);
-      
-      const zoneId = String(props['featureId'] || props['id']); 
+      this.selectedPuntoCritico.set(null);
+
+      const zoneId = String(props['featureId'] || props['id']);
       const zoneData = this.zonesData[zoneId];
-      
+
       if (zoneData) {
         // Filtrar las muestras de este sector y ordenarlas
         const secMuestras = this.muestras().filter(m => String(m.properties.id_seccion.id) === zoneId);
-        secMuestras.sort((a,b) => new Date(b.properties.fecha_hora_captura).getTime() - new Date(a.properties.fecha_hora_captura).getTime());
-        
+        secMuestras.sort((a, b) => new Date(b.properties.fecha_hora_captura).getTime() - new Date(a.properties.fecha_hora_captura).getTime());
+
         this.selectedSector.set({
-           zoneData: zoneData,
-           muestras: secMuestras
+          zoneData: zoneData,
+          muestras: secMuestras
         });
       }
       this.isPanelOpen.set(true);
@@ -230,6 +258,77 @@ export class GeomapComponent implements OnInit {
 
     // Es una muestra
     this.selectedSector.set(null);
+
+    // Si el filtro de críticos está activo y la muestra pertenece a un punto crítico, mostrar vista de grupo
+    if (this.showOnlyCritical() && props['id_punto_critico'] != null && !props['forceSampleView']) {
+      this.selectedMuestra.set(null);
+
+      const pcObj = props['id_punto_critico'];
+      const pcId = typeof pcObj === 'object' ? pcObj.id_punto_critico : pcObj;
+      const pc = this.puntosCriticos().find(p => p.id === pcId);
+
+      // Filtrar TODAS las muestras de ese punto crítico en el tiempo seleccionado
+      const pcMuestras = this.muestras().filter(m => {
+        const mPcObj = m.properties.id_punto_critico;
+        const mPcId = typeof mPcObj === 'object' && mPcObj !== null ? (mPcObj as any).id_punto_critico : mPcObj;
+        return mPcId === pcId;
+      });
+      pcMuestras.sort((a, b) => new Date(b.properties.fecha_hora_captura).getTime() - new Date(a.properties.fecha_hora_captura).getTime());
+
+      let avgH = 0, avgT = 0, avgS = 0, avgC = 0;
+      let health: 'optimo' | 'atencion' | 'critico' = 'optimo';
+
+      if (pcMuestras.length > 0) {
+        const mProps = pcMuestras.map(m => m.properties);
+        const humVals = mProps.map(m => m.humedad).filter((v): v is number => v !== null && v !== undefined);
+        const tempVals = mProps.map(m => m.temperatura).filter((v): v is number => v !== null && v !== undefined);
+        const salVals = mProps.map(m => m.salinidad).filter((v): v is number => v !== null && v !== undefined);
+        const condVals = mProps.map(m => m.conductividad).filter((v): v is number => v !== null && v !== undefined);
+
+        avgH = humVals.length > 0 ? humVals.reduce((acc, v) => acc + v, 0) / humVals.length : 0;
+        avgT = tempVals.length > 0 ? tempVals.reduce((acc, v) => acc + v, 0) / tempVals.length : 0;
+        avgS = salVals.length > 0 ? salVals.reduce((acc, v) => acc + v, 0) / salVals.length : 0;
+        avgC = condVals.length > 0 ? condVals.reduce((acc, v) => acc + v, 0) / condVals.length : 0;
+
+        if (avgC > 3.5 || avgS > 2.5) {
+          health = 'critico';
+        } else if (avgC > 2.0 || avgS > 1.5) {
+          health = 'atencion';
+        }
+      }
+
+      let zonaName = 'Zona Desconocida';
+      let descripcion = 'Punto crítico';
+      if (pc) {
+        zonaName = pc.properties.id_seccion?.properties
+          ? `${pc.properties.id_seccion.properties.tipo_de_tierra} #${pc.properties.id_seccion.properties.numero_de_hoyo}`
+          : zonaName;
+        descripcion = pc.properties.descripcion || descripcion;
+      } else {
+        const seccionProps = props['id_seccion']?.properties;
+        zonaName = seccionProps ? `${seccionProps.tipo_de_tierra} #${seccionProps.numero_de_hoyo}` : zonaName;
+      }
+
+      this.selectedPuntoCritico.set({
+        pcData: {
+          id: pcId,
+          name: `Punto Crítico ${pcId}`,
+          zonaName: zonaName,
+          descripcion: descripcion,
+          health: health,
+          humidity: pcMuestras.length > 0 ? avgH.toFixed(1) : '--',
+          temperature: pcMuestras.length > 0 ? avgT.toFixed(1) : '--',
+          salinity: pcMuestras.length > 0 ? avgS.toFixed(2) : '--',
+          conductivity: pcMuestras.length > 0 ? avgC.toFixed(2) : '--',
+        },
+        muestras: pcMuestras
+      });
+      this.isPanelOpen.set(true);
+      return;
+    }
+
+    // Mostrar vista de muestra individual
+    this.selectedPuntoCritico.set(null);
     const fecha = new Date(props['fecha_hora_captura']);
     const fechaStr = fecha.toLocaleDateString('es-CL') + ' ' + fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 
@@ -263,8 +362,8 @@ export class GeomapComponent implements OnInit {
   }
 
   focusOnSample(m: MuestraFeature) {
-     this.focusId.set(String(m.id || m.properties.id_muestra));
-     this.onZoneSelect({ ...m.properties, id_muestra: m.id || m.properties.id_muestra, type: 'muestra' });
+    this.focusId.set(String(m.id || m.properties.id_muestra));
+    this.onZoneSelect({ ...m.properties, id_muestra: m.id || m.properties.id_muestra, type: 'muestra', forceSampleView: true });
   }
 
   togglePanel() {
