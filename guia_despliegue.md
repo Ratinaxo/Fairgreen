@@ -44,6 +44,16 @@ git checkout main
 
 Conéctate mediante la terminal a tu EC2 (`ssh -i "llave.pem" ubuntu@TU_IP`) y sigue este flujo para actualizar el servidor:
 
+> [!WARNING]
+> **Control de IPs y DNS (DuckDNS y FreeDNS/Afraid):**
+> * Si detienes/apagas la instancia de EC2 y **no** tienes asociada una **IP Elástica (Elastic IP)** en AWS, la IP pública cambiará.
+> * Si la IP pública cambia, debes actualizarla en tus proveedores de DNS para que los dominios sigan apuntando al servidor:
+>   * **DuckDNS:** Actualiza `fairgreen.duckdns.org` con la nueva IP en [duckdns.org](https://www.duckdns.org/).
+>   * **FreeDNS (Afraid.org):** Actualiza `fairgreen.crabdance.com` ingresando a [freedns.afraid.org](https://freedns.afraid.org/), ve a la sección *Subdomains* y actualiza el valor de la IP.
+> * Se recomienda reservar y asociar una **IP Elástica** en AWS para evitar que la IP cambie.
+
+
+
 ### 1. Limpieza de seguridad (Solo si Git detecta conflictos locales)
 Si realizaste modificaciones directas en el servidor y Git te bloquea el cambio de rama o el `pull`, corre esto para limpiar el estado del repositorio:
 ```bash
@@ -114,3 +124,52 @@ scp -i "llave.pem" -r C:\Users\alexa\Desktop\Fairgreen\frontend\dist\angular-app
 sudo find /var/www/fairgreen/html -type d -exec chmod 755 {} \;
 sudo find /var/www/fairgreen/html -type f -exec chmod 644 {} \;
 ```
+
+---
+
+## FASE 4: Diagnóstico y Monitoreo del Servidor (Comandos Útiles)
+
+Si notas lentitud, errores 500/502 (Bad Gateway), o simplemente quieres verificar que todo esté funcionando correctamente en el servidor EC2, utiliza los siguientes comandos:
+
+### 1. Estado de Docker en General
+```bash
+# Ver el estado y tiempo de actividad de todos los contenedores
+docker compose ps
+
+# Monitorear el uso de CPU, Memoria y Red de los contenedores en tiempo real
+docker stats
+
+# Ver los logs combinados de todos los servicios (con seguimiento en tiempo real)
+docker compose logs -f --tail=100
+```
+
+### 2. Estado y Logs del Backend (Django)
+```bash
+# Ver si el contenedor del backend está activo o si se está reiniciando
+docker compose ps backend
+
+# Ver logs en tiempo real del backend para depurar errores de Django o Nginx (ej. errores 502)
+docker compose logs -f --tail=100 backend
+
+# Entrar a la terminal interactiva del backend (útil para revisar archivos internos)
+docker compose exec backend sh
+
+# Verificar el estado de las migraciones de Django en la base de datos de producción
+docker compose exec backend python manage.py showmigrations
+```
+
+### 3. Estado y Conexión de la Base de Datos (PostgreSQL)
+```bash
+# Ver si el contenedor de la base de datos está activo y saludable
+docker compose ps db
+
+# Ver logs del motor de base de datos PostgreSQL
+docker compose logs -f --tail=100 db
+
+# Verificar si la base de datos está lista y aceptando conexiones
+docker compose exec db pg_isready -U fairgreen_admin -d fairgreen_db
+
+# Entrar directamente a la consola interactiva psql de la base de datos para consultas SQL
+docker compose exec db psql -U fairgreen_admin -d fairgreen_db
+```
+
