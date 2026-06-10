@@ -7,19 +7,29 @@
 
     <!-- Filters card -->
     <div class="card filter-card">
-      <div class="filters-wrapper">
+      <div class="mobile-filter-toggle" (click)="toggleMobileFilters()" role="button" tabindex="0">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+          </svg>
+          <span style="font-weight:600;font-size:14px;color:var(--color-text-primary);">Filtros de Búsqueda</span>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          [style.transform]="showMobileFilters ? 'rotate(180deg)' : 'none'" style="transition: transform 0.2s;">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+      <div class="filters-wrapper" [class.mobile-hidden]="!showMobileFilters">
         <div class="filter-item">
-          <label for="filter-id"
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">ID
-            Muestra:</label>
-          <input id="filter-id" type="text" class="form-control" style="width:90px;" [(ngModel)]="filterIdMuestra"
-            placeholder="Ej: 42" aria-label="Buscar por ID" />
+          <label for="filter-id">ID Muestra:</label>
+          <input id="filter-id" type="text" class="form-control" [(ngModel)]="filterIdMuestra"
+            (ngModelChange)="onFilterChange()" placeholder="Ej: 42" aria-label="Buscar por ID" />
         </div>
         <div class="filter-item">
-          <label for="filter-sector"
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Sector:</label>
-          <div class="select-wrapper" style="width:120px;">
-            <select id="filter-sector" class="form-control" [(ngModel)]="filterSector" aria-label="Filtrar por sector">
+          <label for="filter-sector">Sector:</label>
+          <div class="select-wrapper">
+            <select id="filter-sector" class="form-control" [(ngModel)]="filterSector"
+              (ngModelChange)="onSelectChange()" aria-label="Filtrar por sector">
               <option value="">Todos</option>
               @for (s of sectorOptions; track s) {
               <option [value]="s">{{ s }}</option>
@@ -28,10 +38,10 @@
           </div>
         </div>
         <div class="filter-item">
-          <label for="filter-zona"
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Zona:</label>
-          <div class="select-wrapper" style="width:140px;">
-            <select id="filter-zona" class="form-control" [(ngModel)]="filterZona" aria-label="Filtrar por zona">
+          <label for="filter-zona">Zona:</label>
+          <div class="select-wrapper">
+            <select id="filter-zona" class="form-control" [(ngModel)]="filterZona" (ngModelChange)="onSelectChange()"
+              aria-label="Filtrar por zona">
               <option value="">Todas</option>
               <option>Green</option>
               <option>Fairway</option>
@@ -39,12 +49,10 @@
           </div>
         </div>
         <div class="filter-item">
-          <label for="filter-pc"
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Pto.
-            Crítico:</label>
-          <div class="select-wrapper" style="width:140px;">
+          <label for="filter-pc">Pto. Crítico:</label>
+          <div class="select-wrapper">
             <select id="filter-pc" class="form-control" [(ngModel)]="filterPuntoCritico"
-              aria-label="Filtrar por punto crítico">
+              (ngModelChange)="onSelectChange()" aria-label="Filtrar por punto crítico">
               <option value="">Todos</option>
               <option value="si">Solo asociados (Sí)</option>
               <option value="no">No asociados (No)</option>
@@ -53,20 +61,17 @@
         </div>
         <!-- Filtro de fechas -->
         <div class="filter-item">
-          <label for="filter-fecha-desde"
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Desde:</label>
-          <input id="filter-fecha-desde" type="date" class="form-control" style="width:150px;"
-            [(ngModel)]="filterFechaDesde" aria-label="Fecha desde" />
+          <label for="filter-fecha-desde">Desde:</label>
+          <input id="filter-fecha-desde" type="date" class="form-control" [(ngModel)]="filterFechaDesde"
+            (ngModelChange)="onFilterChange()" aria-label="Fecha desde" />
         </div>
         <div class="filter-item">
-          <label for="filter-fecha-hasta"
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap;">Hasta:</label>
-          <input id="filter-fecha-hasta" type="date" class="form-control" style="width:150px;"
-            [(ngModel)]="filterFechaHasta" aria-label="Fecha hasta" />
+          <label for="filter-fecha-hasta">Hasta:</label>
+          <input id="filter-fecha-hasta" type="date" class="form-control" [(ngModel)]="filterFechaHasta"
+            (ngModelChange)="onFilterChange()" aria-label="Fecha hasta" />
         </div>
         <div class="filter-buttons">
-          <button class="btn-primary" id="apply-filters-btn" (click)="loadPage(1)">Aplicar</button>
-          <button class="btn-text" (click)="clearFilters()">Limpiar</button>
+          <button class="btn-text" (click)="clearFilters()">Limpiar Filtros</button>
         </div>
       </div>
     </div>

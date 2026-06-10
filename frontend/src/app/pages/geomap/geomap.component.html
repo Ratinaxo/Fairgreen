@@ -1,237 +1,434 @@
+<div class="geomap-layout">
+  <!-- Map area -->
+  <div class="map-area" style="position: relative;">
+    <!-- Filters Overlay -->
+    <div class="map-time-filter"
+      style="position: absolute; top: 16px; right: 16px; z-index: 90; background: white; padding: 6px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 16px; border: 1px solid var(--color-border);">
 
-    <div class="geomap-layout">
-      <!-- Map area -->
-      <div class="map-area" style="position: relative;">
-        <!-- Time Filter Overlay -->
-        <div class="map-time-filter" style="position: absolute; top: 16px; right: 16px; z-index: 1000; background: white; padding: 6px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; border: 1px solid var(--color-border);">
-          <label for="timeFilterGeo" style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin: 0;">Periodo:</label>
-          <select id="timeFilterGeo" (change)="onFilterChange($event)" style="border: none; outline: none; font-size: 13px; color: var(--color-text-primary); font-family: inherit; cursor: pointer; background: transparent;">
-            <option value="7d" [selected]="timeFilter() === '7d'">Últimos 7 días</option>
-            <option value="30d" [selected]="timeFilter() === '30d'">Últimos 30 días</option>
-            <option value="6m" [selected]="timeFilter() === '6m'">Últimos 6 meses</option>
-            <option value="all" [selected]="timeFilter() === 'all'">Todo el tiempo</option>
-          </select>
-        </div>
-
-        <!-- OpenLayers Map -->
-        <app-map-georef 
-            (zoneSelect)="onZoneSelect($event)" 
-            [muestras]="muestras()"
-            [secciones]="secciones()"
-            [focusId]="focusId()" />
-
-        <!-- Map legend -->
-        <app-map-legend />
-
-        @if (selectedMuestra()) {
-          <button class="panel-toggle-btn" (click)="togglePanel()">
-            {{ isPanelOpen() ? 'Ocultar Detalles' : 'Ver Detalles' }}
-          </button>
-        }
+      <div style="display:flex; align-items:center; gap:6px;">
+        <label for="timeFilterGeo"
+          style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin: 0;">Periodo:</label>
+        <select id="timeFilterGeo" (change)="onFilterChange($event)"
+          style="border: none; outline: none; font-size: 13px; color: var(--color-text-primary); font-family: inherit; cursor: pointer; background: transparent;">
+          <option value="7d" [selected]="timeFilter() === '7d'">Últimos 7 días</option>
+          <option value="30d" [selected]="timeFilter() === '30d'">Últimos 30 días</option>
+          <option value="6m" [selected]="timeFilter() === '6m'">Últimos 6 meses</option>
+          <option value="all" [selected]="timeFilter() === 'all'">Todo el tiempo</option>
+        </select>
       </div>
 
-      <!-- Right panel -->
-      <aside class="geo-panel" [class.panel-visible]="isPanelOpen()" aria-label="Detalles de muestra seleccionada">
-        @if (selectedMuestra(); as muestra) {
-          <!-- Zone header -->
-          <div style="margin-bottom: 20px; position: relative;">
-            <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
-            </button>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
-              Muestra #{{ muestra.id }}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <span class="badge" [ngClass]="'badge-' + muestra.health">
-                {{ zoneHealthLabel[muestra.health] }}
-              </span>
-            </div>
-            <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
-              {{ muestra.zonaName }}
-            </div>
-          </div>
+      <div style="width:1px; height:20px; background:var(--color-border);"></div>
 
-          <!-- Maintenance status -->
-          <div class="maintenance-card" style="margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:36px;height:36px;background:var(--color-surface);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Capturada el</div>
-                <div style="font-size:11px;color:var(--color-text-muted);">{{ muestra.fechaStr }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Metrics 2x2 -->
-          <div style="margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Mediciones</div>
-            <div class="metrics-grid">
-              <div class="metric-cell">
-                <div class="metric-label">Humedad</div>
-                <div class="metric-value">{{ muestra.humedad }}<span class="metric-unit"> /5</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(muestra.humedad / 5 * 100) + '%'"></div></div>
-              </div>
-              <div class="metric-cell">
-                <div class="metric-label">Temperatura</div>
-                <div class="metric-value">{{ muestra.temperatura }}<span class="metric-unit">°C</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-warning" [style.width]="(muestra.temperatura / 40 * 100) + '%'"></div></div>
-              </div>
-              <div class="metric-cell">
-                <div class="metric-label">Salinidad</div>
-                <div class="metric-value">{{ muestra.salinidad }}<span class="metric-unit"> dS</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(muestra.salinidad / 5 * 100) + '%'"></div></div>
-              </div>
-              <div class="metric-cell">
-                <div class="metric-label">Conductividad</div>
-                <div class="metric-value">{{ muestra.conductividad }}<span class="metric-unit"> dS</span></div>
-                <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-danger" [style.width]="(muestra.conductividad / 5 * 100) + '%'"></div></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Image & Notes -->
-          <div style="margin-bottom: 20px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Evidencia e Indicaciones</div>
-            @if (muestra.fotos && muestra.fotos.length > 0) {
-              <div class="carousel-card" style="position:relative; margin-bottom:10px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden;">
-                <div class="carousel-viewport" style="position:relative; width:100%; aspect-ratio:4/3; background:#000;">
-                  <img
-                    [src]="muestra.fotos[muestra.currentPhotoIndex].url"
-                    [alt]="'Foto ' + (muestra.currentPhotoIndex + 1) + ' de muestra'"
-                    style="width:100%; height:100%; object-fit:contain;"
-                  />
-
-                  @if (muestra.fotos.length > 1) {
-                    <button class="carousel-btn carousel-btn--prev" (click)="prevPhoto()" aria-label="Foto anterior" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-                    </button>
-                    <button class="carousel-btn carousel-btn--next" (click)="nextPhoto()" aria-label="Foto siguiente" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-                    </button>
-                  }
-                </div>
-
-                @if (muestra.fotos.length > 1) {
-                  <div class="thumbnails-row" style="display:flex; gap:8px; padding:8px; background:var(--color-surface); overflow-x:auto;">
-                    @for (foto of muestra.fotos; track foto.id_foto; let i = $index) {
-                      <button
-                        class="thumb-btn"
-                        [style.border]="i === muestra.currentPhotoIndex ? '2px solid var(--color-primary)' : '2px solid transparent'"
-                        [style.opacity]="i === muestra.currentPhotoIndex ? '1' : '0.6'"
-                        (click)="goToPhoto(i)"
-                        [attr.aria-label]="'Ver foto ' + (i + 1)"
-                        style="width:48px; height:48px; border-radius:6px; overflow:hidden; padding:0; cursor:pointer; flex-shrink:0; transition:all 0.2s;"
-                      >
-                        <img [src]="foto.url" [alt]="'Miniatura ' + (i + 1)" style="width:100%; height:100%; object-fit:cover;" />
-                      </button>
-                    }
-                  </div>
-                }
-              </div>
-            } @else {
-              <div class="no-photo-placeholder" style="text-align:center; padding:20px; background:#f9fbf9; border:1px solid #dde5df; border-radius:8px; margin-bottom:10px;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);margin-bottom:8px;" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                <p style="color:var(--color-text-muted);font-size:12px;margin:0;">Sin fotos registradas</p>
-              </div>
-            }
-            <div style="background:#f9fbf9;border:1px solid #dde5df;padding:12px;border-radius:8px;font-size:12px;color:var(--color-text-secondary);line-height:1.5;">
-              {{ muestra.recomendaciones || 'Sin indicaciones registradas para esta muestra.' }}
-            </div>
-          </div>
-
-        } @else if (selectedSector(); as sectorInfo) {
-          <!-- Sector header -->
-          <div style="margin-bottom: 20px; position: relative;">
-            <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
-            </button>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
-              Sector
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <span class="badge" [ngClass]="'badge-' + sectorInfo.zoneData.health">
-                {{ zoneHealthLabel[sectorInfo.zoneData.health] }}
-              </span>
-            </div>
-            <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
-              {{ sectorInfo.zoneData.name }}
-            </div>
-          </div>
-          
-          <!-- Averages -->
-          <div style="margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Promedios del Sector</div>
-            <div class="metrics-grid">
-              <div class="metric-cell">
-                <div class="metric-label">Humedad</div>
-                <div class="metric-value">{{ sectorInfo.zoneData.humidity }}<span class="metric-unit"> /5</span></div>
-                @if (sectorInfo.zoneData.humidity !== '--') {
-                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(sectorInfo.zoneData.humidity / 5 * 100) + '%'"></div></div>
-                }
-              </div>
-              <div class="metric-cell">
-                <div class="metric-label">Temperatura</div>
-                <div class="metric-value">{{ sectorInfo.zoneData.temperature }}<span class="metric-unit">°C</span></div>
-                @if (sectorInfo.zoneData.temperature !== '--') {
-                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-warning" [style.width]="(sectorInfo.zoneData.temperature / 40 * 100) + '%'"></div></div>
-                }
-              </div>
-              <div class="metric-cell">
-                <div class="metric-label">Salinidad</div>
-                <div class="metric-value">{{ sectorInfo.zoneData.salinity }}<span class="metric-unit"> dS</span></div>
-                @if (sectorInfo.zoneData.salinity !== '--') {
-                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-optimal" [style.width]="(sectorInfo.zoneData.salinity / 5 * 100) + '%'"></div></div>
-                }
-              </div>
-              <div class="metric-cell">
-                <div class="metric-label">Conductividad</div>
-                <div class="metric-value">{{ sectorInfo.zoneData.conductivity }}<span class="metric-unit"> dS</span></div>
-                @if (sectorInfo.zoneData.conductivity !== '--') {
-                  <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill fill-danger" [style.width]="(sectorInfo.zoneData.conductivity / 5 * 100) + '%'"></div></div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- List of points -->
-          <div style="margin-bottom: 16px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">Puntos (Muestras)</div>
-            @if (sectorInfo.muestras.length === 0) {
-               <div style="font-size:12px;color:var(--color-text-muted);">No hay muestras en este sector para el periodo seleccionado.</div>
-            } @else {
-               <div style="display:flex; flex-direction:column; gap:8px;">
-                 @for (m of sectorInfo.muestras; track m.id) {
-                   <div class="maintenance-card hover-card" style="cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; padding:10px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface);" (click)="focusOnSample(m)" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                       <div>
-                         <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);">Muestra #{{ m.id || m.properties.id_muestra }}</div>
-                         <div style="font-size:11px;color:var(--color-text-muted);">{{ m.properties.fecha_hora_captura | date:'dd/MM/yyyy HH:mm' }}</div>
-                       </div>
-                       <div style="display:flex; gap:10px; font-size:11px; color:var(--color-text-secondary); background:#f9fbf9; padding:4px 8px; border-radius:6px;">
-                          <div style="display:flex;flex-direction:column;align-items:center;">
-                             <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.humedad | number:'1.1-1' }}</span>
-                             <span style="font-size:9px;">Hum</span>
-                          </div>
-                          <div style="display:flex;flex-direction:column;align-items:center;">
-                             <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.conductividad | number:'1.1-1' }}</span>
-                             <span style="font-size:9px;">Cond</span>
-                          </div>
-                       </div>
-                     </div>
-                   </div>
-                 }
-               </div>
-            }
-          </div>
-
-        } @else {
-          <div class="empty-panel">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--color-text-muted);" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
-            <p>Selecciona un sector o una muestra en el mapa para ver sus detalles</p>
-          </div>
-        }
-      </aside>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary);">Solo críticos:</span>
+        <label style="position:relative; display:inline-block; width:34px; height:20px; margin:0; cursor:pointer;">
+          <input type="checkbox" style="opacity:0; width:0; height:0;" [checked]="showOnlyCritical()"
+            (change)="toggleCriticalFilter($event)">
+          <span style="position:absolute; top:0; left:0; right:0; bottom:0; transition:.4s; border-radius:34px;"
+            [style.background-color]="showOnlyCritical() ? '#EF4444' : '#ccc'">
+            <span
+              style="position:absolute; height:16px; width:16px; left:2px; bottom:2px; background-color:white; transition:.4s; border-radius:50%;"
+              [style.transform]="showOnlyCritical() ? 'translateX(14px)' : 'translateX(0)'"></span>
+          </span>
+        </label>
+      </div>
     </div>
-  
+
+    <!-- OpenLayers Map -->
+    <app-map-georef (zoneSelect)="onZoneSelect($event)" [muestras]="muestras()" [secciones]="secciones()"
+      [focusId]="focusId()" />
+
+    <!-- Map legend -->
+    <app-map-legend />
+
+    @if (selectedMuestra() || selectedPuntoCritico()) {
+    <button class="panel-toggle-btn" (click)="togglePanel()">
+      {{ isPanelOpen() ? 'Ocultar Detalles' : 'Ver Detalles' }}
+    </button>
+    }
+  </div>
+
+  <!-- Right panel -->
+  <aside class="geo-panel" [class.panel-visible]="isPanelOpen()" aria-label="Detalles de muestra seleccionada">
+    @if (selectedMuestra(); as muestra) {
+    <!-- Zone header -->
+    <div style="margin-bottom: 20px; position: relative;">
+      <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" x2="6" y1="6" y2="18" />
+          <line x1="6" x2="18" y1="6" y2="18" />
+        </svg>
+      </button>
+      <div
+        style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
+        Muestra #{{ muestra.id }}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="badge" [ngClass]="'badge-' + muestra.health">
+          {{ zoneHealthLabel[muestra.health] }}
+        </span>
+      </div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
+        {{ muestra.zonaName }}
+      </div>
+    </div>
+
+    <!-- Maintenance status -->
+    <div class="maintenance-card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div
+          style="width:36px;height:36px;background:var(--color-surface);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75"
+            aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Capturada el</div>
+          <div style="font-size:11px;color:var(--color-text-muted);">{{ muestra.fechaStr }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics 2x2 -->
+    <div style="margin-bottom:16px;">
+      <div
+        style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">
+        Mediciones</div>
+      <div class="metrics-grid">
+        <div class="metric-cell">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value">{{ muestra.humedad }}<span class="metric-unit"> /5</span></div>
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-optimal" [style.width]="(muestra.humedad / 5 * 100) + '%'"></div>
+          </div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value">{{ muestra.temperatura }}<span class="metric-unit">°C</span></div>
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-warning" [style.width]="(muestra.temperatura / 40 * 100) + '%'"></div>
+          </div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Salinidad</div>
+          <div class="metric-value">{{ muestra.salinidad }}<span class="metric-unit"> dS</span></div>
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-optimal" [style.width]="(muestra.salinidad / 5 * 100) + '%'"></div>
+          </div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Conductividad</div>
+          <div class="metric-value">{{ muestra.conductividad }}<span class="metric-unit"> dS</span></div>
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-danger" [style.width]="(muestra.conductividad / 5 * 100) + '%'"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image & Notes -->
+    <div style="margin-bottom: 20px;">
+      <div
+        style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">
+        Evidencia e Indicaciones</div>
+      @if (muestra.fotos && muestra.fotos.length > 0) {
+      <div class="carousel-card"
+        style="position:relative; margin-bottom:10px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden;">
+        <div class="carousel-viewport" style="position:relative; width:100%; aspect-ratio:4/3; background:#000;">
+          <img [src]="muestra.fotos[muestra.currentPhotoIndex].url"
+            [alt]="'Foto ' + (muestra.currentPhotoIndex + 1) + ' de muestra'"
+            style="width:100%; height:100%; object-fit:contain;" />
+
+          @if (muestra.fotos.length > 1) {
+          <button class="carousel-btn carousel-btn--prev" (click)="prevPhoto()" aria-label="Foto anterior"
+            style="position:absolute; left:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button class="carousel-btn carousel-btn--next" (click)="nextPhoto()" aria-label="Foto siguiente"
+            style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+          }
+        </div>
+
+        @if (muestra.fotos.length > 1) {
+        <div class="thumbnails-row"
+          style="display:flex; gap:8px; padding:8px; background:var(--color-surface); overflow-x:auto;">
+          @for (foto of muestra.fotos; track foto.id_foto; let i = $index) {
+          <button class="thumb-btn"
+            [style.border]="i === muestra.currentPhotoIndex ? '2px solid var(--color-primary)' : '2px solid transparent'"
+            [style.opacity]="i === muestra.currentPhotoIndex ? '1' : '0.6'" (click)="goToPhoto(i)"
+            [attr.aria-label]="'Ver foto ' + (i + 1)"
+            style="width:48px; height:48px; border-radius:6px; overflow:hidden; padding:0; cursor:pointer; flex-shrink:0; transition:all 0.2s;">
+            <img [src]="foto.url" [alt]="'Miniatura ' + (i + 1)" style="width:100%; height:100%; object-fit:cover;" />
+          </button>
+          }
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="no-photo-placeholder"
+        style="text-align:center; padding:20px; background:#f9fbf9; border:1px solid #dde5df; border-radius:8px; margin-bottom:10px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          style="color:var(--color-text-muted);margin-bottom:8px;" aria-hidden="true">
+          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+          <circle cx="9" cy="9" r="2" />
+          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </svg>
+        <p style="color:var(--color-text-muted);font-size:12px;margin:0;">Sin fotos registradas</p>
+      </div>
+      }
+      <div
+        style="background:#f9fbf9;border:1px solid #dde5df;padding:12px;border-radius:8px;font-size:12px;color:var(--color-text-secondary);line-height:1.5;">
+        {{ muestra.recomendaciones || 'Sin indicaciones registradas para esta muestra.' }}
+      </div>
+    </div>
+
+    } @else if (selectedPuntoCritico(); as pcInfo) {
+    <!-- Punto Critico header -->
+    <div style="margin-bottom: 20px; position: relative;">
+      <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" x2="6" y1="6" y2="18" />
+          <line x1="6" x2="18" y1="6" y2="18" />
+        </svg>
+      </button>
+      <div
+        style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
+        {{ pcInfo.pcData.zonaName }}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="badge" [ngClass]="'badge-' + pcInfo.pcData.health">
+          {{ zoneHealthLabel[pcInfo.pcData.health] }}
+        </span>
+      </div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
+        {{ pcInfo.pcData.name }}
+      </div>
+      <div style="font-size:13px;color:var(--color-text-secondary);margin-top:6px;">
+        {{ pcInfo.pcData.descripcion }}
+      </div>
+    </div>
+
+    <!-- Averages -->
+    <div style="margin-bottom:16px;">
+      <div
+        style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">
+        Promedios del Punto</div>
+      <div class="metrics-grid">
+        <div class="metric-cell">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value">{{ pcInfo.pcData.humidity }}<span class="metric-unit"> /5</span></div>
+          @if (pcInfo.pcData.humidity !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-optimal" [style.width]="(pcInfo.pcData.humidity / 5 * 100) + '%'"></div>
+          </div>
+          }
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value">{{ pcInfo.pcData.temperature }}<span class="metric-unit">°C</span></div>
+          @if (pcInfo.pcData.temperature !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-warning" [style.width]="(pcInfo.pcData.temperature / 40 * 100) + '%'"></div>
+          </div>
+          }
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Salinidad</div>
+          <div class="metric-value">{{ pcInfo.pcData.salinity }}<span class="metric-unit"> dS</span></div>
+          @if (pcInfo.pcData.salinity !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-optimal" [style.width]="(pcInfo.pcData.salinity / 5 * 100) + '%'"></div>
+          </div>
+          }
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Conductividad</div>
+          <div class="metric-value">{{ pcInfo.pcData.conductivity }}<span class="metric-unit"> dS</span></div>
+          @if (pcInfo.pcData.conductivity !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-danger" [style.width]="(pcInfo.pcData.conductivity / 5 * 100) + '%'"></div>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- List of points -->
+    <div style="margin-bottom: 16px;">
+      <div
+        style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">
+        Muestras (Puntos)</div>
+      @if (pcInfo.muestras.length === 0) {
+      <div style="font-size:12px;color:var(--color-text-muted);">No hay muestras en este punto crítico para el periodo
+        seleccionado.</div>
+      } @else {
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        @for (m of pcInfo.muestras; track m.id) {
+        <div class="maintenance-card hover-card"
+          style="cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; padding:10px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface);"
+          (click)="focusOnSample(m)"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'"
+          onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);">Muestra #{{ m.id ||
+                m.properties.id_muestra }}</div>
+              <div style="font-size:11px;color:var(--color-text-muted);">{{ m.properties.fecha_hora_captura |
+                date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+            <div
+              style="display:flex; gap:10px; font-size:11px; color:var(--color-text-secondary); background:#f9fbf9; padding:4px 8px; border-radius:6px;">
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.humedad | number:'1.1-1'
+                  }}</span>
+                <span style="font-size:9px;">Hum</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.conductividad |
+                  number:'1.1-1' }}</span>
+                <span style="font-size:9px;">Cond</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    } @else if (selectedSector(); as sectorInfo) {
+    <!-- Sector header -->
+    <div style="margin-bottom: 20px; position: relative;">
+      <button class="panel-close-btn-mobile" (click)="isPanelOpen.set(false)" aria-label="Cerrar detalles">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" x2="6" y1="6" y2="18" />
+          <line x1="6" x2="18" y1="6" y2="18" />
+        </svg>
+      </button>
+      <div
+        style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:6px;">
+        Sector
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="badge" [ngClass]="'badge-' + sectorInfo.zoneData.health">
+          {{ zoneHealthLabel[sectorInfo.zoneData.health] }}
+        </span>
+      </div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">
+        {{ sectorInfo.zoneData.name }}
+      </div>
+    </div>
+
+    <!-- Averages -->
+    <div style="margin-bottom:16px;">
+      <div
+        style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">
+        Promedios del Sector</div>
+      <div class="metrics-grid">
+        <div class="metric-cell">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value">{{ sectorInfo.zoneData.humidity }}<span class="metric-unit"> /5</span></div>
+          @if (sectorInfo.zoneData.humidity !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-optimal" [style.width]="(sectorInfo.zoneData.humidity / 5 * 100) + '%'">
+            </div>
+          </div>
+          }
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value">{{ sectorInfo.zoneData.temperature }}<span class="metric-unit">°C</span></div>
+          @if (sectorInfo.zoneData.temperature !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-warning" [style.width]="(sectorInfo.zoneData.temperature / 40 * 100) + '%'">
+            </div>
+          </div>
+          }
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Salinidad</div>
+          <div class="metric-value">{{ sectorInfo.zoneData.salinity }}<span class="metric-unit"> dS</span></div>
+          @if (sectorInfo.zoneData.salinity !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-optimal" [style.width]="(sectorInfo.zoneData.salinity / 5 * 100) + '%'">
+            </div>
+          </div>
+          }
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Conductividad</div>
+          <div class="metric-value">{{ sectorInfo.zoneData.conductivity }}<span class="metric-unit"> dS</span></div>
+          @if (sectorInfo.zoneData.conductivity !== '--') {
+          <div class="progress-bar" style="margin-top:6px;">
+            <div class="progress-fill fill-danger" [style.width]="(sectorInfo.zoneData.conductivity / 5 * 100) + '%'">
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- List of points -->
+    <div style="margin-bottom: 16px;">
+      <div
+        style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:10px;">
+        Puntos (Muestras)</div>
+      @if (sectorInfo.muestras.length === 0) {
+      <div style="font-size:12px;color:var(--color-text-muted);">No hay muestras en este sector para el periodo
+        seleccionado.</div>
+      } @else {
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        @for (m of sectorInfo.muestras; track m.id) {
+        <div class="maintenance-card hover-card"
+          style="cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; padding:10px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface);"
+          (click)="focusOnSample(m)"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'"
+          onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);">Muestra #{{ m.id ||
+                m.properties.id_muestra }}</div>
+              <div style="font-size:11px;color:var(--color-text-muted);">{{ m.properties.fecha_hora_captura |
+                date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+            <div
+              style="display:flex; gap:10px; font-size:11px; color:var(--color-text-secondary); background:#f9fbf9; padding:4px 8px; border-radius:6px;">
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.humedad | number:'1.1-1'
+                  }}</span>
+                <span style="font-size:9px;">Hum</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <span style="font-weight:600;color:var(--color-text-primary);">{{ m.properties.conductividad |
+                  number:'1.1-1' }}</span>
+                <span style="font-size:9px;">Cond</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    } @else {
+    <div class="empty-panel">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+        style="color:var(--color-text-muted);" aria-hidden="true">
+        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+        <line x1="9" x2="9" y1="3" y2="18" />
+        <line x1="15" x2="15" y1="6" y2="21" />
+      </svg>
+      <p>Selecciona un sector o una muestra en el mapa para ver sus detalles</p>
+    </div>
+    }
+  </aside>
+</div>
