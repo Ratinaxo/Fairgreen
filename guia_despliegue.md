@@ -42,7 +42,7 @@ git checkout main
 
 ## FASE 2: En el Servidor AWS EC2 (Código y Backend)
 
-Conéctate mediante la terminal a tu EC2 (`ssh -i "llave.pem" ubuntu@TU_IP`) y sigue este flujo para actualizar el servidor:
+Conéctate mediante la terminal a tu EC2 (`ssh -i "llave-fairgreen.pem" ubuntu@TU_IP`) y sigue este flujo para actualizar el servidor:
 
 > [!WARNING]
 > **Control de IPs y DNS (DuckDNS y FreeDNS/Afraid):**
@@ -116,7 +116,7 @@ npm run build
 
 ### 2. Transferir los archivos compilados al servidor
 ```bash
-scp -i "llave.pem" -r C:\Users\alexa\Desktop\Fairgreen\frontend\dist\angular-app\browser\* ubuntu@TU_IP_PUBLICA:/var/www/fairgreen/html/
+scp -i "llave-fairgreen.pem" -r C:\Users\alexa\Desktop\Fairgreen\frontend\dist\angular-app\browser\* ubuntu@TU_IP_PUBLICA:/var/www/fairgreen/html/
 ```
 
 ### 3. Dar permisos a los archivos transferidos (En el Servidor EC2)
