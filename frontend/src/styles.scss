@@ -519,9 +519,16 @@ app-root {
 }
 
 @media (max-width: 768px) {
-  .btn-primary, .btn-outline, .btn-text, .form-control, .input-field, .select-wrapper select {
+
+  .btn-primary,
+  .btn-outline,
+  .btn-text,
+  .form-control,
+  .input-field,
+  .select-wrapper select {
     min-height: 44px;
   }
+
   .modal-overlay .modal-card {
     padding: var(--space-lg);
   }
@@ -795,4 +802,4 @@ app-root {
 
 body.modal-open .content-area {
   overflow-y: hidden !important;
-}
+}
