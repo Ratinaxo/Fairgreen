@@ -55,7 +55,7 @@ export class SidebarComponent {
       label: 'Registro de Muestras',
       route: '/samples/new',
       icon: 'bi-droplet-half',
-      roles: ['Administrador', 'Agrónomo']
+      roles: ['Administrador', 'Agrónomo', 'Canchero']
     },
     {
       label: 'Historial de Muestras',

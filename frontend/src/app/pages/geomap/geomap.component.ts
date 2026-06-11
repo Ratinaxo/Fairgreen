@@ -40,6 +40,12 @@ export class GeomapComponent implements OnInit {
   puntosCriticos = signal<PuntoCriticoFeature[]>([]);
   focusId = signal<string | null>(null);
 
+  /** Señales GPS para el mapa geomap */
+  gpsLat = signal<number | null>(null);
+  gpsLng = signal<number | null>(null);
+  gpsLoading = signal(false);
+  gpsError = signal<string | null>(null);
+
   zoneHealthLabel: Record<string, string> = {
     optimo: 'ÓPTIMO',
     atencion: 'ATENCIÓN',
@@ -364,6 +370,45 @@ export class GeomapComponent implements OnInit {
   focusOnSample(m: MuestraFeature) {
     this.focusId.set(String(m.id || m.properties.id_muestra));
     this.onZoneSelect({ ...m.properties, id_muestra: m.id || m.properties.id_muestra, type: 'muestra', forceSampleView: true });
+  }
+
+  /** Obtiene la ubicación GPS del usuario y centra el mapa en su posición */
+  useGpsLocation(): void {
+    if (!navigator.geolocation) {
+      this.gpsError.set('Tu navegador no soporta geolocalización.');
+      return;
+    }
+
+    this.gpsLoading.set(true);
+    this.gpsError.set(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = parseFloat(position.coords.latitude.toFixed(6));
+        const lng = parseFloat(position.coords.longitude.toFixed(6));
+        this.gpsLat.set(lat);
+        this.gpsLng.set(lng);
+        this.gpsLoading.set(false);
+        // El mapa-georef recibe gpsLat/gpsLng via @Input y centra la vista
+      },
+      (error) => {
+        this.gpsLoading.set(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            this.gpsError.set('Permiso de ubicación denegado. Actívalo en la configuración del navegador.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            this.gpsError.set('No se pudo obtener la ubicación. Verifica el GPS del dispositivo.');
+            break;
+          case error.TIMEOUT:
+            this.gpsError.set('Tiempo de espera agotado. Intenta de nuevo.');
+            break;
+          default:
+            this.gpsError.set('Error desconocido al obtener la ubicación.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   }
 
   togglePanel() {

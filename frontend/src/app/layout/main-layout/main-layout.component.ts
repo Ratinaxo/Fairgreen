@@ -36,31 +36,52 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   }
 
   private touchStartX = 0;
+  private touchStartY = 0;
   private touchEndX = 0;
+  private touchEndY = 0;
+
+  /** Píxeles mínimos de desplazamiento horizontal para considerar swipe */
+  private readonly swipeThreshold = 100;
+  /** Píxeles desde el borde izquierdo para activar el gesto de "abrir drawer" */
+  private readonly edgeZone = 30;
+  /** Ratio mínimo horizontal/vertical para considerar el gesto predominantemente horizontal */
+  private readonly horizontalRatioMin = 2;
 
   onTouchStart(e: TouchEvent) {
     this.touchStartX = e.changedTouches[0].screenX;
+    this.touchStartY = e.changedTouches[0].screenY;
   }
 
   onTouchEnd(e: TouchEvent) {
     this.touchEndX = e.changedTouches[0].screenX;
-    this.handleSwipe();
+    this.touchEndY = e.changedTouches[0].screenY;
+    this.handleSwipe(e);
   }
 
-  private handleSwipe() {
-    // Solo en dispositivos móviles (asumimos ancho < 768px, pero igual controlamos el umbral del swipe)
-    if (window.innerWidth > 768) return;
+  private handleSwipe(e: TouchEvent) {
+    // Solo en móviles (breakpoint del sidebar)
+    if (window.innerWidth >= 1024) return;
 
-    const swipeThreshold = 50; // Mínimo recorrido para considerarlo swipe
-    
-    // Swipe a la derecha
-    if (this.touchEndX - this.touchStartX > swipeThreshold) {
-      if (!this.sidebar.isOpen()) {
+    const deltaX = this.touchEndX - this.touchStartX;
+    const deltaY = this.touchEndY - this.touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    // Verificar que el gesto sea predominantemente horizontal
+    if (absX < this.swipeThreshold) return;
+    if (absY > 0 && absX / absY < this.horizontalRatioMin) return;
+
+    // Ignorar si el toque inició sobre un contenedor de mapa (navegación del mapa no debe abrir el menú)
+    const target = e.target as Element | null;
+    if (target?.closest('.map-georef-container, .map-picker-container, .ol-viewport')) return;
+
+    if (deltaX > 0) {
+      // Swipe a la derecha: solo abrir si el dedo comenzó en el borde izquierdo
+      if (this.touchStartX <= this.edgeZone && !this.sidebar.isOpen()) {
         this.sidebar.isOpen.set(true);
       }
-    }
-    // Swipe a la izquierda
-    else if (this.touchStartX - this.touchEndX > swipeThreshold) {
+    } else {
+      // Swipe a la izquierda: cerrar el drawer si está abierto
       if (this.sidebar.isOpen()) {
         this.sidebar.isOpen.set(false);
       }

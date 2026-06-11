@@ -6,7 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto, Notificacion
 from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer, UsuarioSerializer, FotoSerializer, NotificacionSerializer
-from .permissions import EsAdmin, EsAdminOAgronoma
+from .permissions import EsAdmin, EsAdminOAgronoma, PuedeCreadoPorTodos
 
 
 class SeccionViewSet(viewsets.ModelViewSet):
@@ -40,15 +40,25 @@ class MuestraViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar Muestras de suelo tomadas en terreno.
     - Devuelve datos en formato GeoJSON.
-    - Lectura pública.
-    - Administradores ('ADMIN') y Agrónomas ('AGRO') pueden registrar, editar o eliminar muestras.
-    - Cancheros ('CANCHERO') solo lectura.
+    - Lectura: cualquier usuario autenticado.
+    - Crear (POST): cualquier usuario autenticado (Canchero incluido).
+    - Editar (PUT/PATCH): solo ADMIN y AGRO.
+    - Eliminar (DELETE): NADIE. Las muestras son registros permanentes.
     - Enlaza automáticamente la muestra al usuario logueado mediante el token JWT.
     - Filtros opcionales: fecha_desde, fecha_hasta (formato YYYY-MM-DD).
     """
     serializer_class = MuestraSerializer
-    permission_classes = [EsAdminOAgronoma]
+    permission_classes = [PuedeCreadoPorTodos]
     pagination_class = GeoJsonPagination
+
+    def destroy(self, request, *args, **kwargs):
+        """Las muestras son registros de auditoría permanentes. Eliminación deshabilitada para todos los roles."""
+        from rest_framework.response import Response
+        from rest_framework import status
+        return Response(
+            {'detail': 'La eliminación de muestras no está permitida. Las muestras son registros permanentes.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
     def get_queryset(self):
         qs = Muestra.objects.all().order_by('-fecha_hora_captura')
@@ -92,11 +102,13 @@ class MuestraViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['delete'], url_path='delete_all')
     def delete_all(self, request):
         """
-        Elimina TODAS las muestras del sistema.
-        Solo accesible por ADMIN y AGRO (mismo permiso que el ViewSet).
+        Endpoint deshabilitado. Las muestras son registros permanentes de auditoría
+        y no pueden eliminarse masivamente.
         """
-        count, _ = Muestra.objects.all().delete()
-        return Response({'deleted': count})
+        return Response(
+            {'detail': 'La eliminación masiva de muestras no está permitida.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
 
 
@@ -114,11 +126,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 class FotoViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar Fotos asociadas a las muestras.
-    - Administradores y Agrónomas pueden subir o eliminar fotos.
+    - Crear (POST): cualquier usuario autenticado (necesario para que el Canchero suba fotos al registrar muestras).
+    - Editar / Eliminar: solo ADMIN y AGRO.
     """
     queryset = Foto.objects.all().order_by('-fecha_hora_subida')
     serializer_class = FotoSerializer
-    permission_classes = [EsAdminOAgronoma]
+    permission_classes = [PuedeCreadoPorTodos]
 
 
 class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
