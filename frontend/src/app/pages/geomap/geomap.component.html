@@ -36,10 +36,30 @@
 
     <!-- OpenLayers Map -->
     <app-map-georef (zoneSelect)="onZoneSelect($event)" [muestras]="muestras()" [secciones]="secciones()"
-      [focusId]="focusId()" />
+      [focusId]="focusId()" [gpsLat]="gpsLat()" [gpsLng]="gpsLng()" />
 
     <!-- Map legend -->
     <app-map-legend />
+
+    <!-- Botón GPS flotante -->
+    <div class="gps-fab-container">
+      <button
+        class="gps-fab"
+        id="geomap-gps-btn"
+        (click)="useGpsLocation()"
+        [disabled]="gpsLoading()"
+        [title]="gpsLoading() ? 'Obteniendo ubicación...' : 'Centrar mapa en mi ubicación'"
+        aria-label="Centrar mapa en mi ubicación GPS"
+      >
+        <i class="bi" [ngClass]="gpsLoading() ? 'bi-arrow-repeat gps-spin' : 'bi-crosshair2'"></i>
+      </button>
+      @if (gpsError()) {
+        <div class="gps-fab-error" role="alert">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          {{ gpsError() }}
+        </div>
+      }
+    </div>
 
     @if (selectedMuestra() || selectedPuntoCritico()) {
     <button class="panel-toggle-btn" (click)="togglePanel()">

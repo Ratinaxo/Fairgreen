@@ -24,6 +24,10 @@ export class NewSampleComponent implements OnInit {
   isLoading = false;
   submitted = false;
 
+  /** GPS state */
+  gpsLoading = false;
+  gpsError: string | null = null;
+
   secciones: SeccionFeature[] = [];
   todosPuntosCriticos: PuntoCriticoFeature[] = [];
 
@@ -126,6 +130,98 @@ export class NewSampleComponent implements OnInit {
 
   toggleMap(): void {
     this.mostrarMapa = !this.mostrarMapa;
+  }
+
+  /** Obtiene la ubicación actual del dispositivo vía GPS del navegador */
+  useGpsLocation(): void {
+    if (!navigator.geolocation) {
+      this.gpsError = 'Tu navegador no soporta geolocalización.';
+      return;
+    }
+
+    this.gpsLoading = true;
+    this.gpsError = null;
+    this.cdr.detectChanges();
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = parseFloat(position.coords.latitude.toFixed(6));
+        const lng = parseFloat(position.coords.longitude.toFixed(6));
+
+        this.form.lat = String(lat);
+        this.form.lng = String(lng);
+
+        // Auto-detectar sección usando point-in-polygon sobre los polígonos cargados
+        const seccionDetectada = this.autoDetectSeccion(lat, lng);
+        if (seccionDetectada) {
+          this.form.zona = seccionDetectada.properties.tipo_de_tierra;
+          this.form.sector = String(seccionDetectada.properties.numero_de_hoyo);
+          this.form.puntoCriticoId = '';
+        }
+
+        // Si el mapa está oculto, abrirlo para que el usuario vea la ubicación
+        if (!this.mostrarMapa) {
+          this.mostrarMapa = true;
+        }
+
+        this.gpsLoading = false;
+        this.cdr.detectChanges();
+      },
+      (error) => {
+        this.gpsLoading = false;
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            this.gpsError = 'Permiso de ubicación denegado. Actívalo en la configuración del navegador.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            this.gpsError = 'No se pudo obtener la ubicación. Verifica el GPS del dispositivo.';
+            break;
+          case error.TIMEOUT:
+            this.gpsError = 'Tiempo de espera agotado. Intenta de nuevo en un lugar con mejor señal.';
+            break;
+          default:
+            this.gpsError = 'Error desconocido al obtener la ubicación.';
+        }
+        this.cdr.detectChanges();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  }
+
+  /**
+   * Determina si un punto (lat, lng) cae dentro de algún polígono de sección
+   * usando el algoritmo de ray-casting (point-in-polygon).
+   */
+  private autoDetectSeccion(lat: number, lng: number): import('../../services/data.service').SeccionFeature | null {
+    for (const sec of this.secciones) {
+      if (sec.geometry.type !== 'Polygon') continue;
+      const rings = sec.geometry.coordinates;
+      // Solo chequeamos el anillo exterior (rings[0])
+      if (this._pointInRing(lng, lat, rings[0])) {
+        return sec;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Ray-casting: retorna true si el punto (px, py) está dentro del polígono definido
+   * por 'ring' (array de [lng, lat]).
+   */
+  private _pointInRing(px: number, py: number, ring: number[][]): boolean {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i][0], yi = ring[i][1];
+      const xj = ring[j][0], yj = ring[j][1];
+      const intersect = ((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
   }
 
   onCoordinateSelected(coords: { lat: number; lon: number; seccion: import('../../services/data.service').SeccionFeature | null, puntoCriticoId?: number }): void {

@@ -38,7 +38,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/new-sample/new-sample.component').then(m => m.NewSampleComponent),
         title: 'Nuevo Registro — FairGreen',
-        canActivate: [roleGuard(['ADMIN', 'AGRO'])], // Canchero NO puede registrar
+        canActivate: [roleGuard(['ADMIN', 'AGRO', 'CANCHERO'])], // Canchero SÍ puede registrar, pero no editar
       },
       {
         path: 'samples/edit/:id',

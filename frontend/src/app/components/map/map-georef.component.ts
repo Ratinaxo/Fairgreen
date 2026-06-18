@@ -40,6 +40,10 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
     @Input() muestras: MuestraFeature[] = [];
     @Input() secciones: SeccionFeature[] = [];
     @Input() focusId: string | null = null;
+    /** Latitud GPS del usuario para centrar el mapa y mostrar marcador */
+    @Input() gpsLat: number | null = null;
+    /** Longitud GPS del usuario para centrar el mapa y mostrar marcador */
+    @Input() gpsLng: number | null = null;
 
     /** Emite las properties de la muestra seleccionada, o null al hacer click fuera */
     zoneSelect = output<Record<string, unknown> | null>();
@@ -49,6 +53,8 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
     private pointsLayer: VectorLayer | null = null;
     private sectionsSource: VectorSource | null = null;
     private sectionsLayer: VectorLayer | null = null;
+    private gpsSource: VectorSource | null = null;
+    private gpsLayer: VectorLayer | null = null;
     private selectedId: string | null = null;
     private selectedSectorId: string | null = null;
 
@@ -84,6 +90,9 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                 this.pointsLayer?.changed();
                 this.sectionsLayer?.changed();
                 this.zoomToSample(this.focusId);
+            }
+            if ((changes['gpsLat'] || changes['gpsLng']) && this.gpsLat != null && this.gpsLng != null) {
+                this.updateGpsMarker(this.gpsLat, this.gpsLng);
             }
         }
     }
@@ -136,6 +145,21 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
         }
     }
 
+    /** Actualiza el marcador de posición GPS del usuario en el mapa */
+    private updateGpsMarker(lat: number, lng: number): void {
+        if (!this.gpsSource || !this.mapInstance) return;
+        this.gpsSource.clear();
+        const gpsFeature = new Feature({ geometry: new Point(fromLonLat([lng, lat])) });
+        gpsFeature.set('isGps', true);
+        this.gpsSource.addFeature(gpsFeature);
+        // Centrar el mapa con animación suave
+        this.mapInstance.getView().animate({
+            center: fromLonLat([lng, lat]),
+            zoom: 18,
+            duration: 800
+        });
+    }
+
     private async initMap(): Promise<void> {
         const container = this.el.nativeElement.querySelector('.map-georef-container');
 
@@ -144,6 +168,19 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
 
         this.sectionsSource = new VectorSource();
         this.updateSections();
+
+        this.gpsSource = new VectorSource();
+        this.gpsLayer = new VectorLayer({
+            source: this.gpsSource,
+            style: new Style({
+                image: new Circle({
+                    radius: 10,
+                    fill: new Fill({ color: '#3B82F6' }),       // Azul GPS
+                    stroke: new Stroke({ color: '#FFFFFF', width: 2.5 }),
+                }),
+            }),
+            zIndex: 50, // Encima de todo
+        });
 
         this.pointsLayer = new VectorLayer({
             source: this.pointsSource,
@@ -173,10 +210,10 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                 let zIndex = isSelected ? 10 : 1;
 
                 if (tipo === 'GREEN') {
-                    fillColor = isSelected ? 'rgba(52, 211, 153, 0.7)' : 'rgba(76, 175, 125, 0.4)'; // Más chillón al seleccionar
+                    fillColor = isSelected ? 'rgba(52, 211, 153, 0.7)' : 'rgba(76, 175, 125, 0.4)';
                     strokeColor = isSelected ? '#10B981' : '#4CAF7D';
                 } else if (tipo === 'FAIRWAY') {
-                    fillColor = isSelected ? 'rgba(251, 191, 36, 0.7)' : 'rgba(245, 158, 11, 0.4)'; // Más chillón al seleccionar
+                    fillColor = isSelected ? 'rgba(251, 191, 36, 0.7)' : 'rgba(245, 158, 11, 0.4)';
                     strokeColor = isSelected ? '#F59E0B' : '#F59E0B';
                 }
 
@@ -194,6 +231,7 @@ export class MapGeorefComponent implements AfterViewInit, OnDestroy, OnChanges {
                 this.mapService.createSatelliteLayer(),
                 this.sectionsLayer,
                 this.pointsLayer,
+                this.gpsLayer!,
             ],
             view: this.mapService.createDefaultView(),
             controls: [new Zoom()],

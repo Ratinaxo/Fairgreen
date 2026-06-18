@@ -141,4 +141,94 @@
     .input-error:focus {
       box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
     }
-  
+
+    /* ── Contenedor Botones Ubicación ── */
+    .location-actions {
+      margin-bottom: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    /* ── Botón GPS ─────────────────────────────────────────────────────── */
+    .btn-gps {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 16px;
+      height: 38px;
+      background: linear-gradient(135deg, #1a9e5c 0%, #147a47 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md, 8px);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 200ms ease, transform 150ms ease, box-shadow 200ms ease;
+      box-shadow: 0 2px 8px rgba(26, 158, 92, 0.3);
+      white-space: nowrap;
+    }
+
+    .btn-gps:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(26, 158, 92, 0.4);
+    }
+
+    .btn-gps:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-gps .bi {
+      font-size: 14px;
+    }
+
+    /* Animación de carga del GPS */
+    @keyframes gpsSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .btn-gps .gps-spin {
+      animation: gpsSpin 0.9s linear infinite;
+    }
+
+    /* Mensaje de error GPS */
+    .gps-error-msg {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 6px;
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 500;
+      animation: fadeSlideUp 200ms ease;
+    }
+
+    /* Badge de coordenadas GPS activas */
+    .gps-coords-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: rgba(26, 158, 92, 0.1);
+      border: 1px solid rgba(26, 158, 92, 0.3);
+      border-radius: 20px;
+      color: #147a47;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+
+    @media (max-width: 600px) {
+      .location-actions { flex-direction: column; align-items: stretch; }
+      .location-actions button { width: 100%; justify-content: center; }
+      .btn-gps { width: 100%; justify-content: center; }
+    }
