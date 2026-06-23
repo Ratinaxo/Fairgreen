@@ -156,15 +156,46 @@ export class UsersComponent implements OnInit {
     this.showCreateModal.set(false);
   }
 
+  onRutInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    // Remueve cualquier carácter que no sea un número o la letra k/K
+    let cleaned = input.value.replace(/[^0-9kK]/g, '').toUpperCase();
+    
+    // No permitir más de 9 caracteres limpios
+    if (cleaned.length > 9) {
+      cleaned = cleaned.substring(0, 9);
+    }
+    
+    this.createForm.rut = cleaned;
+    input.value = cleaned;
+  }
+
+  formatRut() {
+    let rut = this.createForm.rut.replace(/[^0-9K]/g, '');
+    if (rut.length <= 1) return;
+    
+    const dv = rut.slice(-1);
+    let numbers = rut.slice(0, -1);
+    numbers = numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
+    this.createForm.rut = `${numbers}-${dv}`;
+  }
+
   submitCreateUser() {
-    if (!this.createForm.rut || !this.createForm.password || !this.createForm.correo) {
-      alert('RUT, correo y contraseña son obligatorios.');
+    if (!this.createForm.rut || !this.createForm.password || !this.createForm.correo || !this.createForm.nombre || !this.createForm.apellido) {
+      alert('Todos los campos con asterisco (*) son obligatorios.');
+      return;
+    }
+    
+    const cleanRut = this.createForm.rut.replace(/[^0-9K]/g, '');
+    if (!/^[0-9]{8}[0-9K]$/.test(cleanRut)) {
+      alert('El RUT debe tener exactamente 9 caracteres (8 números seguidos de un número o letra K).');
       return;
     }
     this.isCreating.set(true);
     
     this.dataService.createUsuario({
-      rut: this.createForm.rut,
+      rut: cleanRut,
       nombre: this.createForm.nombre,
       apellido: this.createForm.apellido,
       correo_electronico: this.createForm.correo,

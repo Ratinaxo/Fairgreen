@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 # =============================================================================
 # Manager personalizado para el modelo Usuario
@@ -60,7 +60,11 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         ('CANCHERO', 'Canchero'),
     ]
 
-    rut = models.CharField(max_length=12, primary_key=True)
+    rut = models.CharField(
+        max_length=9,
+        primary_key=True,
+        validators=[RegexValidator(r'^[0-9]{8}[0-9kK]$', 'El RUT debe tener exactamente 9 caracteres (8 números y un dígito final o k).')]
+    )
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)
     correo_electronico = models.EmailField(unique=True)
