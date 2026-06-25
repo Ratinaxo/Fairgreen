@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 # =============================================================================
 # Manager personalizado para el modelo Usuario
@@ -131,10 +131,10 @@ class Muestra(models.Model):
     # Opcional: Solo si la muestra se tomó exactamente en un Punto Crítico mapeado
     id_punto_critico = models.ForeignKey(PuntoCritico, on_delete=models.SET_NULL, null=True, blank=True, related_name='muestras')
     
-    salinidad = models.FloatField()
-    humedad = models.FloatField()
-    conductividad = models.FloatField()
-    temperatura = models.FloatField()
+    salinidad = models.FloatField(null=True, blank=True)
+    humedad = models.FloatField(null=True, blank=True, validators=[MinValueValidator(1.0), MaxValueValidator(5.0)])
+    conductividad = models.FloatField(null=True, blank=True)
+    temperatura = models.FloatField(null=True, blank=True)
     
     # Dónde exactamente se paró la agrónoma a tomar la muestra
     ubicacion_exacta = models.PointField(srid=4326)

@@ -3,7 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass, CommonModule } from '@angular/common';
 import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
-import { DataService, SeccionFeature, MuestraFeature } from '../../services/data.service';
+import { DataService, SeccionFeature, FotoItem } from '../../services/data.service';
 
 @Component({
   selector: 'app-edit-sample',
@@ -19,14 +19,14 @@ export class EditSampleComponent implements OnInit {
 
   sampleId = signal<number | null>(null);
   isDragging = false;
-  uploadedFile = '';
-  currentPhotoUrl = '';
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
+  existingPhotos: FotoItem[] = [];
   showSuccess = signal(false);
   mostrarMapa = false;
-  
+
   isInitialLoading = signal(true);
   isSaving = signal(false);
+  submitted = false;
 
   secciones: SeccionFeature[] = [];
 
@@ -41,6 +41,7 @@ export class EditSampleComponent implements OnInit {
     conductivity: '',
     notes: '',
   };
+
 
   ngOnInit() {
     this.isInitialLoading.set(true);
@@ -99,10 +100,8 @@ export class EditSampleComponent implements OnInit {
             notes: p.recomendaciones || '',
           };
 
-          if (p.fotos && p.fotos.length > 0) {
-            this.currentPhotoUrl = p.fotos[0].ruta_archivo;
-            this.uploadedFile = p.fotos[0].ruta_archivo.split('/').pop() || 'Foto de evidencia';
-          }
+          // Populate existing photos
+          this.existingPhotos = p.fotos ?? [];
           this.isInitialLoading.set(false);
         } catch (err) {
           console.error('Error al procesar datos de la muestra:', err);
@@ -116,6 +115,12 @@ export class EditSampleComponent implements OnInit {
         this.router.navigate(['/samples/history']);
       }
     });
+  }
+
+  get isHumidityInvalid(): boolean {
+    if (this.form.humidity === '') return false;
+    const val = parseFloat(this.form.humidity);
+    return isNaN(val) || val < 1 || val > 5;
   }
 
   toggleMap(): void {
@@ -135,26 +140,36 @@ export class EditSampleComponent implements OnInit {
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files?.[0]) {
-      const file = input.files[0];
-      this.selectedFile = file;
-      this.uploadedFile = file.name;
+    if (input.files && input.files.length > 0) {
+      const newFiles = Array.from(input.files);
+      this.selectedFiles = [...this.selectedFiles, ...newFiles];
     }
+    input.value = '';
+  }
+
+  removeNewFile(index: number): void {
+    this.selectedFiles = this.selectedFiles.filter((_, i) => i !== index);
   }
 
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging = false;
-    const file = event.dataTransfer?.files[0];
-    if (file) {
-      this.selectedFile = file;
-      this.uploadedFile = file.name;
+    if (event.dataTransfer?.files) {
+      const newFiles = Array.from(event.dataTransfer.files);
+      this.selectedFiles = [...this.selectedFiles, ...newFiles];
     }
   }
 
   saveSample(): void {
-    if (!this.form.zona || !this.form.sector || !this.form.lat || !this.form.lng || !this.form.humidity || !this.form.temperature || !this.form.salinity || !this.form.conductivity) {
-      alert('Por favor complete los campos obligatorios.');
+    this.submitted = true;
+
+    if (!this.form.zona || !this.form.sector || !this.form.lat || !this.form.lng || this.isHumidityInvalid) {
+      return;
+    }
+
+    if ((this.form.salinity !== '' && parseFloat(this.form.salinity) < 0) || 
+        (this.form.conductivity !== '' && parseFloat(this.form.conductivity) < 0)) {
+      alert('La salinidad y la conductividad no pueden ser valores negativos.');
       return;
     }
 
@@ -176,10 +191,10 @@ export class EditSampleComponent implements OnInit {
     this.isSaving.set(true);
     const payload = {
       id_seccion_id: sec.id,
-      salinidad: parseFloat(this.form.salinity),
-      humedad: parseFloat(this.form.humidity),
-      conductividad: parseFloat(this.form.conductivity),
-      temperatura: parseFloat(this.form.temperature),
+      salinidad: this.form.salinity !== '' ? parseFloat(this.form.salinity) : null,
+      humedad: this.form.humidity !== '' ? parseFloat(this.form.humidity) : null,
+      conductividad: this.form.conductivity !== '' ? parseFloat(this.form.conductivity) : null,
+      temperatura: this.form.temperature !== '' ? parseFloat(this.form.temperature) : null,
       recomendaciones: this.form.notes,
       ubicacion_exacta: {
         type: 'Point' as const,
@@ -188,19 +203,23 @@ export class EditSampleComponent implements OnInit {
     };
 
     this.dataService.updateMuestra(currentId, payload).subscribe({
-      next: (muestra: MuestraFeature) => {
-        // Subir foto si se seleccionó una nueva
-        if (this.selectedFile) {
-          this.dataService.uploadFoto(muestra.id, this.selectedFile).subscribe({
-            next: () => {
+      next: (muestra) => {
+        if (this.selectedFiles.length > 0) {
+          const uploadNext = (index: number) => {
+            if (index >= this.selectedFiles.length) {
               this.onSaveSuccess();
-            },
-            error: () => {
-              this.isSaving.set(false);
-              alert('Muestra actualizada, pero hubo un error al subir la nueva imagen.');
-              this.router.navigate(['/samples/history']);
+              return;
             }
-          });
+            this.dataService.uploadFoto(muestra.id, this.selectedFiles[index]).subscribe({
+              next: () => uploadNext(index + 1),
+              error: () => {
+                this.isSaving.set(false);
+                alert(`Muestra actualizada, pero hubo un error al subir la imagen ${index + 1}.`);
+                this.router.navigate(['/samples/history']);
+              }
+            });
+          };
+          uploadNext(0);
         } else {
           this.onSaveSuccess();
         }

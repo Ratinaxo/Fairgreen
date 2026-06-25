@@ -19,9 +19,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from core.views import SeccionViewSet, PuntoCriticoViewSet, MuestraViewSet, UsuarioViewSet, FotoViewSet, NotificacionViewSet
-from core.auth_views import AuthMeView
+from core.auth_views import AuthMeView, CustomTokenObtainPairView
 
 # Configuración del enrutador automático de DRF
 router = DefaultRouter()
@@ -38,7 +38,7 @@ urlpatterns = [
     # Endpoints de autenticación JWT
     # POST /api/token/         → Enviar {"correo_electronico": "...", "password": "..."} → Recibe {access, refresh}
     # POST /api/token/refresh/ → Enviar {"refresh": "..."} → Recibe un nuevo {access}
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # Perfil del usuario autenticado (requiere Bearer token)

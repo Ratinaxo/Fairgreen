@@ -54,10 +54,28 @@ class MuestraViewSet(viewsets.ModelViewSet):
         qs = Muestra.objects.all().order_by('-fecha_hora_captura')
         fecha_desde = self.request.query_params.get('fecha_desde')
         fecha_hasta = self.request.query_params.get('fecha_hasta')
+        sector = self.request.query_params.get('sector')
+        zona = self.request.query_params.get('zona')
+        id_muestra = self.request.query_params.get('id_muestra')
+
         if fecha_desde:
             qs = qs.filter(fecha_hora_captura__date__gte=fecha_desde)
         if fecha_hasta:
             qs = qs.filter(fecha_hora_captura__date__lte=fecha_hasta)
+        if sector:
+            qs = qs.filter(id_seccion__numero_de_hoyo=sector)
+        if zona:
+            qs = qs.filter(id_seccion__tipo_de_tierra__iexact=zona)
+        if id_muestra:
+            qs = qs.filter(id_muestra=id_muestra)
+        
+        punto_critico = self.request.query_params.get('punto_critico')
+        if punto_critico:
+            if punto_critico.lower() == 'si':
+                qs = qs.filter(id_punto_critico__isnull=False)
+            elif punto_critico.lower() == 'no':
+                qs = qs.filter(id_punto_critico__isnull=True)
+
         return qs
 
     def perform_create(self, serializer):

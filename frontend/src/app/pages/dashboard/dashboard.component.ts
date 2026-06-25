@@ -31,9 +31,9 @@ interface Sector {
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit {
-  showDownloadModal = false;
   isLoading = signal(true);
   muestras = signal<MuestraFeature[]>([]);
+  latestMeasurementTime = signal<string>('Cargando...');
 
   private dataService = inject(DataService);
 
@@ -94,6 +94,9 @@ export class DashboardComponent implements OnInit {
     { id: 5, label: '5', x: 680, y: 240, status: 'optimo' },
   ];
 
+  timeFilter = signal<'7d' | '30d' | '6m' | 'all'>('7d');
+  allMuestras: MuestraFeature[] = [];
+
   ngOnInit() {
     Promise.all([
       new Promise<SeccionFeature[]>((res) => {
@@ -109,34 +112,58 @@ export class DashboardComponent implements OnInit {
         });
       })
     ]).then(([secciones, muestras]) => {
-      if (muestras.length === 0) {
-        this.isLoading.set(false);
-        return;
-      }
-      
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const recentMuestras = muestras.filter(m => new Date(m.properties.fecha_hora_captura) >= sevenDaysAgo);
-
-      const targetMuestras = recentMuestras.length > 0 ? recentMuestras : muestras;
-      this.muestras.set(targetMuestras);
-
-      this._calcularKPIs(targetMuestras); 
+      this.allMuestras = muestras;
+      this.applyTimeFilter();
       this.isLoading.set(false);
     });
   }
 
+  onFilterChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.timeFilter.set(select.value as any);
+    this.applyTimeFilter();
+  }
+
+  private applyTimeFilter() {
+    if (this.allMuestras.length === 0) {
+      this.muestras.set([]);
+      return;
+    }
+
+    let filtered = this.allMuestras;
+    if (this.timeFilter() !== 'all') {
+      const cutoffDate = new Date();
+      if (this.timeFilter() === '7d') {
+        cutoffDate.setDate(cutoffDate.getDate() - 7);
+      } else if (this.timeFilter() === '30d') {
+        cutoffDate.setDate(cutoffDate.getDate() - 30);
+      } else if (this.timeFilter() === '6m') {
+        cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+      }
+      filtered = this.allMuestras.filter(m => new Date(m.properties.fecha_hora_captura) >= cutoffDate);
+      
+      // Fallback a todas si el filtro es muy restrictivo y deja 0
+      if (filtered.length === 0) {
+        filtered = this.allMuestras;
+      }
+    }
+
+    this.muestras.set(filtered);
+    this._calcularKPIs(filtered);
+  }
+
   private _calcularKPIs(features: MuestraFeature[]) {
     const props = features.map(f => f.properties);
-    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
-    const avgHumedad = avg(props.map(p => p.humedad));
-    const avgTemp = avg(props.map(p => p.temperatura));
-    const avgSalinidad = avg(props.map(p => p.salinidad));
-    const avgConduct = avg(props.map(p => p.conductividad));
+    const avgHumedad = avg(props.map(p => p.humedad).filter((v): v is number => v !== null && v !== undefined));
+    const avgTemp = avg(props.map(p => p.temperatura).filter((v): v is number => v !== null && v !== undefined));
+    const avgSalinidad = avg(props.map(p => p.salinidad).filter((v): v is number => v !== null && v !== undefined));
+    const avgConduct = avg(props.map(p => p.conductividad).filter((v): v is number => v !== null && v !== undefined));
 
-    const ultima = new Date(props[0].fecha_hora_captura);
-    const agoStr = this._tiempoRelativo(ultima);
+    const ultima = props.length > 0 ? new Date(props[0].fecha_hora_captura) : null;
+    const agoStr = ultima ? this._tiempoRelativo(ultima) : 'Sin registros';
+    this.latestMeasurementTime.set(agoStr);
 
     // Humedad (escala 1-5, óptimo > 3)
     this.kpiCards[0].value = avgHumedad.toFixed(1);

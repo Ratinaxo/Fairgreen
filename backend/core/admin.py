@@ -36,7 +36,7 @@ class UsuarioAdmin(BaseUserAdmin):
 
 # =============================================================================
 # Clase base para administración de mapas GIS (GeoDjango)
-# Centrada en Club de Golf Las Palmas, Quillota, Chile (cerca de Viña del Mar)
+# Centrada en Club Naval de Campo Las Salinas
 # =============================================================================
 class FairgreenGISAdmin(gis_admin.GISModelAdmin):
     gis_widget_kwargs = {

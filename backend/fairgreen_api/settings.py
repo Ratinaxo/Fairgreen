@@ -32,6 +32,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-7c_vf)*4a$bu0xkq@#e)lgqog)
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+for host in ['backend', 'web', 'localhost', '127.0.0.1', '0.0.0.0']:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
 
 # Application definition

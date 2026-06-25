@@ -1,7 +1,9 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { DataService, MuestraFeature, SeccionFeature } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
@@ -9,29 +11,29 @@ import { MapGeorefComponent } from '../../components/map/map-georef.component';
 interface SampleRow {
   id: number;
   date: string;
-  humidity: number;
-  temperature: number;
-  conductivity: number;
-  salinity: number;
+  humidity: number | null | undefined;
+  temperature: number | null | undefined;
+  conductivity: number | null | undefined;
+  salinity: number | null | undefined;
   responsible: string;
   zona: string;
   sector: number;
+  hasPuntoCritico: boolean;
   rawFeature: MuestraFeature;
 }
 
 @Component({
   selector: 'app-sample-history',
   standalone: true,
-  imports: [FormsModule, CommonModule, MapGeorefComponent],
+  imports: [FormsModule, CommonModule],
   templateUrl: './sample-history.component.html',
   styleUrl: './sample-history.component.css'
 })
-export class SampleHistoryComponent implements OnInit, OnDestroy {
+export class SampleHistoryComponent implements OnInit {
   private dataService = inject(DataService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
-
-  secciones = signal<SeccionFeature[]>([]);
 
   canEdit = computed(() => {
     const rol = this.authService.rol();
@@ -42,7 +44,16 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
   filterZona = '';
   filterFechaDesde = '';
   filterFechaHasta = '';
+  filterIdMuestra = '';
+  filterPuntoCritico = '';
   readonly pageSize = 20;
+  
+  showMobileFilters = false;
+  private filterSubject = new Subject<void>();
+
+  toggleMobileFilters() {
+    this.showMobileFilters = !this.showMobileFilters;
+  }
 
   currentPage = signal(1);
   totalCount = signal(0);
@@ -64,23 +75,42 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
     return range;
   });
 
-  selectedFeature = signal<MuestraFeature | null>(null);
-
   ngOnInit() {
-    this.dataService.getSecciones().subscribe({
-      next: (data) => {
-        this.secciones.set(data.features ?? []);
-      }
+    this.filterSubject.pipe(debounceTime(400)).subscribe(() => {
+      this.loadPage(1);
     });
-    this.loadPage(1);
-  }
 
-  ngOnDestroy() {
-    document.body.classList.remove('modal-open');
+    this.route.queryParams.subscribe(params => {
+      const page = params['page'] ? parseInt(params['page'], 10) : 1;
+      this.filterSector = params['sector'] || '';
+      this.filterZona = params['zona'] || '';
+      this.filterFechaDesde = params['desde'] || '';
+      this.filterFechaHasta = params['hasta'] || '';
+      this.filterIdMuestra = params['id'] || '';
+      this.filterPuntoCritico = params['punto_critico'] || '';
+      this._fetchData(page);
+    });
   }
 
   loadPage(page: number) {
-    if (page < 1 || page > this.totalPages()) return;
+    if (this.totalCount() > 0 && (page < 1 || page > this.totalPages())) return;
+    
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { 
+        page,
+        sector: this.filterSector || null,
+        zona: this.filterZona || null,
+        desde: this.filterFechaDesde || null,
+        hasta: this.filterFechaHasta || null,
+        id: this.filterIdMuestra || null,
+        punto_critico: this.filterPuntoCritico || null
+      },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private _fetchData(page: number) {
     this.isLoading.set(true);
     this.currentPage.set(page);
 
@@ -89,6 +119,10 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
       this.pageSize,
       this.filterFechaDesde || undefined,
       this.filterFechaHasta || undefined,
+      this.filterSector || undefined,
+      this.filterZona || undefined,
+      this.filterIdMuestra || undefined,
+      this.filterPuntoCritico || undefined
     ).subscribe({
       next: (geoJson) => {
         this.totalCount.set(geoJson.count ?? 0);
@@ -106,6 +140,16 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
     this.filterZona = '';
     this.filterFechaDesde = '';
     this.filterFechaHasta = '';
+    this.filterIdMuestra = '';
+    this.filterPuntoCritico = '';
+    this.loadPage(1);
+  }
+
+  onFilterChange() {
+    this.filterSubject.next();
+  }
+
+  onSelectChange() {
     this.loadPage(1);
   }
 
@@ -113,14 +157,8 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
     this.router.navigate(['/samples/edit', id]);
   }
 
-  openDetailModal(feature: MuestraFeature) {
-    this.selectedFeature.set(feature);
-    document.body.classList.add('modal-open');
-  }
-
-  closeDetailModal() {
-    this.selectedFeature.set(null);
-    document.body.classList.remove('modal-open');
+  viewDetail(id: number) {
+    this.router.navigate(['/samples/detail', id]);
   }
 
   formatFecha(fechaIso: string): string {
@@ -150,6 +188,7 @@ export class SampleHistoryComponent implements OnInit, OnDestroy {
           : '—',
         zona: zonaMap[tipo] ?? tipo,
         sector: p.id_seccion.properties.numero_de_hoyo ?? 0,
+        hasPuntoCritico: p.id_punto_critico !== null && p.id_punto_critico !== undefined,
         rawFeature: f
       };
     });

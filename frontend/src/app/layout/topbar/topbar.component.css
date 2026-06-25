@@ -73,12 +73,8 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      cursor: pointer;
       padding: 4px 8px;
       border-radius: var(--radius-md);
-      transition: background var(--transition-fast);
-
-      &:hover { background: var(--color-surface-alt); }
     }
 
     .user-avatar {

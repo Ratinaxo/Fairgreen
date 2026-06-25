@@ -1,6 +1,49 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializador de SimpleJWT modificado para proporcionar mensajes de error
+    detallados según el fallo específico (usuario inexistente, inactivo o clave errónea).
+    """
+    def validate(self, attrs):
+        username = attrs.get(self.username_field)
+        password = attrs.get('password')
+
+        try:
+            user = Usuario.objects.get(correo_electronico=username)
+        except Usuario.DoesNotExist:
+            raise AuthenticationFailed(
+                {
+                    'detail': 'El correo electrónico no está registrado.',
+                    'code': 'user_not_found'
+                },
+                code='user_not_found'
+            )
+
+        if not user.is_active:
+            raise AuthenticationFailed(
+                {
+                    'detail': 'Tu cuenta de usuario está desactivada. Contacta al administrador.',
+                    'code': 'user_inactive'
+                },
+                code='user_inactive'
+            )
+
+        if not user.check_password(password):
+            raise AuthenticationFailed(
+                {
+                    'detail': 'Contraseña incorrecta. Por favor intente nuevamente.',
+                    'code': 'incorrect_password'
+                },
+                code='incorrect_password'
+            )
+
+        return super().validate(attrs)
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -68,24 +111,34 @@ class FotoSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         import os
         from django.conf import settings
+        from core.utils.s3_utils import upload_file_to_s3
 
         archivo = validated_data.pop('ruta_archivo')
         muestra = validated_data['id_muestra']
+        nombre_base = f"muestra_{muestra.pk}_{archivo.name}"
 
-        # Guardar archivo en media/fotos/
-        fotos_dir = os.path.join(settings.BASE_DIR, 'media', 'fotos')
-        os.makedirs(fotos_dir, exist_ok=True)
+        # Intentar subir a S3 primero
+        s3_url = upload_file_to_s3(archivo, nombre_base, folder='fotos')
 
-        nombre = f"muestra_{muestra.pk}_{archivo.name}"
-        ruta = os.path.join(fotos_dir, nombre)
-
-        with open(ruta, 'wb+') as dest:
-            for chunk in archivo.chunks():
-                dest.write(chunk)
+        if s3_url:
+            # S3 fue exitoso
+            ruta_final = s3_url
+        else:
+            # Fallback a disco local
+            fotos_dir = os.path.join(settings.BASE_DIR, 'media', 'fotos')
+            os.makedirs(fotos_dir, exist_ok=True)
+            
+            ruta_local = os.path.join(fotos_dir, nombre_base)
+            # Rebobinar el archivo por si boto3 lo leyó y falló
+            archivo.seek(0)
+            with open(ruta_local, 'wb+') as dest:
+                for chunk in archivo.chunks():
+                    dest.write(chunk)
+            ruta_final = f"/media/fotos/{nombre_base}"
 
         foto = Foto.objects.create(
             id_muestra=muestra,
-            ruta_archivo=f"/media/fotos/{nombre}",
+            ruta_archivo=ruta_final,
         )
         return foto
 
@@ -127,6 +180,15 @@ class MuestraSerializer(GeoFeatureModelSerializer):
             'fotos',
         ]
         read_only_fields = ['id_muestra', 'fecha_hora_captura']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.id_punto_critico:
+            ret['properties']['id_punto_critico'] = {
+                'id_punto_critico': instance.id_punto_critico.id_punto_critico,
+                'descripcion': instance.id_punto_critico.descripcion
+            }
+        return ret
 
 
 class NotificacionSerializer(serializers.ModelSerializer):

@@ -51,7 +51,7 @@ export class UsersComponent implements OnInit {
     rol: 'CANCHERO'
   };
 
-  users: UserRow[] = [];
+  users = signal<UserRow[]>([]);
 
   ngOnInit() {
     this._loadUsers();
@@ -61,7 +61,7 @@ export class UsersComponent implements OnInit {
     this.isLoading.set(true);
     this.dataService.getUsuarios().subscribe({
       next: (lista) => {
-        this.users = lista.map(u => this._mapUsuario(u));
+        this.users.set(lista.map(u => this._mapUsuario(u)));
         this.isLoading.set(false);
       },
       error: () => {
@@ -122,12 +122,29 @@ export class UsersComponent implements OnInit {
         this.closePanel();
       },
       error: () => {
-        // Fallback local si la API falla
-        this.showSaved.set(true);
-        setTimeout(() => this.showSaved.set(false), 2500);
-        this.closePanel();
+        alert('Error al guardar el usuario. Verifica los datos e inténtalo de nuevo.');
       }
     });
+  }
+
+  deleteUser() {
+    const user = this.selectedUser();
+    if (!user) return;
+
+    if (confirm(`¿Estás seguro de que deseas eliminar al usuario ${user.name}?`)) {
+      this.dataService.deleteUsuario(user.rut).subscribe({
+        next: () => {
+          this._loadUsers();
+          this.closePanel();
+          this.showSaved.set(true);
+          setTimeout(() => this.showSaved.set(false), 2500);
+        },
+        error: (err) => {
+          console.error('Error al eliminar usuario', err);
+          alert('Error al eliminar usuario. Puede que tenga datos asociados.');
+        }
+      });
+    }
   }
 
   addUser() {
@@ -164,7 +181,8 @@ export class UsersComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error al crear usuario', err);
-        alert('Error al crear usuario. Revisa el RUT o si ya existe.');
+        const msg = err.error ? JSON.stringify(err.error) : 'Error al crear usuario.';
+        alert(`Error: ${msg}\nRevisa que el RUT y correo no existan ya en el sistema.`);
         this.isCreating.set(false);
       }
     });

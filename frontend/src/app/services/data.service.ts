@@ -35,7 +35,8 @@ export interface PuntoCriticoFeature {
   properties: {
     id_punto_critico: number;
     descripcion: string;
-    id_seccion_id: number;
+    id_seccion_id?: number;
+    id_seccion?: SeccionFeature;
   };
 }
 
@@ -58,11 +59,11 @@ export interface MuestraProperties {
   id_muestra: number;
   rut_usuario: UsuarioResumen;
   id_seccion: SeccionFeature;
-  id_punto_critico: number | null;
-  salinidad: number;
-  humedad: number;
-  conductividad: number;
-  temperatura: number;
+  id_punto_critico: { id_punto_critico: number; descripcion: string; } | null;
+  salinidad?: number | null;
+  humedad?: number | null;
+  conductividad?: number | null;
+  temperatura?: number | null;
   recomendaciones: string | null;
   fecha_hora_captura: string; // ISO 8601
   fotos: FotoItem[];
@@ -85,7 +86,8 @@ export interface MuestraGeoJSON {
 
 export interface FotoItem {
   id_foto: number;
-  ruta_archivo: string;
+  ruta_archivo?: string;
+  url: string;
   fecha_hora_subida: string;
 }
 
@@ -113,10 +115,10 @@ export interface NotificacionesResponse {
 export interface CreateMuestraPayload {
   id_seccion_id: number;
   id_punto_critico?: number | null;
-  salinidad: number;
-  humedad: number;
-  conductividad: number;
-  temperatura: number;
+  salinidad?: number | null;
+  humedad?: number | null;
+  conductividad?: number | null;
+  temperatura?: number | null;
   ubicacion_exacta: { type: 'Point', coordinates: [number, number] };
   recomendaciones?: string;
 }
@@ -149,6 +151,11 @@ export class DataService {
     return this.http.get<PuntoCriticoGeoJSON>(`${this.api}/puntos-criticos/?id_seccion=${seccionId}`);
   }
 
+  /** Crea un nuevo punto crítico. */
+  createPuntoCritico(payload: { id_seccion_id: number, descripcion: string, ubicacion: { type: 'Point', coordinates: [number, number] } }): Observable<PuntoCriticoFeature> {
+    return this.http.post<PuntoCriticoFeature>(`${this.api}/puntos-criticos/`, payload);
+  }
+
   /** Lista todos los puntos críticos. */
   getTodosPuntosCriticos(): Observable<PuntoCriticoGeoJSON> {
     return this.http.get<PuntoCriticoGeoJSON>(`${this.api}/puntos-criticos/`);
@@ -161,13 +168,17 @@ export class DataService {
    * @param page  Número de página (1-indexed)
    * @param size  Resultados por página (por defecto usa el global: 50)
    */
-  getMuestras(page = 1, size = 20, fechaDesde?: string, fechaHasta?: string): Observable<MuestraGeoJSON> {
+  getMuestras(page = 1, size = 20, fechaDesde?: string, fechaHasta?: string, sector?: string, zona?: string, idMuestra?: string, puntoCritico?: string): Observable<MuestraGeoJSON> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('page_size', size.toString());
 
     if (fechaDesde) params = params.set('fecha_desde', fechaDesde);
     if (fechaHasta) params = params.set('fecha_hasta', fechaHasta);
+    if (sector) params = params.set('sector', sector);
+    if (zona) params = params.set('zona', zona);
+    if (idMuestra) params = params.set('id_muestra', idMuestra);
+    if (puntoCritico) params = params.set('punto_critico', puntoCritico);
 
     return this.http.get<MuestraGeoJSON>(`${this.api}/muestras/`, { params });
   }
@@ -182,7 +193,7 @@ export class DataService {
     return this.http.post<MuestraFeature>(`${this.api}/muestras/`, payload);
   }
 
-  /** Actualiza una muestra existente (parcial). */
+  /** Actualiza una muestra existente. */
   updateMuestra(id: number, payload: Partial<CreateMuestraPayload>): Observable<MuestraFeature> {
     return this.http.patch<MuestraFeature>(`${this.api}/muestras/${id}/`, payload);
   }
@@ -217,6 +228,11 @@ export class DataService {
   /** Actualiza un usuario (parcial). */
   updateUsuario(rut: string, data: Partial<UsuarioResumen>): Observable<UsuarioResumen> {
     return this.http.patch<UsuarioResumen>(`${this.api}/usuarios/${rut}/`, data);
+  }
+
+  /** Elimina un usuario por su RUT. */
+  deleteUsuario(rut: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/usuarios/${rut}/`);
   }
 
   /** Toggle de acceso del usuario (activa/desactiva). */
