@@ -53,6 +53,8 @@ export interface UsuarioResumen {
   rol: 'ADMIN' | 'AGRO' | 'CANCHERO';
   ruta_foto: string | null;
   is_active: boolean;
+  last_login: string | null;
+  is_online: boolean;
 }
 
 export interface MuestraProperties {

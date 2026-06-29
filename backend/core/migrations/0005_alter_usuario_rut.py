@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='usuario',
             name='rut',
-            field=models.CharField(max_length=9, primary_key=True, serialize=False, validators=[django.core.validators.RegexValidator('^[0-9]{8}[0-9kK]$', 'El RUT debe tener exactamente 9 caracteres (8 números y un dígito final o k).')]),
+            field=models.CharField(max_length=13, primary_key=True, serialize=False, validators=[django.core.validators.RegexValidator('^[\\d\\.\\-]{8,13}$', 'El RUT no es válido. Debe tener hasta 13 caracteres.')]),
         ),
     ]

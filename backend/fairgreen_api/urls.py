@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from core.views import SeccionViewSet, PuntoCriticoViewSet, MuestraViewSet, UsuarioViewSet, FotoViewSet, NotificacionViewSet
-from core.auth_views import AuthMeView, CustomTokenObtainPairView
+from core.auth_views import AuthMeView, CustomTokenObtainPairView, HeartbeatView
 
 # Configuración del enrutador automático de DRF
 router = DefaultRouter()
@@ -43,6 +43,9 @@ urlpatterns = [
 
     # Perfil del usuario autenticado (requiere Bearer token)
     path('api/auth/me', AuthMeView.as_view(), name='auth_me'),
+
+    # Heartbeat: el frontend envía un POST cada 60s para indicar que el usuario sigue conectado
+    path('api/auth/heartbeat', HeartbeatView.as_view(), name='auth_heartbeat'),
 
     # Endpoints de la API REST / GeoJSON
     path('api/', include(router.urls)),

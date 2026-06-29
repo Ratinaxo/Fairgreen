@@ -1,10 +1,10 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { DataService, UsuarioResumen } from '../../services/data.service';
 
 type Role = 'Agrónomo' | 'Administrador' | 'Canchero';
-type Status = 'Activo' | 'Offline';
+type Status = 'Activo' | 'Suspendido';
 
 interface UserRow {
   rut: string;
@@ -24,7 +24,7 @@ interface UserRow {
   templateUrl: './users.component.html',
   styleUrl: './users.component.css'
 })
-export class UsersComponent implements OnInit {
+export class UsersComponent implements OnInit, OnDestroy {
   private dataService = inject(DataService);
 
   selectedUser = signal<UserRow | null>(null);
@@ -52,21 +52,34 @@ export class UsersComponent implements OnInit {
   };
 
   users = signal<UserRow[]>([]);
+  private refreshInterval: any;
 
   ngOnInit() {
     this._loadUsers();
+    
+    // Auto-refrescar la lista silenciosamente cada 60 segundos
+    // para mantener actualizados los estados de "En línea"
+    this.refreshInterval = setInterval(() => {
+      this._loadUsers(true);
+    }, 60000);
   }
 
-  private _loadUsers() {
-    this.isLoading.set(true);
+  ngOnDestroy() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  }
+
+  private _loadUsers(silent = false) {
+    if (!silent) this.isLoading.set(true);
     this.dataService.getUsuarios().subscribe({
       next: (lista) => {
         this.users.set(lista.map(u => this._mapUsuario(u)));
-        this.isLoading.set(false);
+        if (!silent) this.isLoading.set(false);
       },
       error: () => {
-        this.errorMsg.set('Error al cargar los usuarios.');
-        this.isLoading.set(false);
+        if (!silent) this.errorMsg.set('Error al cargar los usuarios.');
+        if (!silent) this.isLoading.set(false);
       }
     });
   }
@@ -79,10 +92,22 @@ export class UsersComponent implements OnInit {
       name: `${u.nombre} ${u.apellido}`,
       email: u.correo_electronico,
       role: rolMap[u.rol] ?? 'Canchero',
-      status: u.is_active ? 'Activo' : 'Offline',
-      lastActivity: u.is_active ? 'Activo' : 'Sin acceso',
+      status: u.is_active ? 'Activo' : 'Suspendido',
+      lastActivity: u.is_online ? 'En línea' : this._formatLastLogin(u.last_login),
       initials: `${u.nombre.charAt(0)}${u.apellido.charAt(0)}`.toUpperCase(),
     };
+  }
+
+  private _formatLastLogin(lastLogin: string | null): string {
+    if (!lastLogin) return 'Nunca';
+    const date = new Date(lastLogin);
+    if (isNaN(date.getTime())) return 'Nunca';
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
   }
 
   selectUser(user: UserRow) {

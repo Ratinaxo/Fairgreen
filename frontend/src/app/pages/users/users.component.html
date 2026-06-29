@@ -53,7 +53,16 @@
                         <span style="font-size:13px;color:var(--color-text-secondary);">{{ user.status }}</span>
                       </div>
                     </td>
-                    <td style="font-size:13px;color:var(--color-text-muted);">{{ user.lastActivity }}</td>
+                    <td style="font-size:13px;color:var(--color-text-muted);">
+                      <div style="display:flex;align-items:center;gap:6px;">
+                        @if (user.lastActivity === 'En línea') {
+                          <span class="status-dot dot-online-pulse" aria-hidden="true"></span>
+                          <span style="color:var(--color-success, #22c55e);font-weight:500;">En línea</span>
+                        } @else {
+                          {{ user.lastActivity }}
+                        }
+                      </div>
+                    </td>
                   </tr>
                 }
               </tbody>

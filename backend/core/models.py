@@ -61,9 +61,9 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     ]
 
     rut = models.CharField(
-        max_length=9,
+        max_length=13,
         primary_key=True,
-        validators=[RegexValidator(r'^[0-9]{8}[0-9kK]$', 'El RUT debe tener exactamente 9 caracteres (8 números y un dígito final o k).')]
+        validators=[RegexValidator(r'^[\d\.\-]{8,13}$', 'El RUT no es válido. Debe tener hasta 13 caracteres.')]
     )
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)

@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
+from django.contrib.auth.models import update_last_login
 from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
 
 
@@ -43,7 +44,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 code='incorrect_password'
             )
 
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        update_last_login(None, self.user)
+        return data
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -52,10 +55,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
     Solo expone campos públicos del perfil. El password es write-only.
     """
     password = serializers.CharField(write_only=True, required=False)
+    is_online = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
-        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active', 'password']
+        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active', 'last_login', 'is_online', 'password']
+        read_only_fields = ['last_login', 'is_online']
+
+    def get_is_online(self, obj):
+        from django.core.cache import cache
+        return cache.get(f'user_online_{obj.rut}', False)
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
