@@ -1,41 +1,42 @@
-import { Component, signal, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { DataService, MuestraFeature } from '../../services/data.service';
 import { FormsModule } from '@angular/forms';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import html2canvas from 'html2canvas';
+
+const PC_SAMPLE_CAP = 50;
 
 interface ReportRow {
   id: number;
   date: string;
   sector: string;
   point: string;
-  component: string;
-  level: number | null | undefined;
-  status: 'optimo' | 'atencion' | 'critico';
   humedad?: number | null;
   temperatura?: number | null;
   salinidad?: number | null;
   conductividad?: number | null;
 }
 
+interface PcSample {
+  feature: MuestraFeature;
+  color: string;
+  visible: boolean;
+}
+
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DatePipe],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })
 export class ReportsComponent {
   private dataService = inject(DataService);
 
-  @ViewChild('chartSvg') chartSvgRef!: ElementRef;
-  @ViewChild('exportChartSvg') exportChartSvgRef!: ElementRef;
-
   filtersApplied = signal(false);
-  appliedComponent = signal('Humedad');
   appliedDateFrom = signal('');
   appliedDateTo = signal('');
   appliedZona = signal('');
@@ -45,19 +46,139 @@ export class ReportsComponent {
     dateTo: '',
     sector: '',
     zona: '',
-    component: 'Humedad',
   };
 
-  // Chart data
-  rawData = [1.8, 2.3, 3.1, 2.8, 3.5, 4.1, 3.8, 4.3, 3.9, 4.5, 4.2, 3.7];
-  xLabels = [
-    { x: 60, text: 'Jun' }, { x: 115, text: 'Jul' }, { x: 170, text: 'Ago' },
-    { x: 225, text: 'Sep' }, { x: 280, text: 'Oct' }, { x: 335, text: 'Nov' },
-    { x: 390, text: 'Dic' }, { x: 445, text: 'Ene' }, { x: 500, text: 'Feb' },
-    { x: 555, text: 'Mar' }, { x: 610, text: 'Abr' }, { x: 665, text: 'May' },
+  // ── Parallel Coordinates Config ──────────────────────────────────────────
+
+  readonly PC_PARAMS = [
+    { key: 'humedad'        as 'humedad',        label: 'Humedad',       unit: '1–5',    min: 0, max: 5    },
+    { key: 'salinidad'      as 'salinidad',      label: 'Salinidad',     unit: 'dS/m',   min: 0, max: 10   },
+    { key: 'conductividad'  as 'conductividad',  label: 'Conductividad', unit: 'µS/cm',  min: 0, max: 2000 },
+    { key: 'temperatura'    as 'temperatura',    label: 'Temperatura',   unit: '°C',     min: 0, max: 45   },
   ];
 
-  // Variables para la Exportación Personalizada
+  // Customizable axes — user can toggle params on/off
+  pcActiveKeys = new Set<string>(['humedad', 'salinidad', 'conductividad', 'temperatura']);
+
+  get pcActiveParams() {
+    return this.PC_PARAMS.filter(p => this.pcActiveKeys.has(p.key));
+  }
+
+  pcToggleParam(key: string) {
+    // Prevent deactivating all — must keep at least 2
+    if (this.pcActiveKeys.has(key)) {
+      if (this.pcActiveKeys.size > 2) {
+        this.pcActiveKeys.delete(key);
+      }
+    } else {
+      this.pcActiveKeys.add(key);
+    }
+    // Force change detection by reassigning the set
+    this.pcActiveKeys = new Set(this.pcActiveKeys);
+  }
+
+  pcIsParamActive(key: string): boolean {
+    return this.pcActiveKeys.has(key);
+  }
+
+  // SVG dimensions
+  readonly PC_W = 700;
+  readonly PC_H = 300;
+  readonly PC_MARGIN = { top: 52, right: 40, bottom: 30, left: 40 };
+
+  // Palette: gradient-based hue rotation in the green/teal/earth spectrum
+  private _buildPalette(n: number): string[] {
+    const colors: string[] = [];
+    // Sweep from hue 90° (yellow-green) to 210° (teal/cyan) then back through
+    // warm accent tones — all at medium-dark saturation matching the brand.
+    for (let i = 0; i < n; i++) {
+      const t = n <= 1 ? 0 : i / (n - 1);
+      // Hue goes 120 → 185 (green → teal) for the first 60%, then 185 → 80 (teal → lime)
+      let hue: number;
+      if (t < 0.6) {
+        hue = 120 + t * (185 - 120) / 0.6;
+      } else {
+        hue = 185 + (t - 0.6) * (80 - 185) / 0.4;
+      }
+      // Vary lightness slightly so adjacent lines are distinguishable
+      const l = 28 + (i % 3) * 10; // 28 / 38 / 48 %
+      const s = 55 + (i % 2) * 15; // 55 / 70 %
+      colors.push(`hsl(${Math.round(hue)},${s}%,${l}%)`);
+    }
+    return colors;
+  }
+
+  // State
+  pcSamples: PcSample[] = [];
+  pcHoveredId: number | null = null;
+  pcCappedCount = 0;    // original count before cap (for info banner)
+  pcTotalCount = 0;
+
+  // Legend dropdown state
+  legendDropdownOpen = false;
+
+  toggleLegendDropdown() {
+    this.legendDropdownOpen = !this.legendDropdownOpen;
+  }
+
+  closeLegendDropdown() {
+    this.legendDropdownOpen = false;
+  }
+
+  pcShowAll() {
+    this.pcSamples.forEach(s => s.visible = true);
+  }
+
+  pcHideAll() {
+    this.pcSamples.forEach(s => s.visible = false);
+  }
+
+  get pcVisibleCount(): number {
+    return this.pcSamples.filter(s => s.visible).length;
+  }
+
+  // Tooltip
+  pcTooltip: {
+    show: boolean;
+    x: number;
+    y: number;
+    sample: MuestraFeature | null;
+  } = { show: false, x: 0, y: 0, sample: null };
+
+  // Data table
+  reportRows: ReportRow[] = [];
+
+  // Table pagination
+  readonly TABLE_PAGE_SIZE = 25;
+  tablePage = 1;
+
+  get tablePageCount(): number {
+    return Math.ceil(this.reportRows.length / this.TABLE_PAGE_SIZE) || 1;
+  }
+
+  get pagedRows(): ReportRow[] {
+    const start = (this.tablePage - 1) * this.TABLE_PAGE_SIZE;
+    return this.reportRows.slice(start, start + this.TABLE_PAGE_SIZE);
+  }
+
+  get tablePageNumbers(): number[] {
+    const total = this.tablePageCount;
+    const current = this.tablePage;
+    const pages: number[] = [];
+    // Show max 7 page buttons with ellipsis logic handled in template
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, current + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.tablePageCount) {
+      this.tablePage = page;
+    }
+  }
+
+  // Export modal
   showExportModal = signal(false);
   isExporting = signal(false);
   exportConfig = {
@@ -67,94 +188,15 @@ export class ReportsComponent {
     dateTo: '',
     sector: '',
     zona: '',
-    component: 'Humedad',
+    component: 'Todos',
     includeStats: true,
     includeTable: true
   };
-
-  // Variables para el gráfico SVG de exportación (oculto)
-  exportYAxisValues: number[] = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0];
-  exportYAxisMax = 5;
-  exportYFactor = 40;
-  exportXLabels: { x: number; text: string }[] = [];
-  exportRawData: number[] = [];
   exportReportRows: ReportRow[] = [];
   exportAvgGreen = 0;
   exportAvgFairway = 0;
 
-  // Averages for bar chart
-  avgGreen = signal(0);
-  avgFairway = signal(0);
-
-  // Chart properties dinámicos
-  yAxisValues: number[] = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0];
-  yAxisMax = 5;
-  yFactor = 40; // (200px height / 5 units)
-
-  get chartPoints() {
-    return this.rawData.map((v, i) => ({
-      x: this.xLabels[i].x,
-      y: 10 + (this.yAxisMax - v) * this.yFactor,
-    }));
-  }
-
-  get linePath(): string {
-    const pts = this.chartPoints;
-    if (!pts.length) return '';
-    let d = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const cx = (pts[i - 1].x + pts[i].x) / 2;
-      d += ` C ${cx} ${pts[i - 1].y} ${cx} ${pts[i].y} ${pts[i].x} ${pts[i].y}`;
-    }
-    return d;
-  }
-
-  get areaPath(): string {
-    const pts = this.chartPoints;
-    if (!pts.length) return '';
-    let d = `M ${pts[0].x} 200`;
-    d += ` L ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const cx = (pts[i - 1].x + pts[i].x) / 2;
-      d += ` C ${cx} ${pts[i - 1].y} ${cx} ${pts[i].y} ${pts[i].x} ${pts[i].y}`;
-    }
-    d += ` L ${pts[pts.length - 1].x} 200 Z`;
-    return d;
-  }
-
-  // --- Helpers for Export Chart ---
-  get exportChartPoints() {
-    return this.exportRawData.map((v, i) => ({
-      x: this.exportXLabels[i]?.x ?? 0,
-      y: 10 + (this.exportYAxisMax - v) * this.exportYFactor,
-    }));
-  }
-
-  get exportLinePath(): string {
-    const pts = this.exportChartPoints;
-    if (!pts.length) return '';
-    let d = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const cx = (pts[i - 1].x + pts[i].x) / 2;
-      d += ` C ${cx} ${pts[i - 1].y} ${cx} ${pts[i].y} ${pts[i].x} ${pts[i].y}`;
-    }
-    return d;
-  }
-
-  get exportAreaPath(): string {
-    const pts = this.exportChartPoints;
-    if (!pts.length) return '';
-    let d = `M ${pts[0].x} 200`;
-    d += ` L ${pts[0].x} ${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const cx = (pts[i - 1].x + pts[i].x) / 2;
-      d += ` C ${cx} ${pts[i - 1].y} ${cx} ${pts[i].y} ${pts[i].x} ${pts[i].y}`;
-    }
-    d += ` L ${pts[pts.length - 1].x} 200 Z`;
-    return d;
-  }
-
-  reportRows: ReportRow[] = [];
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
   displayDateFrom(): string {
     if (this.appliedDateFrom()) {
@@ -172,46 +214,6 @@ export class ReportsComponent {
     return new Date().toLocaleDateString('es-CL');
   }
 
-  barHeight(value: number): number {
-    // Escalar la altura de la barra relativa al maximo (yAxisMax)
-    return Math.min(100, Math.max(0, (value / this.yAxisMax) * 100));
-  }
-
-  applyFilters() {
-    this.dataService.getMuestras(1, 500).subscribe({
-      next: (geoJson) => {
-        // Set applied values first
-        this.appliedComponent.set(this.filters.component);
-        this.appliedDateFrom.set(this.filters.dateFrom);
-        this.appliedDateTo.set(this.filters.dateTo);
-        this.appliedZona.set(this.filters.zona);
-
-        let features = geoJson.features ?? [];
-        
-        // 1. Filtrar por fecha
-        if (this.filters.dateFrom) {
-          features = features.filter(f => f.properties.fecha_hora_captura.substring(0, 10) >= this.filters.dateFrom);
-        }
-        if (this.filters.dateTo) {
-          features = features.filter(f => f.properties.fecha_hora_captura.substring(0, 10) <= this.filters.dateTo);
-        }
-
-        // 2. Filtrar por sector
-        if (this.filters.sector) {
-          features = features.filter(f => f.properties.id_seccion?.properties?.numero_de_hoyo === parseInt(this.filters.sector));
-        }
-
-        // 3. Filtrar por zona
-        if (this.filters.zona) {
-          features = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra.toLowerCase() === this.filters.zona.toLowerCase());
-        }
-
-        this._processData(features);
-        this.filtersApplied.set(true);
-      }
-    });
-  }
-
   validateDates(type: 'filter' | 'export') {
     if (type === 'filter') {
       if (this.filters.dateFrom && this.filters.dateTo && this.filters.dateFrom > this.filters.dateTo) {
@@ -224,6 +226,174 @@ export class ReportsComponent {
     }
   }
 
+  // ── Parallel Coordinates — geometry ──────────────────────────────────────
+
+  pcAxisX(index: number): number {
+    const innerW = this.PC_W - this.PC_MARGIN.left - this.PC_MARGIN.right;
+    const nAxes = this.pcActiveParams.length;
+    if (nAxes <= 1) return this.PC_MARGIN.left + innerW / 2;
+    return this.PC_MARGIN.left + (index / (nAxes - 1)) * innerW;
+  }
+
+  private pcValueY(normalizedVal: number): number {
+    const innerH = this.PC_H - this.PC_MARGIN.top - this.PC_MARGIN.bottom;
+    return this.PC_MARGIN.top + (1 - normalizedVal) * innerH;
+  }
+
+  private pcNormalize(value: number | null | undefined, min: number, max: number): number {
+    if (value == null) return 0;
+    return Math.min(1, Math.max(0, (value - min) / (max - min)));
+  }
+
+  pcBuildPath(feature: MuestraFeature): string {
+    const props = feature.properties;
+    const active = this.pcActiveParams;
+    const points = active.map((p, i) => ({
+      x: this.pcAxisX(i),
+      y: this.pcValueY(this.pcNormalize(props[p.key], p.min, p.max)),
+    }));
+    if (points.length === 0) return '';
+    if (points.length === 1) {
+      // Single axis — draw a dot-like short horizontal stroke
+      return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)} L ${(points[0].x + 0.1).toFixed(2)} ${points[0].y.toFixed(2)}`;
+    }
+    let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const mx = ((points[i].x + points[i + 1].x) / 2).toFixed(2);
+      d += ` C ${mx} ${points[i].y.toFixed(2)}, ${mx} ${points[i + 1].y.toFixed(2)}, ${points[i + 1].x.toFixed(2)} ${points[i + 1].y.toFixed(2)}`;
+    }
+    return d;
+  }
+
+  pcTickY(param: typeof this.PC_PARAMS[0], tick: 'min' | 'max'): number {
+    return tick === 'max' ? this.PC_MARGIN.top : this.PC_H - this.PC_MARGIN.bottom;
+  }
+
+  // ── Parallel Coordinates — interactivity ─────────────────────────────────
+
+  pcOnLineEnter(sampleId: number, event: MouseEvent) {
+    this.pcHoveredId = sampleId;
+    const sample = this.pcSamples.find(s => s.feature.id === sampleId);
+    if (sample) {
+      this.pcTooltip = {
+        show: true,
+        x: (event as any).layerX ?? event.offsetX,
+        y: (event as any).layerY ?? event.offsetY,
+        sample: sample.feature,
+      };
+    }
+  }
+
+  pcOnLineMove(event: MouseEvent) {
+    if (this.pcTooltip.show) {
+      this.pcTooltip = {
+        ...this.pcTooltip,
+        x: (event as any).layerX ?? event.offsetX,
+        y: (event as any).layerY ?? event.offsetY,
+      };
+    }
+  }
+
+  pcOnLineLeave() {
+    this.pcHoveredId = null;
+    this.pcTooltip = { ...this.pcTooltip, show: false, sample: null };
+  }
+
+  pcToggleSample(sampleId: number) {
+    const s = this.pcSamples.find(s => s.feature.id === sampleId);
+    if (s) s.visible = !s.visible;
+  }
+
+  pcLineOpacity(sampleId: number): string {
+    if (this.pcHoveredId === null) return '0.62';
+    return sampleId === this.pcHoveredId ? '1' : '0.06';
+  }
+
+  pcLineWidth(sampleId: number): number {
+    return sampleId === this.pcHoveredId ? 3.5 : 1.8;
+  }
+
+  pcTooltipValue(param: typeof this.PC_PARAMS[0]): string {
+    const val = this.pcTooltip.sample?.properties[param.key];
+    return val != null ? val.toFixed(param.key === 'conductividad' ? 0 : 2) : '—';
+  }
+
+  pcSampleLabel(feature: MuestraFeature): string {
+    const p = feature.properties;
+    const tipo = p.id_seccion?.properties?.tipo_de_tierra ?? '?';
+    const hoyo = p.id_seccion?.properties?.numero_de_hoyo ?? '?';
+    return `#${feature.id} · ${tipo} H${hoyo}`;
+  }
+
+  // ── Filters & data processing ─────────────────────────────────────────────
+
+  applyFilters() {
+    this.dataService.getMuestras(1, 500).subscribe({
+      next: (geoJson) => {
+        this.appliedDateFrom.set(this.filters.dateFrom);
+        this.appliedDateTo.set(this.filters.dateTo);
+        this.appliedZona.set(this.filters.zona);
+
+        let features = geoJson.features ?? [];
+
+        if (this.filters.dateFrom) {
+          features = features.filter(f => f.properties.fecha_hora_captura.substring(0, 10) >= this.filters.dateFrom);
+        }
+        if (this.filters.dateTo) {
+          features = features.filter(f => f.properties.fecha_hora_captura.substring(0, 10) <= this.filters.dateTo);
+        }
+        if (this.filters.sector) {
+          features = features.filter(f => f.properties.id_seccion?.properties?.numero_de_hoyo === parseInt(this.filters.sector));
+        }
+        if (this.filters.zona) {
+          features = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra.toLowerCase() === this.filters.zona.toLowerCase());
+        }
+
+        this._processData(features);
+        this.tablePage = 1;
+        this.filtersApplied.set(true);
+      }
+    });
+  }
+
+  private _processData(features: MuestraFeature[]) {
+    this.pcTotalCount = features.length;
+
+    // Sort newest first, then cap
+    const sorted = [...features].sort(
+      (a, b) => new Date(b.properties.fecha_hora_captura).getTime()
+              - new Date(a.properties.fecha_hora_captura).getTime()
+    );
+    const capped = sorted.slice(0, PC_SAMPLE_CAP);
+    this.pcCappedCount = sorted.length > PC_SAMPLE_CAP ? PC_SAMPLE_CAP : sorted.length;
+
+    // Build palette — gradient hue rotation over the green/teal spectrum
+    const palette = this._buildPalette(capped.length);
+
+    this.pcSamples = capped.map((f, i) => ({
+      feature: f,
+      color: palette[i],
+      visible: true,
+    }));
+
+    // Data table — all four columns, newest first
+    this.reportRows = capped.map(f => {
+      const p = f.properties;
+      return {
+        id: f.id,
+        date: new Date(p.fecha_hora_captura).toLocaleDateString('es-CL'),
+        sector: `Sector ${p.id_seccion?.properties?.numero_de_hoyo ?? 0}`,
+        point: `${p.id_seccion?.properties?.tipo_de_tierra ?? 'Z'}`,
+        humedad: p.humedad,
+        temperatura: p.temperatura,
+        salinidad: p.salinidad,
+        conductividad: p.conductividad,
+      };
+    });
+  }
+
+  // ── Export ────────────────────────────────────────────────────────────────
+
   openExportModal() {
     this.exportConfig = {
       format: 'pdf',
@@ -232,7 +402,7 @@ export class ReportsComponent {
       dateTo: this.filters.dateTo,
       sector: this.filters.sector,
       zona: this.filters.zona,
-      component: this.filters.component || 'Humedad',
+      component: 'Todos',
       includeTable: true,
       includeStats: true,
     };
@@ -282,329 +452,40 @@ export class ReportsComponent {
     });
   }
 
-  private _processData(features: MuestraFeature[]) {
-    // Definir configuración del gráfico según componente
-    let propKey: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad' = 'humedad';
-    const comp = this.appliedComponent();
-    if (comp === 'Humedad') { propKey = 'humedad'; this.yAxisMax = 5; this.yAxisValues = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
-    else if (comp === 'Temperatura') { propKey = 'temperatura'; this.yAxisMax = 40; this.yAxisValues = [40, 35, 30, 25, 20, 15, 10, 5, 0]; }
-    else if (comp === 'Salinidad') { propKey = 'salinidad'; this.yAxisMax = 5; this.yAxisValues = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
-    else if (comp === 'Conductividad') { propKey = 'conductividad'; this.yAxisMax = 6; this.yAxisValues = [6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
-    
-    this.yFactor = 200 / this.yAxisMax;
-
-    // Actualizar tabla
-    this.reportRows = features.map(f => {
-      const p = f.properties;
-      const val = p[propKey];
-      let status: 'optimo' | 'atencion' | 'critico' = 'optimo';
-      if (val !== null && val !== undefined) {
-        if (propKey === 'conductividad' || propKey === 'salinidad') {
-          if (val > (this.yAxisMax * 0.6)) status = 'critico';
-          else if (val > (this.yAxisMax * 0.4)) status = 'atencion';
-        } else {
-          if (val < (this.yAxisMax * 0.2)) status = 'critico';
-          else if (val < (this.yAxisMax * 0.4)) status = 'atencion';
-        }
-      }
-
-      return {
-        id: f.id,
-        date: new Date(p.fecha_hora_captura).toLocaleDateString('es-CL'),
-        sector: `Sector ${p.id_seccion?.properties?.numero_de_hoyo ?? 0}`,
-        point: `${p.id_seccion?.properties?.tipo_de_tierra ?? 'Z'}`,
-        component: comp,
-        level: val,
-        status: status
-      };
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    // Generar puntos equitativos para el gráfico basados en el tiempo real transcurrido
-    if (features.length === 0) {
-      this.rawData = Array(12).fill(0);
-      this.xLabels = Array.from({ length: 12 }, (_, i) => ({ x: 60 + i * 55, text: '' }));
-      return;
-    }
-
-    // Ordenamos cronológicamente
-    features.sort((a, b) => new Date(a.properties.fecha_hora_captura).getTime() - new Date(b.properties.fecha_hora_captura).getTime());
-
-    // 1. Determinar rango de tiempo
-    let startStr = this.appliedDateFrom();
-    let endStr = this.appliedDateTo();
-
-    if (!startStr && features.length) {
-      startStr = features[0].properties.fecha_hora_captura.substring(0, 10);
-    }
-    if (!endStr && features.length) {
-      endStr = features[features.length - 1].properties.fecha_hora_captura.substring(0, 10);
-    }
-
-    let startTime = new Date(startStr + 'T00:00:00').getTime();
-    let endTime = new Date(endStr + 'T23:59:59').getTime();
-
-    if (endTime <= startTime) {
-      endTime = startTime + 24 * 3600 * 1000 - 1000;
-    }
-
-    const totalDays = (endTime - startTime) / (24 * 3600 * 1000);
-
-    // Definición de los buckets (intervalos de tiempo específicos)
-    interface TimeBucket {
-      start: number;
-      end: number;
-      label: string;
-      showLabel: boolean;
-    }
-    let bucketsConfig: TimeBucket[] = [];
-
-    if (totalDays <= 1.5) {
-      // 1. Agrupar por hora (cada 2 horas)
-      for (let hour = 0; hour < 24; hour += 2) {
-        const start = new Date(startStr + 'T00:00:00');
-        start.setHours(hour, 0, 0, 0);
-        const end = new Date(start.getTime() + 2 * 3600 * 1000 - 1);
-        const label = start.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-        bucketsConfig.push({ start: start.getTime(), end: end.getTime(), label, showLabel: true });
-      }
-    } else if (totalDays <= 31) {
-      // 2. Agrupar por día
-      const start = new Date(startStr + 'T00:00:00');
-      const endLimit = new Date(endStr + 'T23:59:59');
-      let curr = new Date(start.getTime());
-      while (curr.getTime() <= endLimit.getTime()) {
-        const s = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate(), 0, 0, 0, 0).getTime();
-        const e = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate(), 23, 59, 59, 999).getTime();
-        const label = curr.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '');
-        bucketsConfig.push({ start: s, end: e, label, showLabel: true });
-        curr.setDate(curr.getDate() + 1);
-      }
-      
-      // Ocultar etiquetas intermedias si son demasiados días
-      if (bucketsConfig.length > 12) {
-        const step = Math.ceil(bucketsConfig.length / 8);
-        bucketsConfig.forEach((b, idx) => {
-          if (idx % step !== 0 && idx !== bucketsConfig.length - 1) {
-            b.showLabel = false;
-          }
-        });
-      }
-    } else {
-      // 3. Agrupar por mes calendario (evita duplicados de meses en rangos largos)
-      const start = new Date(startStr + 'T00:00:00');
-      const endLimit = new Date(endStr + 'T23:59:59');
-      let curr = new Date(start.getFullYear(), start.getMonth(), 1, 0, 0, 0, 0);
-      
-      while (curr.getTime() <= endLimit.getTime()) {
-        const s = new Date(curr.getFullYear(), curr.getMonth(), 1, 0, 0, 0, 0).getTime();
-        const e = new Date(curr.getFullYear(), curr.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-        const label = curr.toLocaleDateString('es-CL', { month: 'short' }).replace('.', '');
-        bucketsConfig.push({ start: s, end: e, label, showLabel: true });
-        curr.setMonth(curr.getMonth() + 1);
-      }
-
-      // Ocultar etiquetas intermedias si son demasiados meses (rango multi-año)
-      if (bucketsConfig.length > 12) {
-        const step = Math.ceil(bucketsConfig.length / 12);
-        bucketsConfig.forEach((b, idx) => {
-          if (idx % step !== 0 && idx !== bucketsConfig.length - 1) {
-            b.showLabel = false;
-          }
-        });
-      }
-    }
-
-    const N = bucketsConfig.length;
-    
-    // 2. Generar las coordenadas X y etiquetas dinámicamente
-    const newLabels = [];
-    for (let i = 0; i < N; i++) {
-      const x = N > 1 ? 60 + i * (605 / (N - 1)) : 362.5;
-      newLabels.push({
-        x: x,
-        text: bucketsConfig[i].showLabel ? bucketsConfig[i].label : ''
-      });
-    }
-    this.xLabels = newLabels;
-
-    // 3. Agrupar muestras en los buckets correspondientes
-    const bucketsData = Array.from({ length: N }, () => [] as number[]);
-    for (const f of features) {
-      const t = new Date(f.properties.fecha_hora_captura).getTime();
-      for (let i = 0; i < N; i++) {
-        if (t >= bucketsConfig[i].start && t <= bucketsConfig[i].end) {
-          const val = f.properties[propKey];
-          if (val !== null && val !== undefined) {
-            bucketsData[i].push(val);
-          }
-          break;
-        }
-      }
-    }
-
-    this.rawData = bucketsData.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
-
-    // Calcular promedios para Green vs Fairway
-    const greenVals = features
-      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN')
-      .map(f => f.properties[propKey])
-      .filter((v): v is number => v !== null && v !== undefined);
-    const fairwayVals = features
-      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY')
-      .map(f => f.properties[propKey])
-      .filter((v): v is number => v !== null && v !== undefined);
-
-    const gAvg = greenVals.length > 0 ? greenVals.reduce((acc, v) => acc + v, 0) / greenVals.length : 0;
-    const fAvg = fairwayVals.length > 0 ? fairwayVals.reduce((acc, v) => acc + v, 0) / fairwayVals.length : 0;
-
-    this.avgGreen.set(gAvg);
-    this.avgFairway.set(fAvg);
-  }
-
   private _processExportData(features: MuestraFeature[]) {
-    let propKey: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad' = 'humedad';
-    const comp = this.exportConfig.component;
-    
-    if (comp === 'Todos') {
-      this.exportReportRows = features.map(f => {
-        const p = f.properties;
-        return {
-          id: f.id,
-          date: new Date(p.fecha_hora_captura).toLocaleDateString('es-CL'),
-          sector: `Sector ${p.id_seccion?.properties?.numero_de_hoyo ?? 0}`,
-          point: `${p.id_seccion?.properties?.tipo_de_tierra ?? 'Z'}`,
-          component: 'Todos',
-          level: 0,
-          status: 'optimo' as const,
-          humedad: p.humedad,
-          temperatura: p.temperatura,
-          salinidad: p.salinidad,
-          conductividad: p.conductividad
-        };
-      }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      this.exportConfig.includeStats = false;
-      return;
-    }
+    const sorted = [...features].sort(
+      (a, b) => new Date(b.properties.fecha_hora_captura).getTime()
+              - new Date(a.properties.fecha_hora_captura).getTime()
+    );
 
-    if (comp === 'Humedad') { propKey = 'humedad'; this.exportYAxisMax = 5; this.exportYAxisValues = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
-    else if (comp === 'Temperatura') { propKey = 'temperatura'; this.exportYAxisMax = 40; this.exportYAxisValues = [40, 35, 30, 25, 20, 15, 10, 5, 0]; }
-    else if (comp === 'Salinidad') { propKey = 'salinidad'; this.exportYAxisMax = 5; this.exportYAxisValues = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
-    else if (comp === 'Conductividad') { propKey = 'conductividad'; this.exportYAxisMax = 6; this.exportYAxisValues = [6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0]; }
-    
-    this.exportYFactor = 200 / this.exportYAxisMax;
-
-    this.exportReportRows = features.map(f => {
+    this.exportReportRows = sorted.map(f => {
       const p = f.properties;
-      const val = p[propKey];
-      let status: 'optimo' | 'atencion' | 'critico' = 'optimo';
-      if (val !== null && val !== undefined) {
-        if (propKey === 'conductividad' || propKey === 'salinidad') {
-          if (val > (this.exportYAxisMax * 0.6)) status = 'critico';
-          else if (val > (this.exportYAxisMax * 0.4)) status = 'atencion';
-        } else {
-          if (val < (this.exportYAxisMax * 0.2)) status = 'critico';
-          else if (val < (this.exportYAxisMax * 0.4)) status = 'atencion';
-        }
-      }
       return {
         id: f.id,
         date: new Date(p.fecha_hora_captura).toLocaleDateString('es-CL'),
         sector: `Sector ${p.id_seccion?.properties?.numero_de_hoyo ?? 0}`,
         point: `${p.id_seccion?.properties?.tipo_de_tierra ?? 'Z'}`,
-        component: comp,
-        level: val,
-        status: status
+        humedad: p.humedad,
+        temperatura: p.temperatura,
+        salinidad: p.salinidad,
+        conductividad: p.conductividad,
       };
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
 
-    if (features.length === 0) {
-      this.exportRawData = Array(12).fill(0);
-      this.exportXLabels = Array.from({ length: 12 }, (_, i) => ({ x: 60 + i * 55, text: '' }));
-      return;
+    const comp = this.exportConfig.component;
+    if (comp !== 'Todos') {
+      const propKey = comp.toLowerCase() as 'humedad' | 'temperatura' | 'salinidad' | 'conductividad';
+      const greenVals = features
+        .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN')
+        .map(f => f.properties[propKey])
+        .filter((v): v is number => v != null);
+      const fairwayVals = features
+        .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY')
+        .map(f => f.properties[propKey])
+        .filter((v): v is number => v != null);
+      this.exportAvgGreen = greenVals.length ? greenVals.reduce((a, b) => a + b, 0) / greenVals.length : 0;
+      this.exportAvgFairway = fairwayVals.length ? fairwayVals.reduce((a, b) => a + b, 0) / fairwayVals.length : 0;
     }
-
-    features.sort((a, b) => new Date(a.properties.fecha_hora_captura).getTime() - new Date(b.properties.fecha_hora_captura).getTime());
-
-    let startStr = this.exportConfig.dateFrom || features[0].properties.fecha_hora_captura.substring(0, 10);
-    let endStr = this.exportConfig.dateTo || features[features.length - 1].properties.fecha_hora_captura.substring(0, 10);
-
-    let startTime = new Date(startStr + 'T00:00:00').getTime();
-    let endTime = new Date(endStr + 'T23:59:59').getTime();
-    if (endTime <= startTime) endTime = startTime + 24 * 3600 * 1000 - 1000;
-
-    const totalDays = (endTime - startTime) / (24 * 3600 * 1000);
-    let bucketsConfig: any[] = [];
-
-    if (totalDays <= 1.5) {
-      for (let hour = 0; hour < 24; hour += 2) {
-        const start = new Date(startStr + 'T00:00:00');
-        start.setHours(hour, 0, 0, 0);
-        const end = new Date(start.getTime() + 2 * 3600 * 1000 - 1);
-        bucketsConfig.push({ start: start.getTime(), end: end.getTime(), label: start.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }), showLabel: true });
-      }
-    } else if (totalDays <= 31) {
-      const endLimit = new Date(endStr + 'T23:59:59');
-      let curr = new Date(startStr + 'T00:00:00');
-      while (curr.getTime() <= endLimit.getTime()) {
-        const s = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate(), 0, 0, 0, 0).getTime();
-        const e = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate(), 23, 59, 59, 999).getTime();
-        bucketsConfig.push({ start: s, end: e, label: curr.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', ''), showLabel: true });
-        curr.setDate(curr.getDate() + 1);
-      }
-      if (bucketsConfig.length > 12) {
-        const step = Math.ceil(bucketsConfig.length / 8);
-        bucketsConfig.forEach((b, idx) => { if (idx % step !== 0 && idx !== bucketsConfig.length - 1) b.showLabel = false; });
-      }
-    } else {
-      const endLimit = new Date(endStr + 'T23:59:59');
-      let curr = new Date(new Date(startStr + 'T00:00:00').getFullYear(), new Date(startStr + 'T00:00:00').getMonth(), 1, 0, 0, 0, 0);
-      while (curr.getTime() <= endLimit.getTime()) {
-        const s = new Date(curr.getFullYear(), curr.getMonth(), 1, 0, 0, 0, 0).getTime();
-        const e = new Date(curr.getFullYear(), curr.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-        bucketsConfig.push({ start: s, end: e, label: curr.toLocaleDateString('es-CL', { month: 'short' }).replace('.', ''), showLabel: true });
-        curr.setMonth(curr.getMonth() + 1);
-      }
-      if (bucketsConfig.length > 12) {
-        const step = Math.ceil(bucketsConfig.length / 12);
-        bucketsConfig.forEach((b, idx) => { if (idx % step !== 0 && idx !== bucketsConfig.length - 1) b.showLabel = false; });
-      }
-    }
-
-    const N = bucketsConfig.length;
-    const newLabels = [];
-    for (let i = 0; i < N; i++) {
-      newLabels.push({ x: N > 1 ? 60 + i * (605 / (N - 1)) : 362.5, text: bucketsConfig[i].showLabel ? bucketsConfig[i].label : '' });
-    }
-    this.exportXLabels = newLabels;
-
-    const bucketsData = Array.from({ length: N }, () => [] as number[]);
-    for (const f of features) {
-      const t = new Date(f.properties.fecha_hora_captura).getTime();
-      for (let i = 0; i < N; i++) {
-        if (t >= bucketsConfig[i].start && t <= bucketsConfig[i].end) {
-          const val = f.properties[propKey];
-          if (val !== null && val !== undefined) {
-            bucketsData[i].push(val);
-          }
-          break;
-        }
-      }
-    }
-
-    this.exportRawData = bucketsData.map(b => b.length ? (b.reduce((x, y) => x + y, 0) / b.length) : 0);
-
-    const greenVals = features
-      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN')
-      .map(f => f.properties[propKey])
-      .filter((v): v is number => v !== null && v !== undefined);
-    const fairwayVals = features
-      .filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY')
-      .map(f => f.properties[propKey])
-      .filter((v): v is number => v !== null && v !== undefined);
-
-    this.exportAvgGreen = greenVals.length > 0 ? greenVals.reduce((acc, v) => acc + v, 0) / greenVals.length : 0;
-    this.exportAvgFairway = fairwayVals.length > 0 ? fairwayVals.reduce((acc, v) => acc + v, 0) / fairwayVals.length : 0;
   }
 
   private async _generateExcel() {
@@ -614,45 +495,25 @@ export class ReportsComponent {
     sheet.addRow([this.exportConfig.title]);
     sheet.getRow(1).font = { bold: true, size: 16 };
     sheet.addRow([`Fecha de Generación: ${new Date().toLocaleDateString('es-CL')}`]);
-    sheet.addRow([`Componente analizado: ${this.exportConfig.component}`]);
     sheet.addRow([]);
 
     if (this.exportConfig.includeTable) {
-      if (this.exportConfig.component === 'Todos') {
-        sheet.addRow(['ID', 'Fecha', 'Sector', 'Zona', 'Humedad', 'Temperatura', 'Salinidad', 'Conduct.']);
-        const headerRow = sheet.getRow(5);
-        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C3D2E' } };
+      sheet.addRow(['ID', 'Fecha', 'Sector', 'Zona', 'Humedad', 'Temperatura', 'Salinidad', 'Conduct.']);
+      const headerRow = sheet.getRow(4);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C3D2E' } };
 
-        this.exportReportRows.forEach(row => {
-          sheet.addRow([row.id, row.date, row.sector, row.point, row.humedad?.toFixed(2) || '-', row.temperatura?.toFixed(2) || '-', row.salinidad?.toFixed(2) || '-', row.conductividad?.toFixed(2) || '-']);
-        });
+      this.exportReportRows.forEach(row => {
+        sheet.addRow([
+          row.id, row.date, row.sector, row.point,
+          row.humedad?.toFixed(2) ?? '-',
+          row.temperatura?.toFixed(2) ?? '-',
+          row.salinidad?.toFixed(2) ?? '-',
+          row.conductividad?.toFixed(0) ?? '-',
+        ]);
+      });
 
-        sheet.getColumn(1).width = 10;
-        sheet.getColumn(2).width = 15;
-        sheet.getColumn(3).width = 15;
-        sheet.getColumn(4).width = 15;
-        sheet.getColumn(5).width = 12;
-        sheet.getColumn(6).width = 12;
-        sheet.getColumn(7).width = 12;
-        sheet.getColumn(8).width = 12;
-      } else {
-        sheet.addRow(['ID', 'Fecha', 'Sector', 'Zona', 'Componente', 'Nivel']);
-        const headerRow = sheet.getRow(5);
-        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C3D2E' } };
-
-        this.exportReportRows.forEach(row => {
-          sheet.addRow([row.id, row.date, row.sector, row.point, row.component, row.level != null ? row.level.toFixed(1) : '-']);
-        });
-
-        sheet.getColumn(1).width = 10;
-        sheet.getColumn(2).width = 15;
-        sheet.getColumn(3).width = 15;
-        sheet.getColumn(4).width = 15;
-        sheet.getColumn(5).width = 20;
-        sheet.getColumn(6).width = 12;
-      }
+      [10, 15, 15, 12, 12, 12, 12, 12].forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -661,59 +522,54 @@ export class ReportsComponent {
 
   private async _generatePDF() {
     const doc = new jsPDF();
-    
-    // Header
+
     doc.setFontSize(18);
     doc.text(this.exportConfig.title, 14, 22);
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Fecha de Generación: ${new Date().toLocaleDateString('es-CL')}`, 14, 30);
-    doc.text(`Componente: ${this.exportConfig.component}`, 14, 35);
-    
-    let currentY = 45;
 
-    // Stats
-    if (this.exportConfig.includeStats) {
+    let currentY = 42;
+
+    if (this.exportConfig.includeStats && this.exportConfig.component !== 'Todos') {
       doc.setFontSize(12);
       doc.setTextColor(0);
       doc.text('Resumen Estadístico', 14, currentY);
       currentY += 8;
-      
-      const allLevels = this.exportReportRows.map(r => r.level).filter((v): v is number => v !== null && v !== undefined);
-      const min = allLevels.length ? Math.min(...allLevels).toFixed(2) : '0.00';
-      const max = allLevels.length ? Math.max(...allLevels).toFixed(2) : '0.00';
-      const avg = allLevels.length ? (allLevels.reduce((a, b) => a + b, 0) / allLevels.length).toFixed(2) : '0.00';
-      
+
+      const propKey = this.exportConfig.component.toLowerCase() as keyof ReportRow;
+      const allLevels = this.exportReportRows
+        .map(r => r[propKey] as number | null | undefined)
+        .filter((v): v is number => v != null);
+
+      const min = allLevels.length ? Math.min(...allLevels).toFixed(2) : '—';
+      const max = allLevels.length ? Math.max(...allLevels).toFixed(2) : '—';
+      const avg = allLevels.length ? (allLevels.reduce((a, b) => a + b, 0) / allLevels.length).toFixed(2) : '—';
+
       doc.setFontSize(10);
       doc.setTextColor(80);
       doc.text(`Promedio Global: ${avg}`, 14, currentY); currentY += 5;
       doc.text(`Nivel Máximo: ${max}`, 14, currentY); currentY += 5;
       doc.text(`Nivel Mínimo: ${min}`, 14, currentY); currentY += 10;
-      
       doc.text(`Promedio en Green: ${this.exportAvgGreen.toFixed(2)}`, 100, currentY - 15);
       doc.text(`Promedio en Fairway: ${this.exportAvgFairway.toFixed(2)}`, 100, currentY - 10);
     }
 
-    // Table
     if (this.exportConfig.includeTable) {
-      if (this.exportConfig.component === 'Todos') {
-        autoTable(doc, {
-          startY: currentY,
-          head: [['ID', 'Fecha', 'Sector', 'Zona', 'Humedad', 'Temperatura', 'Salinidad', 'Conduct.']],
-          body: this.exportReportRows.map(r => [r.id, r.date, r.sector, r.point, r.humedad?.toFixed(2) || '-', r.temperatura?.toFixed(2) || '-', r.salinidad?.toFixed(2) || '-', r.conductividad?.toFixed(2) || '-']),
-          theme: 'striped',
-          headStyles: { fillColor: [28, 61, 46] }
-        });
-      } else {
-        autoTable(doc, {
-          startY: currentY,
-          head: [['ID', 'Fecha', 'Sector', 'Zona', 'Componente', 'Nivel']],
-          body: this.exportReportRows.map(r => [r.id, r.date, r.sector, r.point, r.component, r.level != null ? r.level.toFixed(1) : '-']),
-          theme: 'striped',
-          headStyles: { fillColor: [28, 61, 46] }
-        });
-      }
+      autoTable(doc, {
+        startY: currentY,
+        head: [['ID', 'Fecha', 'Sector', 'Zona', 'Humedad', 'Temp.', 'Salinidad', 'Conduct.']],
+        body: this.exportReportRows.map(r => [
+          r.id, r.date, r.sector, r.point,
+          r.humedad?.toFixed(2) ?? '-',
+          r.temperatura?.toFixed(2) ?? '-',
+          r.salinidad?.toFixed(2) ?? '-',
+          r.conductividad?.toFixed(0) ?? '-',
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [28, 61, 46] }
+      });
     }
 
     doc.save(`Reporte_Fairgreen_${new Date().getTime()}.pdf`);

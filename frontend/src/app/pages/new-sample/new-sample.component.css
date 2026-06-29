@@ -1,234 +1,280 @@
+.new-sample-page {
+  max-width: 720px;
+  margin: 0 auto;
+  animation: fadeSlideUp 250ms ease;
+}
 
-    .new-sample-page { max-width: 720px; margin: 0 auto; animation: fadeSlideUp 250ms ease; }
+.sample-form {
+  overflow: hidden;
+}
 
-    .sample-form { overflow: hidden; }
+.form-section {
+  padding: 20px;
+  border-bottom: 1px solid var(--color-border);
 
-    .form-section {
-      padding: 20px;
-      border-bottom: 1px solid var(--color-border);
-      &:last-child { border-bottom: none; }
-    }
+  &:last-child {
+    border-bottom: none;
+  }
+}
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 14px;
-    }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 14px;
+}
 
-    .form-group { display: flex; flex-direction: column; }
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
 
-    .form-label {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--color-text-primary);
-      margin-bottom: 6px;
-    }
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
 
-    .metrics-form-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-    }
+.metrics-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
 
-    .evidence-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
+.evidence-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
 
-    .upload-col {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-width: 0;
-    }
+.upload-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
 
-    .file-previews {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 160px;
-      overflow-y: auto;
-    }
-    .file-previews::-webkit-scrollbar { width: 3px; }
-    .file-previews::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+.file-previews {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
 
-    .file-preview-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 7px 10px;
-      background: var(--color-surface-alt);
-      border: 1px solid var(--color-border);
-      border-radius: 8px;
-      font-size: 12px;
-      color: var(--color-text-secondary);
-    }
-    .file-preview-name {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-      overflow: hidden;
-    }
-    .file-preview-name span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .file-remove-btn {
-      flex-shrink: 0;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--color-text-muted);
-      padding: 2px;
-      display: flex;
-      align-items: center;
-      border-radius: 4px;
-      transition: color 150ms ease, background 150ms ease;
-    }
-    .file-remove-btn:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+.file-previews::-webkit-scrollbar {
+  width: 3px;
+}
+
+.file-previews::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+.file-preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.file-preview-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.file-preview-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-remove-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.file-remove-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
 
 
-    .form-footer {
-      padding: 16px 20px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      background: var(--color-surface-alt);
-      border-top: 1px solid var(--color-border);
-    }
+.form-footer {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--color-surface-alt);
+  border-top: 1px solid var(--color-border);
+}
 
-    /* Toast */
-    .toast-success {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--color-primary);
-      color: white;
-      padding: 12px 20px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      box-shadow: var(--shadow-modal);
-      animation: fadeSlideUp 200ms ease;
-      z-index: 200;
-    }
+/* Toast */
+.toast-success {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--color-primary);
+  color: white;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-modal);
+  animation: fadeSlideUp 200ms ease;
+  z-index: 200;
+}
 
-    @media (max-width: 900px) {
-      .metrics-form-grid { grid-template-columns: repeat(2, 1fr); }
-      .evidence-row { grid-template-columns: 1fr; }
-    }
+@media (max-width: 900px) {
+  .metrics-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
-    .error-msg {
-      color: #ef4444;
-      font-size: 11px;
-      margin-top: 4px;
-      font-weight: 500;
-    }
+  .evidence-row {
+    grid-template-columns: 1fr;
+  }
+}
 
-    .input-error {
-      border-color: #ef4444 !important;
-      background-color: rgba(239, 68, 68, 0.02) !important;
-    }
-    
-    .input-error:focus {
-      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
-    }
+.error-msg {
+  color: #ef4444;
+  font-size: 11px;
+  margin-top: 4px;
+  font-weight: 500;
+}
 
-    /* ── Contenedor Botones Ubicación ── */
-    .location-actions {
-      margin-bottom: 14px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-    }
+.input-error {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.02) !important;
+}
 
-    /* ── Botón GPS ─────────────────────────────────────────────────────── */
-    .btn-gps {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      padding: 0 16px;
-      height: 38px;
-      background: linear-gradient(135deg, #1a9e5c 0%, #147a47 100%);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-md, 8px);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 200ms ease, transform 150ms ease, box-shadow 200ms ease;
-      box-shadow: 0 2px 8px rgba(26, 158, 92, 0.3);
-      white-space: nowrap;
-    }
+.input-error:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+}
 
-    .btn-gps:hover:not(:disabled) {
-      opacity: 0.92;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(26, 158, 92, 0.4);
-    }
+/* ── Contenedor Botones Ubicación ── */
+.location-actions {
+  margin-bottom: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
 
-    .btn-gps:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
+/* ── Botón GPS ─────────────────────────────────────────────────────── */
+.btn-gps {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 16px;
+  height: 38px;
+  background: linear-gradient(135deg, #1a9e5c 0%, #147a47 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 200ms ease, transform 150ms ease, box-shadow 200ms ease;
+  box-shadow: 0 2px 8px rgba(26, 158, 92, 0.3);
+  white-space: nowrap;
+}
 
-    .btn-gps .bi {
-      font-size: 14px;
-    }
+.btn-gps:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 158, 92, 0.4);
+}
 
-    /* Animación de carga del GPS */
-    @keyframes gpsSpin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+.btn-gps:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
 
-    .btn-gps .gps-spin {
-      animation: gpsSpin 0.9s linear infinite;
-    }
+.btn-gps .bi {
+  font-size: 14px;
+}
 
-    /* Mensaje de error GPS */
-    .gps-error-msg {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      background: rgba(239, 68, 68, 0.08);
-      border: 1px solid rgba(239, 68, 68, 0.25);
-      border-radius: 6px;
-      color: #dc2626;
-      font-size: 12px;
-      font-weight: 500;
-      animation: fadeSlideUp 200ms ease;
-    }
+/* Animación de carga del GPS */
+@keyframes gpsSpin {
+  from {
+    transform: rotate(0deg);
+  }
 
-    /* Badge de coordenadas GPS activas */
-    .gps-coords-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      background: rgba(26, 158, 92, 0.1);
-      border: 1px solid rgba(26, 158, 92, 0.3);
-      border-radius: 20px;
-      color: #147a47;
-      font-size: 11px;
-      font-weight: 600;
-      font-family: 'Courier New', monospace;
-    }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-    @media (max-width: 600px) {
-      .location-actions { flex-direction: column; align-items: stretch; }
-      .location-actions button { width: 100%; justify-content: center; }
-      .btn-gps { width: 100%; justify-content: center; }
-    }
+.btn-gps .gps-spin {
+  animation: gpsSpin 0.9s linear infinite;
+}
+
+/* Mensaje de error GPS */
+.gps-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  animation: fadeSlideUp 200ms ease;
+}
+
+/* Badge de coordenadas GPS activas */
+.gps-coords-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(26, 158, 92, 0.1);
+  border: 1px solid rgba(26, 158, 92, 0.3);
+  border-radius: 20px;
+  color: #147a47;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+@media (max-width: 600px) {
+  .location-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .location-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-gps {
+    width: 100%;
+    justify-content: center;
+  }
+}

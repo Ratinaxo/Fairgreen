@@ -2,9 +2,8 @@
   <!-- Header -->
   <div class="reports-header" style="margin-bottom:20px;">
     <div>
-      <h1 style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">Análisis histórico
-      </h1>
-      <p style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">Seleccione las métricas a analizar</p>
+      <h1 style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">Análisis histórico</h1>
+      <p style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">Seleccione los filtros y visualice todos los parámetros en paralelo</p>
     </div>
     @if (filtersApplied()) {
     <div style="display:flex;gap:10px;" aria-label="Exportar reporte">
@@ -27,26 +26,22 @@
     <div class="filters-row">
       <div class="filter-item">
         <label for="date-from" class="filter-label">Desde</label>
-        <input id="date-from" type="date" class="form-control" [(ngModel)]="filters.dateFrom" [max]="filters.dateTo" (change)="validateDates('filter')" style="width:150px;" />
+        <input id="date-from" type="date" class="form-control" [(ngModel)]="filters.dateFrom"
+          [max]="filters.dateTo" (change)="validateDates('filter')" style="width:150px;" />
       </div>
       <div class="filter-item">
         <label for="date-to" class="filter-label">Hasta</label>
-        <input id="date-to" type="date" class="form-control" [(ngModel)]="filters.dateTo" [min]="filters.dateFrom" (change)="validateDates('filter')" style="width:150px;" />
+        <input id="date-to" type="date" class="form-control" [(ngModel)]="filters.dateTo"
+          [min]="filters.dateFrom" (change)="validateDates('filter')" style="width:150px;" />
       </div>
       <div class="filter-item">
         <label for="rep-sector" class="filter-label">Sector</label>
         <div class="select-wrapper" style="width:110px;">
           <select id="rep-sector" class="form-control" [(ngModel)]="filters.sector" aria-label="Sector">
             <option value="">Todos</option>
-            <option>1</option>
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-            <option>5</option>
-            <option>6</option>
-            <option>7</option>
-            <option>8</option>
-            <option>9</option>
+            <option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option>
+            <option>7</option><option>8</option><option>9</option>
           </select>
         </div>
       </div>
@@ -60,20 +55,8 @@
           </select>
         </div>
       </div>
-      <div class="filter-item">
-        <label for="rep-component" class="filter-label">Componente</label>
-        <div class="select-wrapper" style="width:170px;">
-          <select id="rep-component" class="form-control" [(ngModel)]="filters.component" aria-label="Componente">
-            <option>Humedad</option>
-            <option>Temperatura</option>
-            <option>Salinidad</option>
-            <option>Conductividad</option>
-          </select>
-        </div>
-      </div>
       <button class="btn-primary" id="apply-report-btn" (click)="applyFilters()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
         Aplicar filtros
@@ -83,143 +66,288 @@
 
   <!-- Content area -->
   @if (filtersApplied()) {
-  <!-- Chart card -->
+
+  <!-- Sample cap notice -->
+  @if (pcTotalCount > 50) {
+  <div class="cap-notice" role="status">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    Mostrando las <strong>{{ pcCappedCount }} muestras más recientes</strong> de {{ pcTotalCount }} totales. Refina los filtros para ver un rango más acotado.
+  </div>
+  }
+
+  <!-- Parallel Coordinates chart card -->
   <div class="card chart-card">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
       <div>
         <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);">
-          Análisis Temporal de {{ appliedComponent() }}
+          Coordenadas Paralelas — Parámetros de Suelo
         </h2>
         <p style="font-size:12px;color:var(--color-text-muted);">
-          {{ displayDateFrom() }} → {{ displayDateTo() }}
+          {{ displayDateFrom() }} → {{ displayDateTo() }} &nbsp;·&nbsp; {{ pcSamples.length }} muestra{{ pcSamples.length === 1 ? '' : 's' }}
         </p>
       </div>
-      <button style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);"
-        aria-label="Expandir gráfico">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+
+      <!-- Axis toggle chips -->
+      <div class="pc-axis-toggles" aria-label="Alternar ejes del gráfico">
+        @for (param of PC_PARAMS; track param.key) {
+          <button class="pc-axis-chip"
+                  [class.pc-axis-chip-active]="pcIsParamActive(param.key)"
+                  (click)="pcToggleParam(param.key)"
+                  [attr.aria-pressed]="pcIsParamActive(param.key)"
+                  [attr.aria-label]="'Mostrar/ocultar eje ' + param.label">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+              @if (pcIsParamActive(param.key)) {
+                <polyline points="20 6 9 17 4 12"/>
+              } @else {
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              }
+            </svg>
+            {{ param.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (pcSamples.length === 0) {
+    <div class="pc-empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M3 3h18v18H3zM9 9h6M9 12h6M9 15h3"/>
+      </svg>
+      <p>No hay muestras que coincidan con los filtros seleccionados.</p>
+    </div>
+    } @else {
+    <!-- SVG Chart — scrollable container -->
+    <div class="pc-scroll-wrapper">
+      <div class="chart-wrapper pc-container"
+           role="img"
+           aria-label="Gráfico de coordenadas paralelas con parámetros de suelo"
+           (mousemove)="pcOnLineMove($event)">
+
+        <!-- Tooltip -->
+        @if (pcTooltip.show && pcTooltip.sample) {
+        <div class="pc-tooltip"
+             [style.left.px]="pcTooltip.x + 16"
+             [style.top.px]="pcTooltip.y - 10">
+          <div class="pc-tooltip-title">
+            {{ pcSampleLabel(pcTooltip.sample) }}
+          </div>
+          <div class="pc-tooltip-date">
+            {{ pcTooltip.sample.properties.fecha_hora_captura | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+          @for (param of PC_PARAMS; track param.key) {
+          <div class="pc-tooltip-row">
+            <span class="pc-tooltip-label">{{ param.label }}</span>
+            <span class="pc-tooltip-value">{{ pcTooltipValue(param) }} <span class="pc-tooltip-unit">{{ param.unit }}</span></span>
+          </div>
+          }
+        </div>
+        }
+
+        <svg [attr.viewBox]="'0 0 ' + PC_W + ' ' + PC_H" width="100%" preserveAspectRatio="xMidYMid meet" style="overflow:visible;min-width:700px;">
+
+          <!-- Grid lines (faint horizontal reference lines) -->
+          @for (tick of [0, 0.25, 0.5, 0.75, 1]; track tick) {
+            <line
+              [attr.x1]="PC_MARGIN.left"
+              [attr.y1]="PC_MARGIN.top + (1 - tick) * (PC_H - PC_MARGIN.top - PC_MARGIN.bottom)"
+              [attr.x2]="PC_W - PC_MARGIN.right"
+              [attr.y2]="PC_MARGIN.top + (1 - tick) * (PC_H - PC_MARGIN.top - PC_MARGIN.bottom)"
+              class="pc-grid-line"/>
+          }
+
+          <!-- Sample lines — rendered below axes -->
+          @for (s of pcSamples; track s.feature.id) {
+            @if (s.visible) {
+              <path [attr.d]="pcBuildPath(s.feature)"
+                    class="pc-line"
+                    [attr.data-id]="s.feature.id"
+                    [style.stroke]="s.color"
+                    [style.opacity]="pcLineOpacity(s.feature.id)"
+                    [style.stroke-width]="pcLineWidth(s.feature.id)"
+                    (mouseenter)="pcOnLineEnter(s.feature.id, $event)"
+                    (mouseleave)="pcOnLineLeave()"/>
+            }
+          }
+
+          <!-- Axes — rendered above lines (only active params) -->
+          @for (param of pcActiveParams; track param.key; let i = $index) {
+            <!-- Axis line -->
+            <line [attr.x1]="pcAxisX(i)" [attr.y1]="PC_MARGIN.top"
+                  [attr.x2]="pcAxisX(i)" [attr.y2]="PC_H - PC_MARGIN.bottom"
+                  class="pc-axis-line"/>
+            <!-- Min/max tick marks -->
+            <line [attr.x1]="pcAxisX(i) - 5" [attr.y1]="PC_MARGIN.top"
+                  [attr.x2]="pcAxisX(i) + 5" [attr.y2]="PC_MARGIN.top"
+                  class="pc-axis-tick"/>
+            <line [attr.x1]="pcAxisX(i) - 5" [attr.y1]="PC_H - PC_MARGIN.bottom"
+                  [attr.x2]="pcAxisX(i) + 5" [attr.y2]="PC_H - PC_MARGIN.bottom"
+                  class="pc-axis-tick"/>
+            <!-- Parameter label -->
+            <text [attr.x]="pcAxisX(i)" [attr.y]="PC_MARGIN.top - 26"
+                  text-anchor="middle" class="pc-axis-label">{{ param.label }}</text>
+            <!-- Unit -->
+            <text [attr.x]="pcAxisX(i)" [attr.y]="PC_MARGIN.top - 12"
+                  text-anchor="middle" class="pc-axis-unit">{{ param.unit }}</text>
+            <!-- Max value label -->
+            <text [attr.x]="pcAxisX(i) + 9" [attr.y]="PC_MARGIN.top + 4"
+                  text-anchor="start" class="pc-tick-label">{{ param.max }}</text>
+            <!-- Min value label -->
+            <text [attr.x]="pcAxisX(i) + 9" [attr.y]="PC_H - PC_MARGIN.bottom + 4"
+                  text-anchor="start" class="pc-tick-label">{{ param.min }}</text>
+          }
+        </svg>
+      </div>
+    </div>
+
+    <!-- Legend dropdown -->
+    <div class="pc-legend-dropdown-wrapper">
+      <button class="pc-legend-toggle" (click)="toggleLegendDropdown()" aria-expanded="{{legendDropdownOpen}}"
+              aria-controls="legend-dropdown-panel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+        </svg>
+        Muestras ({{ pcVisibleCount }}/{{ pcSamples.length }} visibles)
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+             [style.transform]="legendDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'"
+             style="transition:transform 0.2s ease;margin-left:auto;">
+          <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
+
+      @if (legendDropdownOpen) {
+      <div class="pc-legend-panel" id="legend-dropdown-panel">
+        <!-- Quick actions -->
+        <div class="pc-legend-actions">
+          <button class="pc-legend-action-btn" (click)="pcShowAll()">Mostrar todas</button>
+          <button class="pc-legend-action-btn" (click)="pcHideAll()">Ocultar todas</button>
+        </div>
+        <!-- Sample list -->
+        <div class="pc-legend-list">
+          @for (s of pcSamples; track s.feature.id) {
+            <button class="pc-legend-item"
+                    [class.pc-inactive]="!s.visible"
+                    (click)="pcToggleSample(s.feature.id)"
+                    [attr.aria-label]="'Alternar visibilidad de ' + pcSampleLabel(s.feature)">
+              <span class="pc-legend-swatch" [style.background]="s.color"></span>
+              {{ pcSampleLabel(s.feature) }}
+              @if (s.visible) {
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" style="margin-left:auto;flex-shrink:0;">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              } @else {
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" style="margin-left:auto;flex-shrink:0;opacity:0.4;">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              }
+            </button>
+          }
+        </div>
+      </div>
+      }
     </div>
-
-    <!-- SVG Area Chart -->
-    <div class="chart-wrapper" role="img"
-      [attr.aria-label]="'Gráfico de área de nivel de ' + appliedComponent().toLowerCase()">
-      <svg #chartSvg viewBox="0 0 700 240" width="100%" style="overflow:visible;">
-        <defs>
-          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="rgba(28,61,46,0.18)" />
-            <stop offset="100%" stop-color="rgba(28,61,46,0)" />
-          </linearGradient>
-          <clipPath id="chartClip">
-            <rect width="620" height="200" x="60" y="10" />
-          </clipPath>
-        </defs>
-
-        <!-- Y axis labels -->
-        @for (val of yAxisValues; track val) {
-        <text [attr.x]="52" [attr.y]="10 + (yAxisMax - val) * yFactor + 4" text-anchor="end" font-size="10"
-          font-family="JetBrains Mono" fill="#8FA895">{{ val }}</text>
-        <line [attr.x1]="60" [attr.y1]="10 + (yAxisMax - val) * yFactor" [attr.x2]="680"
-          [attr.y2]="10 + (yAxisMax - val) * yFactor" stroke="#DDE5DF" stroke-width="1" />
-        }
-
-
-        <!-- Area fill -->
-        <path [attr.d]="areaPath" fill="url(#areaGrad)" clip-path="url(#chartClip)" />
-
-        <!-- Line -->
-        <path [attr.d]="linePath" fill="none" stroke="#1C3D2E" stroke-width="2.5" stroke-linecap="round"
-          stroke-linejoin="round" clip-path="url(#chartClip)" class="chart-line" />
-
-        <!-- Data points -->
-        @for (pt of chartPoints; track pt.x) {
-        <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="white" stroke="#1C3D2E" stroke-width="2"
-          class="chart-point" />
-        }
-
-        <!-- X axis labels -->
-        @for (label of xLabels; track label.x) {
-        <text [attr.x]="label.x" y="230" text-anchor="middle" font-size="10" font-family="DM Sans" fill="#8FA895">{{
-          label.text }}</text>
-        }
-      </svg>
-    </div>
+    }
   </div>
-
 
   <!-- Data table -->
   <div class="card" style="margin-top:16px;overflow:hidden;">
-    <div
-      style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--color-border);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--color-border);">
       <span style="font-size:14px;font-weight:600;">Datos</span>
-      <span style="font-size:12px;color:var(--color-text-muted);">Mostrando resultados más recientes</span>
+      <span style="font-size:12px;color:var(--color-text-muted);">{{ reportRows.length }} registro{{ reportRows.length === 1 ? '' : 's' }}, más recientes primero</span>
     </div>
-    <div style="overflow-x:auto;">
+    <div class="table-scroll-wrapper">
       <table class="data-table" aria-label="Datos del análisis histórico">
         <thead>
           <tr>
             <th scope="col">ID</th>
             <th scope="col">Fecha</th>
             <th scope="col">Sector</th>
-            <th scope="col">Punto</th>
-            <th scope="col">Componente</th>
-            <th scope="col">Nivel</th>
+            <th scope="col">Zona</th>
+            <th scope="col">Humedad</th>
+            <th scope="col">Temp.</th>
+            <th scope="col">Salinidad</th>
+            <th scope="col">Conduct.</th>
           </tr>
         </thead>
         <tbody>
-          @for (row of reportRows; track row.date + row.point) {
+          @for (row of pagedRows; track row.id) {
           <tr>
             <td class="mono">#{{ row.id }}</td>
             <td style="font-size:13px;font-weight:500;">{{ row.date }}</td>
             <td>{{ row.sector }}</td>
             <td>{{ row.point }}</td>
-            <td>{{ row.component }}</td>
-            <td>
-              <span class="badge" [class]="'badge-' + row.status" style="font-family:var(--font-mono);">{{
-                row.level != null ? row.level.toFixed(1) : '—' }}</span>
-            </td>
+            <td class="mono">{{ row.humedad != null ? row.humedad.toFixed(1) : '—' }}</td>
+            <td class="mono">{{ row.temperatura != null ? row.temperatura.toFixed(1) : '—' }}</td>
+            <td class="mono">{{ row.salinidad != null ? row.salinidad.toFixed(2) : '—' }}</td>
+            <td class="mono">{{ row.conductividad != null ? row.conductividad.toFixed(0) : '—' }}</td>
           </tr>
           }
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    @if (tablePageCount > 1) {
+    <div class="table-pagination">
+      <button class="pagination-btn" [disabled]="tablePage === 1" (click)="goToPage(tablePage - 1)" aria-label="Página anterior">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      @if (tablePageNumbers[0] > 1) {
+        <button class="pagination-btn" (click)="goToPage(1)">1</button>
+        @if (tablePageNumbers[0] > 2) {
+          <span class="pagination-ellipsis">…</span>
+        }
+      }
+      @for (page of tablePageNumbers; track page) {
+        <button class="pagination-btn" [class.pagination-active]="page === tablePage" (click)="goToPage(page)">{{ page }}</button>
+      }
+      @if (tablePageNumbers[tablePageNumbers.length - 1] < tablePageCount) {
+        @if (tablePageNumbers[tablePageNumbers.length - 1] < tablePageCount - 1) {
+          <span class="pagination-ellipsis">…</span>
+        }
+        <button class="pagination-btn" (click)="goToPage(tablePageCount)">{{ tablePageCount }}</button>
+      }
+      <button class="pagination-btn" [disabled]="tablePage === tablePageCount" (click)="goToPage(tablePage + 1)" aria-label="Página siguiente">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    }
   </div>
+
   } @else {
   <!-- Empty state -->
   <div class="empty-state" role="status" aria-label="Sin filtros aplicados">
     <div class="empty-icon">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-        aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <line x1="18" x2="18" y1="20" y2="10" />
         <line x1="12" x2="12" y1="20" y2="4" />
         <line x1="6" x2="6" y1="20" y2="14" />
       </svg>
     </div>
-    <h3 style="font-size:16px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">Sin filtros
-      aplicados</h3>
-    <p style="font-size:13px;color:var(--color-text-muted);">Configura los filtros y presiona "Aplicar" para visualizar
-      el análisis</p>
+    <h3 style="font-size:16px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">Sin filtros aplicados</h3>
+    <p style="font-size:13px;color:var(--color-text-muted);">Configura los filtros y presiona "Aplicar" para visualizar el análisis</p>
   </div>
   }
 
   <!-- Modal de Exportación Personalizada -->
   @if (showExportModal()) {
     <div class="modal-overlay" (click)="closeExportModal()" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
-      <div class="modal-card" (click)="$event.stopPropagation()" style="width: 480px; max-width: 90vw;">
+      <div class="modal-card" (click)="$event.stopPropagation()" style="width:480px;max-width:90vw;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <h3 id="export-modal-title" style="font-family:var(--font-display);font-size:18px;">Configurar Reporte</h3>
           <button class="close-btn" (click)="closeExportModal()" aria-label="Cerrar modal">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
           </button>
         </div>
-        
+
         <div class="edit-form" style="padding:0;gap:12px;">
-          <!-- Formato y Título -->
-          <div style="display:flex; gap: 12px; margin-bottom: 8px;">
+          <!-- Formato -->
+          <div style="display:flex;gap:12px;margin-bottom:8px;">
             <div class="form-group" style="flex:1;">
               <label class="form-label">Formato</label>
-              <div style="display:flex; gap: 16px; margin-top: 6px;">
+              <div style="display:flex;gap:16px;margin-top:6px;">
                 <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
                   <input type="radio" name="exportFormat" value="pdf" [(ngModel)]="exportConfig.format"/> PDF
                 </label>
@@ -233,17 +361,17 @@
             <label class="form-label">Título del Reporte</label>
             <input type="text" class="form-control" [(ngModel)]="exportConfig.title"/>
           </div>
-          <div style="margin: 16px 0; border-top: 1px solid var(--color-border);"></div>
+          <div style="margin:16px 0;border-top:1px solid var(--color-border);"></div>
           <h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">Filtros de Datos (Independientes)</h4>
-          
+
           <div style="display:flex;gap:12px;">
             <div class="form-group" style="flex:1;">
               <label class="form-label">Desde</label>
-              <input type="date" class="form-control" [(ngModel)]="exportConfig.dateFrom" [max]="exportConfig.dateTo" (change)="validateDates('export')" />
+              <input type="date" class="form-control" [(ngModel)]="exportConfig.dateFrom" [max]="exportConfig.dateTo" (change)="validateDates('export')"/>
             </div>
             <div class="form-group" style="flex:1;">
               <label class="form-label">Hasta</label>
-              <input type="date" class="form-control" [(ngModel)]="exportConfig.dateTo" [min]="exportConfig.dateFrom" (change)="validateDates('export')" />
+              <input type="date" class="form-control" [(ngModel)]="exportConfig.dateTo" [min]="exportConfig.dateFrom" (change)="validateDates('export')"/>
             </div>
           </div>
           <div style="display:flex;gap:12px;">
@@ -263,45 +391,28 @@
                 <option>Fairway</option>
               </select>
             </div>
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">Componente</label>
-              <select class="form-control" [(ngModel)]="exportConfig.component">
-                <option value="Todos">Todos los componentes</option>
-                <option>Humedad</option>
-                <option>Temperatura</option>
-                <option>Salinidad</option>
-                <option>Conductividad</option>
-              </select>
-            </div>
           </div>
 
-          <div style="margin: 16px 0; border-top: 1px solid var(--color-border);"></div>
+          <div style="margin:16px 0;border-top:1px solid var(--color-border);"></div>
           <h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">Elementos a Incluir</h4>
-          
-          <div style="display:flex; flex-direction:column; gap:8px;">
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
             <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
-              <input type="checkbox" [(ngModel)]="exportConfig.includeStats"/> 
-              Resumen Estadístico Global
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
-              <input type="checkbox" [(ngModel)]="exportConfig.includeTable"/> 
+              <input type="checkbox" [(ngModel)]="exportConfig.includeTable"/>
               Tabla detallada de datos
             </label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;" [class.text-muted]="exportConfig.format === 'excel'">
-              <input type="checkbox" [(ngModel)]="exportConfig.includeStats" [disabled]="exportConfig.format === 'excel'"/> 
-              Resumen estadístico (Promedio, Máx, Mín) (Solo PDF)
+            <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"
+                   [class.text-muted]="exportConfig.format === 'excel'">
+              <input type="checkbox" [(ngModel)]="exportConfig.includeStats" [disabled]="exportConfig.format === 'excel'"/>
+              Resumen estadístico (Solo PDF)
             </label>
           </div>
 
-          <button class="btn-primary w-full" (click)="generateReport()" style="margin-top:20px; justify-content:center;" [disabled]="isExporting()">
+          <button class="btn-primary w-full" (click)="generateReport()" style="margin-top:20px;justify-content:center;" [disabled]="isExporting()">
             {{ isExporting() ? 'GENERANDO...' : 'GENERAR Y DESCARGAR' }}
           </button>
         </div>
       </div>
     </div>
   }
-
-  <!-- Contenedor oculto para renderizar el SVG del reporte si es necesario -->
-  <div style="position:absolute; top:-9999px; left:-9999px; visibility:hidden; display:none;">
-  </div>
 </div>
