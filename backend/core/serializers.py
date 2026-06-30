@@ -3,7 +3,7 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.models import update_last_login
-from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
+from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion, HistorialMuestra
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -152,6 +152,24 @@ class FotoSerializer(serializers.ModelSerializer):
         return foto
 
 
+class HistorialMuestraSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el historial de modificaciones de una muestra.
+    Incluye el nombre completo del usuario que realizó el cambio.
+    """
+    usuario_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HistorialMuestra
+        fields = ['id_historial', 'tipo', 'cambios', 'fecha_hora', 'rut_usuario', 'usuario_nombre']
+        read_only_fields = fields
+
+    def get_usuario_nombre(self, obj):
+        if obj.rut_usuario:
+            return f"{obj.rut_usuario.nombre} {obj.rut_usuario.apellido}"
+        return 'Usuario eliminado'
+
+
 class MuestraSerializer(GeoFeatureModelSerializer):
     """
     Serializador para el modelo Muestra.
@@ -160,10 +178,10 @@ class MuestraSerializer(GeoFeatureModelSerializer):
     El usuario y la sección se muestran en modo de solo lectura (anidados).
     Las fotos asociadas también se incluyen.
     """
-    # Campos de solo lectura anidados para lectura
     rut_usuario = UsuarioSerializer(read_only=True)
     id_seccion = SeccionSerializer(read_only=True)
     fotos = FotoSerializer(many=True, read_only=True)
+    historial = HistorialMuestraSerializer(many=True, read_only=True)
 
     # Campos de escritura (claves foráneas) para crear/actualizar muestras
     rut_usuario_id = serializers.CharField(write_only=True, required=False)
@@ -187,6 +205,7 @@ class MuestraSerializer(GeoFeatureModelSerializer):
             'recomendaciones',
             'fecha_hora_captura',
             'fotos',
+            'historial',
         ]
         read_only_fields = ['id_muestra', 'fecha_hora_captura']
 
