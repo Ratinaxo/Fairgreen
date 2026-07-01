@@ -215,3 +215,14 @@ class NotificacionSerializer(serializers.ModelSerializer):
             'id_muestra',
         ]
         read_only_fields = ['id_notificacion', 'fecha_hora']
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    correo_electronico = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+

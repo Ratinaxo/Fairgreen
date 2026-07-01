@@ -102,6 +102,24 @@ export class AuthService {
   }
 
   // ---------------------------------------------------------------------------
+  // Restablecimiento de contraseña
+  // ---------------------------------------------------------------------------
+  requestPasswordReset(correo_electronico: string): Observable<{ detail: string }> {
+    return this.http.post<{ detail: string }>(
+      `${this.api}/auth/password-reset-request/`,
+      { correo_electronico }
+    );
+  }
+
+  confirmPasswordReset(uidb64: string, token: string, new_password: string): Observable<{ detail: string }> {
+    return this.http.post<{ detail: string }>(
+      `${this.api}/auth/password-reset-confirm/`,
+      { uidb64, token, new_password }
+    );
+  }
+
+
+  // ---------------------------------------------------------------------------
   // Helpers de token
   // ---------------------------------------------------------------------------
   getAccessToken(): string | null {
