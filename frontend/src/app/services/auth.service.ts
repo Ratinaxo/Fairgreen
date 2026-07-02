@@ -1,8 +1,9 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { HeartbeatService } from './heartbeat.service';
 
 // ---------------------------------------------------------------------------
 // Tipos de la API
@@ -44,6 +45,7 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router,
+    private heartbeat: HeartbeatService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -55,6 +57,7 @@ export class AuthService {
       .pipe(
         tap((tokens) => {
           this._saveTokens(tokens);
+          this.heartbeat.start();
         }),
         catchError((err) => this._handleError(err)),
       );
@@ -65,7 +68,10 @@ export class AuthService {
   // ---------------------------------------------------------------------------
   loadMe(): Observable<Usuario> {
     return this.http.get<Usuario>(`${this.api}/auth/me`).pipe(
-      tap((usuario) => this._usuario.set(usuario)),
+      tap((usuario) => {
+        this._usuario.set(usuario);
+        this.heartbeat.start();
+      }),
       catchError((err) => {
         this._usuario.set(null);
         return throwError(() => err);
@@ -76,14 +82,19 @@ export class AuthService {
   // ---------------------------------------------------------------------------
   // Refresh del access token usando el refresh token guardado
   // ---------------------------------------------------------------------------
-  refreshAccessToken(): Observable<{ access: string }> {
+  refreshAccessToken(): Observable<{ access: string, refresh?: string }> {
     const refresh = this.getRefreshToken();
     if (!refresh) return throwError(() => new Error('No refresh token'));
 
     return this.http
-      .post<{ access: string }>(`${this.api}/token/refresh/`, { refresh })
+      .post<{ access: string, refresh?: string }>(`${this.api}/token/refresh/`, { refresh })
       .pipe(
-        tap((res) => localStorage.setItem(TOKEN_KEY, res.access)),
+        tap((res) => {
+          localStorage.setItem(TOKEN_KEY, res.access);
+          if (res.refresh) {
+            localStorage.setItem(REFRESH_KEY, res.refresh);
+          }
+        }),
         catchError((err) => {
           this.logout();
           return throwError(() => err);
@@ -95,11 +106,30 @@ export class AuthService {
   // Logout: limpia tokens y estado
   // ---------------------------------------------------------------------------
   logout(): void {
+    this.heartbeat.stop();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     this._usuario.set(null);
     this.router.navigate(['/login']);
   }
+
+  // ---------------------------------------------------------------------------
+  // Restablecimiento de contraseña
+  // ---------------------------------------------------------------------------
+  requestPasswordReset(correo_electronico: string): Observable<{ detail: string }> {
+    return this.http.post<{ detail: string }>(
+      `${this.api}/auth/password-reset-request/`,
+      { correo_electronico }
+    );
+  }
+
+  confirmPasswordReset(uidb64: string, token: string, new_password: string): Observable<{ detail: string }> {
+    return this.http.post<{ detail: string }>(
+      `${this.api}/auth/password-reset-confirm/`,
+      { uidb64, token, new_password }
+    );
+  }
+
 
   // ---------------------------------------------------------------------------
   // Helpers de token

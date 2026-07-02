@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework_gis.pagination import GeoJsonPagination
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto, Notificacion
+from .models import Seccion, PuntoCritico, Muestra, Usuario, Foto, Notificacion, HistorialMuestra
 from .serializers import SeccionSerializer, PuntoCriticoSerializer, MuestraSerializer, UsuarioSerializer, FotoSerializer, NotificacionSerializer
 from .permissions import EsAdmin, EsAdminOAgronoma, PuedeCreadoPorTodos
 
@@ -88,16 +88,97 @@ class MuestraViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    # Campos que se auditan en el historial de modificaciones
+    CAMPOS_AUDITABLES = ['salinidad', 'humedad', 'conductividad', 'temperatura', 'recomendaciones', 'id_seccion_id', 'id_punto_critico_id']
+
     def perform_create(self, serializer):
         """
-        Sobrescribe la creación para enlazar automáticamente la muestra
-        al usuario autenticado mediante su token JWT de sesión.
+        Sobrescribe la creación para:
+        1. Enlazar automáticamente la muestra al usuario autenticado.
+        2. Generar un registro de historial tipo CREACION.
         """
-        if self.request.user and self.request.user.is_authenticated:
-            serializer.save(rut_usuario=self.request.user)
-        else:
-            # Fallback en caso de que falte autenticación (aunque sea atrapada por el permiso)
-            serializer.save()
+        user = self.request.user if self.request.user.is_authenticated else None
+        instance = serializer.save(rut_usuario=user) if user else serializer.save()
+
+        # Registrar creación en el historial
+        cambios = {}
+        for campo in self.CAMPOS_AUDITABLES:
+            valor = getattr(instance, campo, None)
+            if valor is not None:
+                cambios[campo] = {'nuevo': self._serializar_valor(valor)}
+
+        # Agregar ubicación
+        if instance.ubicacion_exacta:
+            cambios['ubicacion_exacta'] = {
+                'nuevo': [instance.ubicacion_exacta.x, instance.ubicacion_exacta.y]
+            }
+
+        HistorialMuestra.objects.create(
+            id_muestra=instance,
+            rut_usuario=user,
+            tipo='CREACION',
+            cambios=cambios,
+        )
+
+    def perform_update(self, serializer):
+        """
+        Sobrescribe la actualización para detectar los campos que cambiaron
+        y generar un registro de historial tipo EDICION.
+        """
+        instance = serializer.instance
+
+        # Capturar valores anteriores antes de guardar
+        valores_anteriores = {}
+        for campo in self.CAMPOS_AUDITABLES:
+            valores_anteriores[campo] = getattr(instance, campo, None)
+
+        # Capturar ubicación anterior
+        ubicacion_anterior = None
+        if instance.ubicacion_exacta:
+            ubicacion_anterior = [instance.ubicacion_exacta.x, instance.ubicacion_exacta.y]
+
+        # Guardar los cambios
+        instance = serializer.save()
+
+        # Comparar y registrar diferencias
+        cambios = {}
+        for campo in self.CAMPOS_AUDITABLES:
+            valor_nuevo = getattr(instance, campo, None)
+            valor_anterior = valores_anteriores[campo]
+            if self._serializar_valor(valor_nuevo) != self._serializar_valor(valor_anterior):
+                cambios[campo] = {
+                    'anterior': self._serializar_valor(valor_anterior),
+                    'nuevo': self._serializar_valor(valor_nuevo),
+                }
+
+        # Comparar ubicación
+        ubicacion_nueva = None
+        if instance.ubicacion_exacta:
+            ubicacion_nueva = [instance.ubicacion_exacta.x, instance.ubicacion_exacta.y]
+        if ubicacion_nueva != ubicacion_anterior:
+            cambios['ubicacion_exacta'] = {
+                'anterior': ubicacion_anterior,
+                'nuevo': ubicacion_nueva,
+            }
+
+        # Solo crear registro si hubo cambios reales
+        if cambios:
+            user = self.request.user if self.request.user.is_authenticated else None
+            HistorialMuestra.objects.create(
+                id_muestra=instance,
+                rut_usuario=user,
+                tipo='EDICION',
+                cambios=cambios,
+            )
+
+    @staticmethod
+    def _serializar_valor(valor):
+        """Convierte valores a tipos serializables para comparación y almacenamiento JSON."""
+        if valor is None:
+            return None
+        if isinstance(valor, float):
+            return round(valor, 6)
+        return valor
 
     @action(detail=False, methods=['delete'], url_path='delete_all')
     def delete_all(self, request):

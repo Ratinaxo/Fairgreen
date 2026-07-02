@@ -2,7 +2,8 @@ from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
-from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion
+from django.contrib.auth.models import update_last_login
+from .models import Usuario, Seccion, PuntoCritico, Muestra, Foto, Notificacion, HistorialMuestra
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -43,7 +44,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 code='incorrect_password'
             )
 
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        update_last_login(None, self.user)
+        return data
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -52,10 +55,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
     Solo expone campos públicos del perfil. El password es write-only.
     """
     password = serializers.CharField(write_only=True, required=False)
+    is_online = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
-        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active', 'password']
+        fields = ['rut', 'nombre', 'apellido', 'correo_electronico', 'rol', 'ruta_foto', 'is_active', 'last_login', 'is_online', 'password']
+        read_only_fields = ['last_login', 'is_online']
+
+    def get_is_online(self, obj):
+        from django.core.cache import cache
+        return cache.get(f'user_online_{obj.rut}', False)
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -143,6 +152,24 @@ class FotoSerializer(serializers.ModelSerializer):
         return foto
 
 
+class HistorialMuestraSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el historial de modificaciones de una muestra.
+    Incluye el nombre completo del usuario que realizó el cambio.
+    """
+    usuario_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HistorialMuestra
+        fields = ['id_historial', 'tipo', 'cambios', 'fecha_hora', 'rut_usuario', 'usuario_nombre']
+        read_only_fields = fields
+
+    def get_usuario_nombre(self, obj):
+        if obj.rut_usuario:
+            return f"{obj.rut_usuario.nombre} {obj.rut_usuario.apellido}"
+        return 'Usuario eliminado'
+
+
 class MuestraSerializer(GeoFeatureModelSerializer):
     """
     Serializador para el modelo Muestra.
@@ -151,10 +178,10 @@ class MuestraSerializer(GeoFeatureModelSerializer):
     El usuario y la sección se muestran en modo de solo lectura (anidados).
     Las fotos asociadas también se incluyen.
     """
-    # Campos de solo lectura anidados para lectura
     rut_usuario = UsuarioSerializer(read_only=True)
     id_seccion = SeccionSerializer(read_only=True)
     fotos = FotoSerializer(many=True, read_only=True)
+    historial = HistorialMuestraSerializer(many=True, read_only=True)
 
     # Campos de escritura (claves foráneas) para crear/actualizar muestras
     rut_usuario_id = serializers.CharField(write_only=True, required=False)
@@ -178,6 +205,7 @@ class MuestraSerializer(GeoFeatureModelSerializer):
             'recomendaciones',
             'fecha_hora_captura',
             'fotos',
+            'historial',
         ]
         read_only_fields = ['id_muestra', 'fecha_hora_captura']
 
@@ -215,3 +243,14 @@ class NotificacionSerializer(serializers.ModelSerializer):
             'id_muestra',
         ]
         read_only_fields = ['id_notificacion', 'fecha_hora']
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    correo_electronico = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+

@@ -251,11 +251,7 @@ export class NewSampleComponent implements OnInit {
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      const validFiles = Array.from(input.files).filter(file => file.type.startsWith('image/'));
-      if (validFiles.length < input.files.length) {
-        alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
-      }
-      this.selectedFiles = [...this.selectedFiles, ...validFiles];
+      this.handleFiles(input.files);
     }
     // Reset input so same file can be re-added after removal
     input.value = '';
@@ -279,6 +275,35 @@ export class NewSampleComponent implements OnInit {
     }
   }
 
+  private handleFiles(files: FileList | File[]): void {
+    const allFiles = Array.from(files);
+    const MAX_SIZE_MB = 10;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    const validFiles: File[] = [];
+    let hasInvalidType = false;
+    let hasOversized = false;
+
+    for (const file of allFiles) {
+      if (!file.type.startsWith('image/')) {
+        hasInvalidType = true;
+      } else if (file.size > MAX_SIZE_BYTES) {
+        hasOversized = true;
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (hasInvalidType) {
+      alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
+    }
+    if (hasOversized) {
+      alert(`Algunas imágenes superan el límite de ${MAX_SIZE_MB} MB y fueron ignoradas.`);
+    }
+
+    this.selectedFiles = [...this.selectedFiles, ...validFiles];
+  }
+
   saveSample(): void {
     this.submitted = true;
 
@@ -286,8 +311,8 @@ export class NewSampleComponent implements OnInit {
       return;
     }
 
-    if ((this.form.salinity !== '' && parseFloat(this.form.salinity) < 0) || 
-        (this.form.conductivity !== '' && parseFloat(this.form.conductivity) < 0)) {
+    if ((this.form.salinity !== '' && parseFloat(this.form.salinity) < 0) ||
+      (this.form.conductivity !== '' && parseFloat(this.form.conductivity) < 0)) {
       alert('La salinidad y la conductividad no pueden ser valores negativos.');
       return;
     }
