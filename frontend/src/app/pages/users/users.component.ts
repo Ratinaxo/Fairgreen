@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { DataService, UsuarioResumen } from '../../services/data.service';
+import { AuthService } from '../../services/auth.service';
 
 type Role = 'Agrónomo' | 'Administrador' | 'Canchero';
 type Status = 'Activo' | 'Suspendido';
@@ -26,6 +27,7 @@ interface UserRow {
 })
 export class UsersComponent implements OnInit, OnDestroy {
   private dataService = inject(DataService);
+  private authService = inject(AuthService);
 
   selectedUser = signal<UserRow | null>(null);
   showSaved = signal(false);
@@ -74,7 +76,9 @@ export class UsersComponent implements OnInit, OnDestroy {
     if (!silent) this.isLoading.set(true);
     this.dataService.getUsuarios().subscribe({
       next: (lista) => {
-        this.users.set(lista.map(u => this._mapUsuario(u)));
+        // Filter out admin users entirely — admins should not see or modify other admins
+        const nonAdmins = lista.filter(u => u.rol !== 'ADMIN');
+        this.users.set(nonAdmins.map(u => this._mapUsuario(u)));
         if (!silent) this.isLoading.set(false);
       },
       error: () => {
