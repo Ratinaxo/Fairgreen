@@ -171,7 +171,7 @@
                 </div>
                 <div class="metric-card">
                   <div class="metric-icon metric-icon--salinity" [ngClass]="{'metric-icon--warn': muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 1.5, 'metric-icon--danger': muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 2.5}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
                   </div>
                   <div class="metric-value" [class.value--warn]="muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 1.5" [class.value--danger]="muestra()?.properties?.salinidad && muestra()!.properties.salinidad! > 2.5">
                     {{ muestra()?.properties?.salinidad?.toFixed(2) ?? '—' }}
