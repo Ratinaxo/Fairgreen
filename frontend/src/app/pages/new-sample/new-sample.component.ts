@@ -251,11 +251,7 @@ export class NewSampleComponent implements OnInit {
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      const validFiles = Array.from(input.files).filter(file => file.type.startsWith('image/'));
-      if (validFiles.length < input.files.length) {
-        alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
-      }
-      this.selectedFiles = [...this.selectedFiles, ...validFiles];
+      this.handleFiles(input.files);
     }
     // Reset input so same file can be re-added after removal
     input.value = '';
@@ -268,15 +264,38 @@ export class NewSampleComponent implements OnInit {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging = false;
-    if (event.dataTransfer?.files) {
-      const allFiles = Array.from(event.dataTransfer.files);
-      const validFiles = allFiles.filter(file => file.type.startsWith('image/'));
-      
-      if (validFiles.length < allFiles.length) {
-        alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
-      }
-      this.selectedFiles = [...this.selectedFiles, ...validFiles];
+    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+      this.handleFiles(event.dataTransfer.files);
     }
+  }
+
+  private handleFiles(files: FileList | File[]): void {
+    const allFiles = Array.from(files);
+    const MAX_SIZE_MB = 10;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+    
+    const validFiles: File[] = [];
+    let hasInvalidType = false;
+    let hasOversized = false;
+
+    for (const file of allFiles) {
+      if (!file.type.startsWith('image/')) {
+        hasInvalidType = true;
+      } else if (file.size > MAX_SIZE_BYTES) {
+        hasOversized = true;
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (hasInvalidType) {
+      alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
+    }
+    if (hasOversized) {
+      alert(`Algunas imágenes superan el límite de ${MAX_SIZE_MB} MB y fueron ignoradas.`);
+    }
+
+    this.selectedFiles = [...this.selectedFiles, ...validFiles];
   }
 
   saveSample(): void {

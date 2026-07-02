@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 # =============================================================================
 # Manager personalizado para el modelo Usuario
@@ -60,7 +60,11 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         ('CANCHERO', 'Canchero'),
     ]
 
-    rut = models.CharField(max_length=12, primary_key=True)
+    rut = models.CharField(
+        max_length=13,
+        primary_key=True,
+        validators=[RegexValidator(r'^[\d\.\-]{8,13}$', 'El RUT no es válido. Debe tener hasta 13 caracteres.')]
+    )
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)
     correo_electronico = models.EmailField(unique=True)
@@ -208,3 +212,43 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"[{self.tipo}] {self.titulo} → {self.rut_usuario}"
+
+
+# =============================================================================
+# Modelo de Historial de Modificaciones de Muestra (Auditoría)
+# =============================================================================
+class HistorialMuestra(models.Model):
+    """
+    Registra cada cambio realizado a una muestra: quién lo hizo, cuándo,
+    y qué campos fueron modificados (con valores anteriores y nuevos).
+    Se genera automáticamente al crear o editar una muestra.
+    """
+    TIPO_CHOICES = [
+        ('CREACION', 'Creación'),
+        ('EDICION', 'Edición'),
+    ]
+
+    id_historial = models.AutoField(primary_key=True)
+    id_muestra = models.ForeignKey(
+        Muestra,
+        on_delete=models.CASCADE,
+        related_name='historial',
+    )
+    rut_usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='modificaciones_muestras',
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    # Almacena los cambios como JSON:
+    # Creación: {"campo": {"nuevo": valor}}
+    # Edición:  {"campo": {"anterior": valor_viejo, "nuevo": valor_nuevo}}
+    cambios = models.JSONField()
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_hora']
+
+    def __str__(self):
+        return f"Historial {self.tipo} - Muestra {self.id_muestra_id} ({self.fecha_hora})"

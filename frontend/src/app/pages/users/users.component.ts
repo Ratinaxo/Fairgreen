@@ -1,10 +1,10 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { DataService, UsuarioResumen } from '../../services/data.service';
 
 type Role = 'Agrónomo' | 'Administrador' | 'Canchero';
-type Status = 'Activo' | 'Offline';
+type Status = 'Activo' | 'Suspendido';
 
 interface UserRow {
   rut: string;
@@ -24,7 +24,7 @@ interface UserRow {
   templateUrl: './users.component.html',
   styleUrl: './users.component.css'
 })
-export class UsersComponent implements OnInit {
+export class UsersComponent implements OnInit, OnDestroy {
   private dataService = inject(DataService);
 
   selectedUser = signal<UserRow | null>(null);
@@ -52,21 +52,34 @@ export class UsersComponent implements OnInit {
   };
 
   users = signal<UserRow[]>([]);
+  private refreshInterval: any;
 
   ngOnInit() {
     this._loadUsers();
+    
+    // Auto-refrescar la lista silenciosamente cada 60 segundos
+    // para mantener actualizados los estados de "En línea"
+    this.refreshInterval = setInterval(() => {
+      this._loadUsers(true);
+    }, 60000);
   }
 
-  private _loadUsers() {
-    this.isLoading.set(true);
+  ngOnDestroy() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  }
+
+  private _loadUsers(silent = false) {
+    if (!silent) this.isLoading.set(true);
     this.dataService.getUsuarios().subscribe({
       next: (lista) => {
         this.users.set(lista.map(u => this._mapUsuario(u)));
-        this.isLoading.set(false);
+        if (!silent) this.isLoading.set(false);
       },
       error: () => {
-        this.errorMsg.set('Error al cargar los usuarios.');
-        this.isLoading.set(false);
+        if (!silent) this.errorMsg.set('Error al cargar los usuarios.');
+        if (!silent) this.isLoading.set(false);
       }
     });
   }
@@ -79,10 +92,22 @@ export class UsersComponent implements OnInit {
       name: `${u.nombre} ${u.apellido}`,
       email: u.correo_electronico,
       role: rolMap[u.rol] ?? 'Canchero',
-      status: u.is_active ? 'Activo' : 'Offline',
-      lastActivity: u.is_active ? 'Activo' : 'Sin acceso',
+      status: u.is_active ? 'Activo' : 'Suspendido',
+      lastActivity: u.is_online ? 'En línea' : this._formatLastLogin(u.last_login),
       initials: `${u.nombre.charAt(0)}${u.apellido.charAt(0)}`.toUpperCase(),
     };
+  }
+
+  private _formatLastLogin(lastLogin: string | null): string {
+    if (!lastLogin) return 'Nunca';
+    const date = new Date(lastLogin);
+    if (isNaN(date.getTime())) return 'Nunca';
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
   }
 
   selectUser(user: UserRow) {
@@ -156,15 +181,46 @@ export class UsersComponent implements OnInit {
     this.showCreateModal.set(false);
   }
 
+  onRutInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    // Remueve cualquier carácter que no sea un número o la letra k/K
+    let cleaned = input.value.replace(/[^0-9kK]/g, '').toUpperCase();
+    
+    // No permitir más de 9 caracteres limpios
+    if (cleaned.length > 9) {
+      cleaned = cleaned.substring(0, 9);
+    }
+    
+    this.createForm.rut = cleaned;
+    input.value = cleaned;
+  }
+
+  formatRut() {
+    let rut = this.createForm.rut.replace(/[^0-9K]/g, '');
+    if (rut.length <= 1) return;
+    
+    const dv = rut.slice(-1);
+    let numbers = rut.slice(0, -1);
+    numbers = numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
+    this.createForm.rut = `${numbers}-${dv}`;
+  }
+
   submitCreateUser() {
-    if (!this.createForm.rut || !this.createForm.password || !this.createForm.correo) {
-      alert('RUT, correo y contraseña son obligatorios.');
+    if (!this.createForm.rut || !this.createForm.password || !this.createForm.correo || !this.createForm.nombre || !this.createForm.apellido) {
+      alert('Todos los campos con asterisco (*) son obligatorios.');
+      return;
+    }
+    
+    const cleanRut = this.createForm.rut.replace(/[^0-9K]/g, '');
+    if (!/^[0-9]{8}[0-9K]$/.test(cleanRut)) {
+      alert('El RUT debe tener exactamente 9 caracteres (8 números seguidos de un número o letra K).');
       return;
     }
     this.isCreating.set(true);
     
     this.dataService.createUsuario({
-      rut: this.createForm.rut,
+      rut: cleanRut,
       nombre: this.createForm.nombre,
       apellido: this.createForm.apellido,
       correo_electronico: this.createForm.correo,

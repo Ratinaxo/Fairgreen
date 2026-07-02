@@ -2,7 +2,7 @@ import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { MapGeorefComponent } from '../../components/map/map-georef.component';
-import { DataService, MuestraFeature, SeccionFeature, FotoItem } from '../../services/data.service';
+import { DataService, MuestraFeature, SeccionFeature, FotoItem, HistorialItem } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -17,6 +17,9 @@ export class SampleDetailComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
+
+  // Exponer Object al template para usar Object.keys()
+  Object = Object;
 
   isLoading = signal(true);
   muestra = signal<MuestraFeature | null>(null);
@@ -58,6 +61,33 @@ export class SampleDetailComponent implements OnInit {
     const u = this.muestra()?.properties?.rut_usuario;
     return u ? `${u.nombre} ${u.apellido}` : '—';
   });
+
+  historial = computed<HistorialItem[]>(() => this.muestra()?.properties?.historial ?? []);
+
+  /** Mapa de nombres técnicos a nombres legibles para la UI */
+  private readonly CAMPO_LABELS: Record<string, string> = {
+    salinidad: 'Salinidad',
+    humedad: 'Humedad',
+    conductividad: 'Conductividad',
+    temperatura: 'Temperatura',
+    recomendaciones: 'Observaciones',
+    id_seccion_id: 'Sección',
+    id_punto_critico_id: 'Punto Crítico',
+    ubicacion_exacta: 'Ubicación',
+  };
+
+  getCampoLabel(campo: string): string {
+    return this.CAMPO_LABELS[campo] ?? campo;
+  }
+
+  formatValor(campo: string, valor: any): string {
+    if (valor === null || valor === undefined || valor === '') return '—';
+    if (campo === 'ubicacion_exacta' && Array.isArray(valor)) {
+      return `${valor[1]?.toFixed(4)}, ${valor[0]?.toFixed(4)}`;
+    }
+    if (typeof valor === 'number') return valor.toString();
+    return String(valor);
+  }
 
   ngOnInit() {
     this.dataService.getSecciones().subscribe({

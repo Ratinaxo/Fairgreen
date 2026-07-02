@@ -53,6 +53,8 @@ export interface UsuarioResumen {
   rol: 'ADMIN' | 'AGRO' | 'CANCHERO';
   ruta_foto: string | null;
   is_active: boolean;
+  last_login: string | null;
+  is_online: boolean;
 }
 
 export interface MuestraProperties {
@@ -67,6 +69,16 @@ export interface MuestraProperties {
   recomendaciones: string | null;
   fecha_hora_captura: string; // ISO 8601
   fotos: FotoItem[];
+  historial: HistorialItem[];
+}
+
+export interface HistorialItem {
+  id_historial: number;
+  tipo: 'CREACION' | 'EDICION';
+  cambios: Record<string, { anterior?: any; nuevo?: any }>;
+  fecha_hora: string; // ISO 8601
+  rut_usuario: string | null;
+  usuario_nombre: string;
 }
 
 export interface MuestraFeature {

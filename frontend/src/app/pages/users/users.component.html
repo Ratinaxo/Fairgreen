@@ -53,7 +53,16 @@
                         <span style="font-size:13px;color:var(--color-text-secondary);">{{ user.status }}</span>
                       </div>
                     </td>
-                    <td style="font-size:13px;color:var(--color-text-muted);">{{ user.lastActivity }}</td>
+                    <td style="font-size:13px;color:var(--color-text-muted);">
+                      <div style="display:flex;align-items:center;gap:6px;">
+                        @if (user.lastActivity === 'En línea') {
+                          <span class="status-dot dot-online-pulse" aria-hidden="true"></span>
+                          <span style="color:var(--color-success, #22c55e);font-weight:500;">En línea</span>
+                        } @else {
+                          {{ user.lastActivity }}
+                        }
+                      </div>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -104,15 +113,15 @@
             <!-- Form fields -->
             <div class="edit-form">
               <div class="form-group">
-                <label for="edit-name" class="form-label">Nombre Completo</label>
+                <label for="edit-name" class="form-label">Nombre Completo <span style="color: var(--color-danger, #dc3545);">*</span></label>
                 <input id="edit-name" type="text" class="form-control" [(ngModel)]="editForm.name" name="edit-name" aria-required="true"/>
               </div>
               <div class="form-group">
-                <label for="edit-email" class="form-label">Correo Electrónico</label>
+                <label for="edit-email" class="form-label">Correo Electrónico <span style="color: var(--color-danger, #dc3545);">*</span></label>
                 <input id="edit-email" type="email" class="form-control" [(ngModel)]="editForm.email" name="edit-email" aria-required="true"/>
               </div>
               <div class="form-group">
-                <label for="edit-role" class="form-label">Rol de la cuenta</label>
+                <label for="edit-role" class="form-label">Rol de la cuenta <span style="color: var(--color-danger, #dc3545);">*</span></label>
                 <div class="select-wrapper">
                   <select id="edit-role" class="form-control" [(ngModel)]="editForm.role" name="edit-role" aria-required="true">
                     <option>Administrador</option>
@@ -164,29 +173,29 @@
           
           <div class="edit-form" style="padding:0;gap:12px;">
             <div class="form-group">
-              <label class="form-label">RUT</label>
-              <input type="text" class="form-control" [(ngModel)]="createForm.rut" placeholder="Ej: 12345678-9"/>
+              <label class="form-label">RUT <span style="color: var(--color-danger, #dc3545);">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="createForm.rut" (input)="onRutInput($event)" (blur)="formatRut()" placeholder="Ej: 12.345.678-9" maxlength="12" />
             </div>
             <div style="display:flex;gap:12px;">
               <div class="form-group" style="flex:1;">
-                <label class="form-label">Nombre</label>
+                <label class="form-label">Nombre <span style="color: var(--color-danger, #dc3545);">*</span></label>
                 <input type="text" class="form-control" [(ngModel)]="createForm.nombre"/>
               </div>
               <div class="form-group" style="flex:1;">
-                <label class="form-label">Apellido</label>
+                <label class="form-label">Apellido <span style="color: var(--color-danger, #dc3545);">*</span></label>
                 <input type="text" class="form-control" [(ngModel)]="createForm.apellido"/>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Correo Electrónico</label>
+              <label class="form-label">Correo Electrónico <span style="color: var(--color-danger, #dc3545);">*</span></label>
               <input type="email" class="form-control" [(ngModel)]="createForm.correo"/>
             </div>
             <div class="form-group">
-              <label class="form-label">Contraseña</label>
+              <label class="form-label">Contraseña <span style="color: var(--color-danger, #dc3545);">*</span></label>
               <input type="password" class="form-control" [(ngModel)]="createForm.password"/>
             </div>
             <div class="form-group">
-              <label class="form-label">Rol</label>
+              <label class="form-label">Rol <span style="color: var(--color-danger, #dc3545);">*</span></label>
               <div class="select-wrapper">
                 <select class="form-control" [(ngModel)]="createForm.rol">
                   <option value="ADMIN">Administrador</option>
