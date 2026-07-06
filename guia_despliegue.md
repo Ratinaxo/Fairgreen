@@ -57,7 +57,7 @@ Conéctate mediante la terminal a tu EC2 (`ssh -i "llave-fairgreen.pem" ubuntu@T
 ### 1. Limpieza de seguridad (Solo si Git detecta conflictos locales)
 Si realizaste modificaciones directas en el servidor y Git te bloquea el cambio de rama o el `pull`, corre esto para limpiar el estado del repositorio:
 ```bash
-cd /var/www/fairgreen
+cd ~/Fairgreen
 
 # Deshace cualquier cambio en archivos existentes
 git checkout -- .
