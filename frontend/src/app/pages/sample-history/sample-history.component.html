@@ -7,7 +7,8 @@
 
     <!-- Filters card -->
     <div class="card filter-card">
-      <div class="mobile-filter-toggle" (click)="toggleMobileFilters()" role="button" tabindex="0">
+      <div class="mobile-filter-toggle" [class.expanded]="showMobileFilters" (click)="toggleMobileFilters()"
+        role="button" tabindex="0">
         <div style="display:flex;align-items:center;gap:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />

@@ -6,6 +6,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { Chart, registerables } from 'chart.js';
+import html2canvas from 'html2canvas';
+Chart.register(...registerables);
 
 const PC_SAMPLE_CAP = 50;
 
@@ -24,6 +27,21 @@ interface PcSample {
   feature: MuestraFeature;
   color: string;
   visible: boolean;
+}
+
+interface PdfStats {
+  total: number;
+  dateMin: string;
+  dateMax: string;
+  humedad:       { avg: number; min: number; max: number; count: number };
+  temperatura:   { avg: number; min: number; max: number; count: number };
+  salinidad:     { avg: number; min: number; max: number; count: number };
+  conductividad: { avg: number; min: number; max: number; count: number };
+  byZone: {
+    green:   { count: number; humedad: number; temperatura: number; salinidad: number; conductividad: number };
+    fairway: { count: number; humedad: number; temperatura: number; salinidad: number; conductividad: number };
+  };
+  bySector: Record<number, number>;
 }
 
 @Component({
@@ -195,6 +213,7 @@ export class ReportsComponent {
   exportReportRows: ReportRow[] = [];
   exportAvgGreen = 0;
   exportAvgFairway = 0;
+  private _rawExportFeatures: MuestraFeature[] = [];
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -453,6 +472,7 @@ export class ReportsComponent {
   }
 
   private _processExportData(features: MuestraFeature[]) {
+    this._rawExportFeatures = features;
     const sorted = [...features].sort(
       (a, b) => new Date(b.properties.fecha_hora_captura).getTime()
               - new Date(a.properties.fecha_hora_captura).getTime()
@@ -520,43 +540,450 @@ export class ReportsComponent {
     saveAs(new Blob([buffer]), `Reporte_Fairgreen_${new Date().getTime()}.xlsx`);
   }
 
+  private _loadLogoBase64(): Promise<{data: string, width: number, height: number}> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = 'assets/logo-fairgreen.png';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve({ data: canvas.toDataURL('image/png'), width: img.width, height: img.height });
+        } else {
+          resolve({ data: '', width: 0, height: 0 });
+        }
+      };
+      img.onerror = () => resolve({ data: '', width: 0, height: 0 });
+    });
+  }
+
+  private async _captureSvgToCanvas(): Promise<string> {
+    const el = document.getElementById('pc-svg-chart');
+    if (!el) return '';
+    try {
+      const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 1.5 });
+      return canvas.toDataURL('image/jpeg', 0.8);
+    } catch (e) {
+      console.error(e);
+      return '';
+    }
+  }
+
+  private async _renderChartToBase64(config: any): Promise<string> {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 300;
+      document.body.appendChild(canvas);
+      canvas.style.display = 'none';
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve('');
+        return;
+      }
+      
+      const chart = new Chart(ctx, {
+        ...config,
+        options: {
+          ...config.options,
+          animation: false,
+          responsive: false,
+        },
+        plugins: [
+          ...(config.plugins ? [config.plugins] : []), // Chart.js 3+ might expect array, but here config.plugins is usually not an array, wait, our config doesn't have a top-level plugins array. It's under options.plugins. We can just add it globally or in the array.
+          {
+            id: 'whiteBackground',
+            beforeDraw: (c) => {
+              const ctx = c.ctx;
+              ctx.save();
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, c.width, c.height);
+              ctx.restore();
+            }
+          }
+        ]
+      });
+      
+      setTimeout(() => {
+        const base64 = chart.toBase64Image('image/jpeg', 0.8);
+        chart.destroy();
+        canvas.remove();
+        resolve(base64);
+      }, 50);
+    });
+  }
+
+  private _addPageHeaderFooter(doc: jsPDF, pageNum: number, totalPages: number, logo: {data: string, width: number, height: number}) {
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    // Header
+    if (logo.data) {
+      const targetHeight = 12;
+      const targetWidth = targetHeight * (logo.width / logo.height);
+      doc.addImage(logo.data, 'PNG', 14, 10, targetWidth, targetHeight);
+    }
+    
+    doc.setFontSize(12);
+    doc.setTextColor(28, 61, 46);
+    doc.setFont("helvetica", "bold");
+    doc.text('Reporte FairGreen', pageWidth - 14, 18, { align: 'right' });
+    
+    doc.setDrawColor(76, 175, 125);
+    doc.setLineWidth(0.5);
+    doc.line(14, 25, pageWidth - 14, 25);
+    
+    // Footer
+    doc.setDrawColor(221, 229, 223);
+    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(143, 168, 149);
+    doc.setFont("helvetica", "normal");
+    const dateStr = new Date().toLocaleDateString('es-CL');
+    doc.text(`FairGreen · Generado automáticamente el ${dateStr}`, 14, pageHeight - 14);
+    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - 14, pageHeight - 14, { align: 'right' });
+  }
+
+  private _computeStats(features: MuestraFeature[]): PdfStats {
+    const stats: PdfStats = {
+      total: features.length,
+      dateMin: '',
+      dateMax: '',
+      humedad: { avg: 0, min: Infinity, max: -Infinity, count: 0 },
+      temperatura: { avg: 0, min: Infinity, max: -Infinity, count: 0 },
+      salinidad: { avg: 0, min: Infinity, max: -Infinity, count: 0 },
+      conductividad: { avg: 0, min: Infinity, max: -Infinity, count: 0 },
+      byZone: {
+        green: { count: 0, humedad: 0, temperatura: 0, salinidad: 0, conductividad: 0 },
+        fairway: { count: 0, humedad: 0, temperatura: 0, salinidad: 0, conductividad: 0 }
+      },
+      bySector: {}
+    };
+
+    if (features.length === 0) return stats;
+
+    let dateMin = new Date(features[0].properties.fecha_hora_captura).getTime();
+    let dateMax = dateMin;
+
+    const sums = {
+      humedad: 0, temperatura: 0, salinidad: 0, conductividad: 0,
+      green: { humedad: 0, temperatura: 0, salinidad: 0, conductividad: 0 },
+      fairway: { humedad: 0, temperatura: 0, salinidad: 0, conductividad: 0 }
+    };
+
+    features.forEach(f => {
+      const p = f.properties;
+      const t = new Date(p.fecha_hora_captura).getTime();
+      if (t < dateMin) dateMin = t;
+      if (t > dateMax) dateMax = t;
+
+      const sector = p.id_seccion?.properties?.numero_de_hoyo ?? 0;
+      stats.bySector[sector] = (stats.bySector[sector] || 0) + 1;
+
+      const isGreen = p.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'GREEN';
+      const isFairway = p.id_seccion?.properties?.tipo_de_tierra?.toUpperCase() === 'FAIRWAY';
+
+      if (isGreen) stats.byZone.green.count++;
+      if (isFairway) stats.byZone.fairway.count++;
+
+      const processParam = (key: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad') => {
+        const val = p[key];
+        if (val != null) {
+          stats[key].count++;
+          sums[key] += val;
+          if (val < stats[key].min) stats[key].min = val;
+          if (val > stats[key].max) stats[key].max = val;
+          
+          if (isGreen) sums.green[key] += val;
+          if (isFairway) sums.fairway[key] += val;
+        }
+      };
+
+      processParam('humedad');
+      processParam('temperatura');
+      processParam('salinidad');
+      processParam('conductividad');
+    });
+
+    stats.dateMin = new Date(dateMin).toLocaleDateString('es-CL');
+    stats.dateMax = new Date(dateMax).toLocaleDateString('es-CL');
+
+    const finalizeParam = (key: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad') => {
+      if (stats[key].count > 0) {
+        stats[key].avg = sums[key] / stats[key].count;
+      } else {
+        stats[key].min = 0;
+        stats[key].max = 0;
+      }
+      if (stats.byZone.green.count > 0) stats.byZone.green[key] = sums.green[key] / stats.byZone.green.count;
+      if (stats.byZone.fairway.count > 0) stats.byZone.fairway[key] = sums.fairway[key] / stats.byZone.fairway.count;
+    };
+
+    finalizeParam('humedad');
+    finalizeParam('temperatura');
+    finalizeParam('salinidad');
+    finalizeParam('conductividad');
+
+    return stats;
+  }
+
+  private _buildExecutiveSummary(doc: jsPDF, stats: PdfStats, currentY: number): number {
+    doc.setFontSize(14);
+    doc.setTextColor(28, 61, 46);
+    doc.setFont("helvetica", "bold");
+    doc.text('RESUMEN EJECUTIVO', 14, currentY);
+    currentY += 8;
+
+    doc.setFontSize(11);
+    doc.setTextColor(90, 112, 96);
+    doc.setFont("helvetica", "normal");
+
+    let text = `Durante el período analizado se registraron ${stats.total} muestras de suelo. `;
+    if (stats.humedad.count > 0) text += `La humedad promedio fue de ${stats.humedad.avg.toFixed(1)} (escala 1-5), `;
+    if (stats.temperatura.count > 0) text += `la temperatura promedio de ${stats.temperatura.avg.toFixed(1)}°C, `;
+    if (stats.salinidad.count > 0) text += `la salinidad promedio de ${stats.salinidad.avg.toFixed(2)} dS/m `;
+    if (stats.conductividad.count > 0) text += `y la conductividad promedio de ${stats.conductividad.avg.toFixed(0)} µS/cm.`;
+
+    const splitText = doc.splitTextToSize(text, 180);
+    doc.text(splitText, 14, currentY);
+    currentY += (splitText.length * 5) + 10;
+
+    // Draw KPI Cards
+    const cardWidth = 42;
+    const cardHeight = 28;
+    const gap = 6;
+    const startX = 14;
+
+    const drawCard = (x: number, y: number, title: string, avg: string, min: string, max: string) => {
+      doc.setDrawColor(221, 229, 223);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
+      
+      doc.setFontSize(10);
+      doc.setTextColor(28, 61, 46);
+      doc.setFont("helvetica", "bold");
+      doc.text(title, x + 4, y + 6);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(76, 175, 125);
+      doc.text(avg, x + 4, y + 14);
+      
+      doc.setFontSize(8);
+      doc.setTextColor(143, 168, 149);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Min: ${min}  Max: ${max}`, x + 4, y + 22);
+    };
+
+    drawCard(startX, currentY, 'Humedad', stats.humedad.count ? stats.humedad.avg.toFixed(1) : '-', stats.humedad.count ? stats.humedad.min.toFixed(1) : '-', stats.humedad.count ? stats.humedad.max.toFixed(1) : '-');
+    drawCard(startX + cardWidth + gap, currentY, 'Temperatura', stats.temperatura.count ? `${stats.temperatura.avg.toFixed(1)}°C` : '-', stats.temperatura.count ? `${stats.temperatura.min.toFixed(1)}°C` : '-', stats.temperatura.count ? `${stats.temperatura.max.toFixed(1)}°C` : '-');
+    drawCard(startX + (cardWidth + gap) * 2, currentY, 'Salinidad', stats.salinidad.count ? `${stats.salinidad.avg.toFixed(2)}` : '-', stats.salinidad.count ? `${stats.salinidad.min.toFixed(2)}` : '-', stats.salinidad.count ? `${stats.salinidad.max.toFixed(2)}` : '-');
+    drawCard(startX + (cardWidth + gap) * 3, currentY, 'Conductividad', stats.conductividad.count ? `${stats.conductividad.avg.toFixed(0)}` : '-', stats.conductividad.count ? `${stats.conductividad.min.toFixed(0)}` : '-', stats.conductividad.count ? `${stats.conductividad.max.toFixed(0)}` : '-');
+
+    return currentY + cardHeight + 15;
+  }
+
+  private _buildZoneComparisonChartConfig(paramKey: 'humedad'|'temperatura'|'salinidad'|'conductividad', label: string, stats: PdfStats): any {
+    return {
+      type: 'bar',
+      data: {
+        labels: ['Green', 'Fairway'],
+        datasets: [{
+          data: [
+            stats.byZone.green[paramKey],
+            stats.byZone.fairway[paramKey]
+          ],
+          backgroundColor: ['#1C3D2E', '#4CAF7D'],
+          borderRadius: 4
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: label, font: { size: 12 }, color: '#1C3D2E' }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    };
+  }
+
+  private _buildSectorDistributionChart(stats: PdfStats): any {
+    const sectors = Object.keys(stats.bySector).map(Number).sort((a, b) => a - b);
+    const counts = sectors.map(s => stats.bySector[s]);
+
+    return {
+      type: 'bar',
+      data: {
+        labels: sectors.map(s => `Sector ${s}`),
+        datasets: [{
+          label: 'Cantidad de Muestras',
+          data: counts,
+          backgroundColor: '#4CAF7D',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    };
+  }
+
   private async _generatePDF() {
     const doc = new jsPDF();
+    const logoData = await this._loadLogoBase64();
+    const stats = this._computeStats(this._rawExportFeatures);
+    
+    // --- PAGE 1: PORTADA & RESUMEN ---
+    let currentY = 35;
+    
+    doc.setFontSize(22);
+    doc.setTextColor(28, 61, 46);
+    doc.setFont("helvetica", "bold");
+    doc.text(this.exportConfig.title, 14, currentY);
+    currentY += 8;
+    
+    doc.setFontSize(14);
+    doc.setTextColor(90, 112, 96);
+    doc.setFont("helvetica", "normal");
+    doc.text('Club de Golf FairGreen', 14, currentY);
+    currentY += 12;
 
-    doc.setFontSize(18);
-    doc.text(this.exportConfig.title, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(26, 46, 32);
+    const dateRange = this.exportConfig.dateFrom || this.exportConfig.dateTo 
+      ? `Período: ${this.exportConfig.dateFrom ? new Date(this.exportConfig.dateFrom).toLocaleDateString('es-CL') : 'Inicio'} — ${this.exportConfig.dateTo ? new Date(this.exportConfig.dateTo).toLocaleDateString('es-CL') : 'Fin'}`
+      : `Período: Todas las fechas (${stats.dateMin} — ${stats.dateMax})`;
+    doc.text(dateRange, 14, currentY); currentY += 6;
+    doc.text(`Zona: ${this.exportConfig.zona || 'Todas'}  ·  Sector: ${this.exportConfig.sector || 'Todos'}`, 14, currentY); currentY += 6;
+    doc.text(`Total de muestras: ${stats.total}`, 14, currentY); currentY += 14;
 
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Fecha de Generación: ${new Date().toLocaleDateString('es-CL')}`, 14, 30);
+    if (this.exportConfig.includeStats && stats.total > 0) {
+      currentY = this._buildExecutiveSummary(doc, stats, currentY);
+    }
+    
+    // --- PAGE 2: GRÁFICOS COMPARATIVOS ---
+    if (this.exportConfig.includeStats && stats.total > 0) {
+      doc.addPage();
+      currentY = 35;
 
-    let currentY = 42;
-
-    if (this.exportConfig.includeStats && this.exportConfig.component !== 'Todos') {
-      doc.setFontSize(12);
-      doc.setTextColor(0);
-      doc.text('Resumen Estadístico', 14, currentY);
+      doc.setFontSize(14);
+      doc.setTextColor(28, 61, 46);
+      doc.setFont("helvetica", "bold");
+      doc.text('ANÁLISIS COMPARATIVO POR ZONA', 14, currentY);
       currentY += 8;
 
-      const propKey = this.exportConfig.component.toLowerCase() as keyof ReportRow;
-      const allLevels = this.exportReportRows
-        .map(r => r[propKey] as number | null | undefined)
-        .filter((v): v is number => v != null);
+      doc.setFontSize(11);
+      doc.setTextColor(90, 112, 96);
+      doc.setFont("helvetica", "normal");
+      doc.text('A continuación se presenta la comparación de los promedios entre zonas Green y Fairway.', 14, currentY);
+      currentY += 10;
 
-      const min = allLevels.length ? Math.min(...allLevels).toFixed(2) : '—';
-      const max = allLevels.length ? Math.max(...allLevels).toFixed(2) : '—';
-      const avg = allLevels.length ? (allLevels.reduce((a, b) => a + b, 0) / allLevels.length).toFixed(2) : '—';
+      // 1x4 Stack (1 per row) to make charts larger
+      const chartWidth = 160;
+      const chartHeight = 70;
+      const x1 = 14;
+      let yGrid = currentY;
 
-      doc.setFontSize(10);
-      doc.setTextColor(80);
-      doc.text(`Promedio Global: ${avg}`, 14, currentY); currentY += 5;
-      doc.text(`Nivel Máximo: ${max}`, 14, currentY); currentY += 5;
-      doc.text(`Nivel Mínimo: ${min}`, 14, currentY); currentY += 10;
-      doc.text(`Promedio en Green: ${this.exportAvgGreen.toFixed(2)}`, 100, currentY - 15);
-      doc.text(`Promedio en Fairway: ${this.exportAvgFairway.toFixed(2)}`, 100, currentY - 10);
+      const chartHConfig = this._buildZoneComparisonChartConfig('humedad', 'Humedad (1-5)', stats);
+      const chartTConfig = this._buildZoneComparisonChartConfig('temperatura', 'Temperatura (°C)', stats);
+      const chartSConfig = this._buildZoneComparisonChartConfig('salinidad', 'Salinidad (dS/m)', stats);
+      const chartCConfig = this._buildZoneComparisonChartConfig('conductividad', 'Conductividad (µS/cm)', stats);
+
+      const [chartH, chartT, chartS, chartC] = await Promise.all([
+        this._renderChartToBase64(chartHConfig),
+        this._renderChartToBase64(chartTConfig),
+        this._renderChartToBase64(chartSConfig),
+        this._renderChartToBase64(chartCConfig)
+      ]);
+
+      if (chartH) {
+        doc.addImage(chartH, 'JPEG', x1, yGrid, chartWidth, chartHeight);
+        yGrid += chartHeight + 10;
+      }
+      if (chartT) {
+        doc.addImage(chartT, 'JPEG', x1, yGrid, chartWidth, chartHeight);
+        yGrid += chartHeight + 10;
+      }
+      
+      // Page break for the next two charts
+      doc.addPage();
+      yGrid = 35;
+      doc.setFontSize(14);
+      doc.setTextColor(28, 61, 46);
+      doc.setFont("helvetica", "bold");
+      doc.text('ANÁLISIS COMPARATIVO POR ZONA (Cont.)', 14, yGrid);
+      yGrid += 12;
+
+      if (chartS) {
+        doc.addImage(chartS, 'JPEG', x1, yGrid, chartWidth, chartHeight);
+        yGrid += chartHeight + 10;
+      }
+      if (chartC) {
+        doc.addImage(chartC, 'JPEG', x1, yGrid, chartWidth, chartHeight);
+        yGrid += chartHeight + 10;
+      }
+
+      // Page break for sector distribution to give it full space
+      doc.addPage();
+      currentY = 35;
+
+      doc.setFontSize(14);
+      doc.setTextColor(28, 61, 46);
+      doc.setFont("helvetica", "bold");
+      doc.text('CANTIDAD DE MUESTRAS POR SECTOR', 14, currentY);
+      currentY += 8;
+
+      const chartSectorConfig = this._buildSectorDistributionChart(stats);
+      const chartSectorBase64 = await this._renderChartToBase64(chartSectorConfig);
+      if (chartSectorBase64) {
+        doc.addImage(chartSectorBase64, 'JPEG', 14, currentY, 160, 80);
+      }
     }
 
-    if (this.exportConfig.includeTable) {
+    // --- PAGE 3: COORDENADAS PARALELAS ---
+    if (this.exportConfig.includeStats && stats.total > 0) {
+      const pcBase64 = await this._captureSvgToCanvas();
+      if (pcBase64) {
+        doc.addPage();
+        currentY = 35;
+        doc.setFontSize(14);
+        doc.setTextColor(28, 61, 46);
+        doc.setFont("helvetica", "bold");
+        doc.text('RELACIÓN ENTRE PARÁMETROS (COORDENADAS PARALELAS)', 14, currentY);
+        currentY += 8;
+        
+        doc.setFontSize(11);
+        doc.setTextColor(90, 112, 96);
+        doc.setFont("helvetica", "normal");
+        doc.text('Este gráfico muestra la correlación individual de las muestras a través de todos los parámetros.', 14, currentY);
+        currentY += 10;
+        
+        doc.addImage(pcBase64, 'JPEG', 14, currentY, 180, 80);
+      }
+    }
+
+    // --- PAGE 4+: TABLA DE DATOS ---
+    if (this.exportConfig.includeTable && stats.total > 0) {
+      doc.addPage();
+      currentY = 35;
+
+      doc.setFontSize(14);
+      doc.setTextColor(28, 61, 46);
+      doc.setFont("helvetica", "bold");
+      doc.text('DETALLE DE MUESTRAS', 14, currentY);
+      currentY += 8;
+
       autoTable(doc, {
         startY: currentY,
         head: [['ID', 'Fecha', 'Sector', 'Zona', 'Humedad', 'Temp.', 'Salinidad', 'Conduct.']],
@@ -568,8 +995,18 @@ export class ReportsComponent {
           r.conductividad?.toFixed(0) ?? '-',
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [28, 61, 46] }
+        headStyles: { fillColor: [28, 61, 46] },
+        styles: { fontSize: 9, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [244, 246, 245] },
+        margin: { top: 30 }
       });
+    }
+
+    // --- ADD HEADER/FOOTER TO ALL PAGES ---
+    const totalPdfPages = (doc.internal as any).getNumberOfPages();
+    for (let i = 1; i <= totalPdfPages; i++) {
+      doc.setPage(i);
+      this._addPageHeaderFooter(doc, i, totalPdfPages, logoData);
     }
 
     doc.save(`Reporte_Fairgreen_${new Date().getTime()}.pdf`);
