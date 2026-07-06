@@ -71,12 +71,18 @@ Guarda y sal del editor (Ctrl+O, Enter, Ctrl+X).
 
 ---
 
-## 4. Construir y Levantar el Backend (Docker)
+## 4. Preparar Volúmenes y Levantar el Backend (Docker)
 
-Con el código y las variables listas, procedemos a construir los contenedores.
+Con el código y las variables listas, procedemos a construir los contenedores. Pero antes, debemos crear la carpeta donde se guardarán los archivos estáticos y darle permisos, de lo contrario el contenedor fallará al intentar escribir en ella.
 
 ```bash
-# Construir y levantar los contenedores en segundo plano
+# 1. Crear la carpeta para archivos estáticos
+sudo mkdir -p /var/www/fairgreen/static
+
+# 2. Darle permisos totales para que Docker pueda escribir
+sudo chmod 777 /var/www/fairgreen/static
+
+# 3. Construir y levantar los contenedores en segundo plano
 docker compose up -d --build
 ```
 Espera un par de minutos a que PostgreSQL (la base de datos) inicie correctamente. Puedes verificar que todo esté encendido con:
@@ -105,23 +111,60 @@ docker compose exec backend python manage.py createsuperuser
 
 ---
 
-## 6. Configurar Nginx y Permisos
+## 6. Configurar Nginx y Permisos (Dominio y Ruteo)
 
-Debemos preparar la carpeta pública donde Nginx servirá el Frontend y los archivos estáticos de Django.
+Como es un servidor desde cero, Nginx viene vacío. Debemos preparar la carpeta del frontend y crear el archivo de configuración que conectará tu dominio con tu aplicación.
 
 ```bash
-# Crear las carpetas si no existen
+# 1. Crear la carpeta del frontend
 sudo mkdir -p /var/www/fairgreen/html
-sudo mkdir -p /var/www/fairgreen/static
 
-# Dar permisos a la carpeta static para que Django pueda escribir ahí
-sudo chmod 777 /var/www/fairgreen/static
+# 2. Dar permisos temporales para poder subir archivos vía SCP (se restringirán en el paso 7)
+sudo chmod 777 /var/www/fairgreen/html
 
-# Recolectar archivos estáticos del panel de admin de Django
-docker compose exec backend python manage.py collectstatic --noinput
+# 3. Crear el archivo de configuración de Nginx
+sudo nano /etc/nginx/sites-available/fairgreen
 ```
 
-*(La configuración específica del archivo `/etc/nginx/sites-available/fairgreen` dependerá de tus dominios DuckDNS/FreeDNS y la debes mantener como la tienes actualmente).*
+Pega el siguiente contenido (asegúrate de que tus dominios en `server_name` sean los correctos):
+
+```nginx
+server {
+    listen 80;
+    server_name fairgreen.duckdns.org fairgreen.crabdance.com;
+
+    # Frontend en Angular
+    location / {
+        root /var/www/fairgreen/html;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Archivos estáticos de Django
+    location /static/ {
+        alias /var/www/fairgreen/static/;
+    }
+
+    # Backend en Django (API y panel de Admin)
+    location ~ ^/(api|admin) {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+Guarda y sal del editor (Ctrl+O, Enter, Ctrl+X).
+
+```bash
+# Activar la configuración
+sudo ln -s /etc/nginx/sites-available/fairgreen /etc/nginx/sites-enabled/
+
+# Verificar si hay errores y reiniciar Nginx
+sudo nginx -t
+sudo systemctl restart nginx
+```
 
 ---
 
