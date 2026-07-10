@@ -173,3 +173,45 @@ docker compose exec db pg_isready -U fairgreen_admin -d fairgreen_db
 docker compose exec db psql -U fairgreen_admin -d fairgreen_db
 ```
 
+---
+
+## FASE 5: Automatización de Respaldos de Base de Datos (a S3)
+
+Para evitar la pérdida de datos, contamos con un script automatizado que realiza un dump de la base de datos de PostgreSQL y lo sube directamente al bucket de Amazon S3. El script se encuentra en la raíz del proyecto con el nombre `backup_db_s3.sh`.
+
+### 1. Ejecución Manual
+Para probar que el script funciona correctamente en el servidor:
+```bash
+# Otorgar permisos de ejecución (si no los tiene)
+chmod +x backup_db_s3.sh
+
+# Ejecutar usando las variables de producción
+./backup_db_s3.sh .env.prod
+```
+
+El script imprimirá logs indicando si el dump se creó y si la subida a S3 fue exitosa. Luego eliminará el archivo temporal local.
+
+### 2. Programación Automática (Todas las noches)
+Para configurar que el respaldo se ejecute automáticamente todas las noches (por ejemplo, a las 3:00 AM), configuramos una tarea programada en el sistema mediante `cron`:
+
+1. Abre el editor de tareas programadas del servidor:
+   ```bash
+   crontab -e
+   ```
+   *(Si es la primera vez que lo abres, te pedirá elegir un editor. Te recomendamos elegir `nano` presionando 1 y Enter).*
+
+2. Ve al final del archivo y agrega la siguiente línea (reemplaza `/home/ubuntu/Fairgreen` con la ruta real donde tengas clonado el proyecto):
+   ```text
+   0 3 * * * /home/ubuntu/Fairgreen/backup_db_s3.sh /home/ubuntu/Fairgreen/.env.prod >> /home/ubuntu/Fairgreen/backup_db.log 2>&1
+   ```
+
+3. Guarda los cambios y cierra el editor (en nano: `Ctrl + O` para guardar, `Enter`, y `Ctrl + X` para salir).
+
+4. Puedes comprobar que el cron quedó programado listando las tareas activas:
+   ```bash
+   crontab -l
+   ```
+
+Los resultados de cada ejecución automática se escribirán en el archivo `backup_db.log` en el directorio de tu proyecto.
+
+

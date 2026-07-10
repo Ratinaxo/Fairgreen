@@ -131,7 +131,7 @@ Pega el siguiente contenido (asegúrate de que tus dominios en `server_name` sea
 ```nginx
 server {
     listen 80;
-    server_name fairgreen.duckdns.org fairgreen.crabdance.com;
+    server_name fairgreen.cncs.cl;
 
     # Frontend en Angular
     location / {
