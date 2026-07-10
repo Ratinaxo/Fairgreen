@@ -36,6 +36,14 @@ for host in ['backend', 'web', 'localhost', '127.0.0.1', '0.0.0.0']:
     if host not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(host)
 
+# Configuración de orígenes de confianza para CSRF (requerido por Django 4.0+ en producción)
+CSRF_TRUSTED_ORIGINS = []
+for host in ALLOWED_HOSTS:
+    if host:
+        host = host.strip()
+        CSRF_TRUSTED_ORIGINS.append(f"http://{host}")
+        CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
+
 
 # Application definition
 
