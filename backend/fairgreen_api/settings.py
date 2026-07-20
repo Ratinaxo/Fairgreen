@@ -44,6 +44,9 @@ for host in ALLOWED_HOSTS:
         CSRF_TRUSTED_ORIGINS.append(f"http://{host}")
         CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
 
+# Confiar en los headers del proxy reverso (Nginx / AWS) para conexiones HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
