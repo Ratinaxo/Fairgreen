@@ -1,6 +1,6 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { DataService, MuestraFeature } from '../../services/data.service';
+import { DataService, MuestraFeature, PuntoCriticoFeature } from '../../services/data.service';
 import { FormsModule } from '@angular/forms';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -33,12 +33,12 @@ interface PdfStats {
   total: number;
   dateMin: string;
   dateMax: string;
-  humedad:       { avg: number; min: number; max: number; count: number };
-  temperatura:   { avg: number; min: number; max: number; count: number };
-  salinidad:     { avg: number; min: number; max: number; count: number };
+  humedad: { avg: number; min: number; max: number; count: number };
+  temperatura: { avg: number; min: number; max: number; count: number };
+  salinidad: { avg: number; min: number; max: number; count: number };
   conductividad: { avg: number; min: number; max: number; count: number };
   byZone: {
-    green:   { count: number; humedad: number; temperatura: number; salinidad: number; conductividad: number };
+    green: { count: number; humedad: number; temperatura: number; salinidad: number; conductividad: number };
     fairway: { count: number; humedad: number; temperatura: number; salinidad: number; conductividad: number };
   };
   bySector: Record<number, number>;
@@ -51,28 +51,66 @@ interface PdfStats {
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })
-export class ReportsComponent {
+export class ReportsComponent implements OnInit {
   private dataService = inject(DataService);
+  private cdr = inject(ChangeDetectorRef);
 
   filtersApplied = signal(false);
   appliedDateFrom = signal('');
   appliedDateTo = signal('');
   appliedZona = signal('');
 
+  todosPuntosCriticos: PuntoCriticoFeature[] = [];
+
+  ngOnInit() {
+    this.dataService.getTodosPuntosCriticos().subscribe({
+      next: (data) => {
+        this.todosPuntosCriticos = data.features ?? [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Error fetching puntos criticos:', err)
+    });
+  }
+
+  get puntosCriticosFiltro(): PuntoCriticoFeature[] {
+    let pts = this.todosPuntosCriticos;
+    if (this.filters.zona) {
+      pts = pts.filter(p => p.properties?.id_seccion?.properties?.tipo_de_tierra?.toLowerCase() === this.filters.zona.toLowerCase());
+    }
+    if (this.filters.sector) {
+      const hoyo = parseInt(this.filters.sector, 10);
+      pts = pts.filter(p => p.properties?.id_seccion?.properties?.numero_de_hoyo === hoyo);
+    }
+    return pts;
+  }
+
+  get puntosCriticosExport(): PuntoCriticoFeature[] {
+    let pts = this.todosPuntosCriticos;
+    if (this.exportConfig.zona) {
+      pts = pts.filter(p => p.properties?.id_seccion?.properties?.tipo_de_tierra?.toLowerCase() === this.exportConfig.zona.toLowerCase());
+    }
+    if (this.exportConfig.sector) {
+      const hoyo = parseInt(this.exportConfig.sector, 10);
+      pts = pts.filter(p => p.properties?.id_seccion?.properties?.numero_de_hoyo === hoyo);
+    }
+    return pts;
+  }
+
   filters = {
     dateFrom: '',
     dateTo: '',
     sector: '',
     zona: '',
+    puntoCritico: '',
   };
 
   // ── Parallel Coordinates Config ──────────────────────────────────────────
 
   readonly PC_PARAMS = [
-    { key: 'humedad'        as 'humedad',        label: 'Humedad',       unit: '1–5',    min: 0, max: 5    },
-    { key: 'salinidad'      as 'salinidad',      label: 'Salinidad',     unit: 'dS/m',   min: 0, max: 10   },
-    { key: 'conductividad'  as 'conductividad',  label: 'Conductividad', unit: 'µS/cm',  min: 0, max: 2000 },
-    { key: 'temperatura'    as 'temperatura',    label: 'Temperatura',   unit: '°C',     min: 0, max: 45   },
+    { key: 'humedad' as 'humedad', label: 'Humedad', unit: '1–5', min: 0, max: 5 },
+    { key: 'salinidad' as 'salinidad', label: 'Salinidad', unit: 'dS/m', min: 0, max: 10 },
+    { key: 'conductividad' as 'conductividad', label: 'Conductividad', unit: 'CE', min: 0, max: 2000 },
+    { key: 'temperatura' as 'temperatura', label: 'Temperatura', unit: '°C', min: 0, max: 45 },
   ];
 
   // Customizable axes — user can toggle params on/off
@@ -206,6 +244,7 @@ export class ReportsComponent {
     dateTo: '',
     sector: '',
     zona: '',
+    puntoCritico: '',
     component: 'Todos',
     includeStats: true,
     includeTable: true
@@ -367,10 +406,19 @@ export class ReportsComponent {
         if (this.filters.zona) {
           features = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra.toLowerCase() === this.filters.zona.toLowerCase());
         }
+        if (this.filters.puntoCritico) {
+          const pcId = parseInt(this.filters.puntoCritico);
+          features = features.filter(f => {
+            const pc = f.properties.id_punto_critico;
+            if (!pc) return false;
+            return typeof pc === 'object' ? pc.id_punto_critico === pcId : pc === pcId;
+          });
+        }
 
         this._processData(features);
         this.tablePage = 1;
         this.filtersApplied.set(true);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -381,7 +429,7 @@ export class ReportsComponent {
     // Sort newest first, then cap
     const sorted = [...features].sort(
       (a, b) => new Date(b.properties.fecha_hora_captura).getTime()
-              - new Date(a.properties.fecha_hora_captura).getTime()
+        - new Date(a.properties.fecha_hora_captura).getTime()
     );
     const capped = sorted.slice(0, PC_SAMPLE_CAP);
     this.pcCappedCount = sorted.length > PC_SAMPLE_CAP ? PC_SAMPLE_CAP : sorted.length;
@@ -421,6 +469,7 @@ export class ReportsComponent {
       dateTo: this.filters.dateTo,
       sector: this.filters.sector,
       zona: this.filters.zona,
+      puntoCritico: this.filters.puntoCritico,
       component: 'Todos',
       includeTable: true,
       includeStats: true,
@@ -451,6 +500,14 @@ export class ReportsComponent {
         if (this.exportConfig.zona) {
           features = features.filter(f => f.properties.id_seccion?.properties?.tipo_de_tierra.toLowerCase() === this.exportConfig.zona.toLowerCase());
         }
+        if (this.exportConfig.puntoCritico) {
+          const pcId = parseInt(this.exportConfig.puntoCritico);
+          features = features.filter(f => {
+            const pc = f.properties.id_punto_critico;
+            if (!pc) return false;
+            return typeof pc === 'object' ? pc.id_punto_critico === pcId : pc === pcId;
+          });
+        }
 
         this._processExportData(features);
 
@@ -475,7 +532,7 @@ export class ReportsComponent {
     this._rawExportFeatures = features;
     const sorted = [...features].sort(
       (a, b) => new Date(b.properties.fecha_hora_captura).getTime()
-              - new Date(a.properties.fecha_hora_captura).getTime()
+        - new Date(a.properties.fecha_hora_captura).getTime()
     );
 
     this.exportReportRows = sorted.map(f => {
@@ -540,7 +597,7 @@ export class ReportsComponent {
     saveAs(new Blob([buffer]), `Reporte_Fairgreen_${new Date().getTime()}.xlsx`);
   }
 
-  private _loadLogoBase64(): Promise<{data: string, width: number, height: number}> {
+  private _loadLogoBase64(): Promise<{ data: string, width: number, height: number }> {
     return new Promise((resolve) => {
       const img = new Image();
       img.src = 'assets/logo-fairgreen.png';
@@ -579,13 +636,13 @@ export class ReportsComponent {
       canvas.height = 300;
       document.body.appendChild(canvas);
       canvas.style.display = 'none';
-      
+
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve('');
         return;
       }
-      
+
       const chart = new Chart(ctx, {
         ...config,
         options: {
@@ -607,7 +664,7 @@ export class ReportsComponent {
           }
         ]
       });
-      
+
       setTimeout(() => {
         const base64 = chart.toBase64Image('image/jpeg', 0.8);
         chart.destroy();
@@ -617,30 +674,30 @@ export class ReportsComponent {
     });
   }
 
-  private _addPageHeaderFooter(doc: jsPDF, pageNum: number, totalPages: number, logo: {data: string, width: number, height: number}) {
+  private _addPageHeaderFooter(doc: jsPDF, pageNum: number, totalPages: number, logo: { data: string, width: number, height: number }) {
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    
+
     // Header
     if (logo.data) {
       const targetHeight = 12;
       const targetWidth = targetHeight * (logo.width / logo.height);
       doc.addImage(logo.data, 'PNG', 14, 10, targetWidth, targetHeight);
     }
-    
+
     doc.setFontSize(12);
     doc.setTextColor(28, 61, 46);
     doc.setFont("helvetica", "bold");
     doc.text('Reporte FairGreen', pageWidth - 14, 18, { align: 'right' });
-    
+
     doc.setDrawColor(76, 175, 125);
     doc.setLineWidth(0.5);
     doc.line(14, 25, pageWidth - 14, 25);
-    
+
     // Footer
     doc.setDrawColor(221, 229, 223);
     doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-    
+
     doc.setFontSize(9);
     doc.setTextColor(143, 168, 149);
     doc.setFont("helvetica", "normal");
@@ -698,7 +755,7 @@ export class ReportsComponent {
           sums[key] += val;
           if (val < stats[key].min) stats[key].min = val;
           if (val > stats[key].max) stats[key].max = val;
-          
+
           if (isGreen) sums.green[key] += val;
           if (isFairway) sums.fairway[key] += val;
         }
@@ -747,7 +804,7 @@ export class ReportsComponent {
     if (stats.humedad.count > 0) text += `La humedad promedio fue de ${stats.humedad.avg.toFixed(1)} (escala 1-5), `;
     if (stats.temperatura.count > 0) text += `la temperatura promedio de ${stats.temperatura.avg.toFixed(1)}°C, `;
     if (stats.salinidad.count > 0) text += `la salinidad promedio de ${stats.salinidad.avg.toFixed(2)} dS/m `;
-    if (stats.conductividad.count > 0) text += `y la conductividad promedio de ${stats.conductividad.avg.toFixed(0)} µS/cm.`;
+    if (stats.conductividad.count > 0) text += `y la conductividad promedio de ${stats.conductividad.avg.toFixed(0)} CE.`;
 
     const splitText = doc.splitTextToSize(text, 180);
     doc.text(splitText, 14, currentY);
@@ -763,16 +820,16 @@ export class ReportsComponent {
       doc.setDrawColor(221, 229, 223);
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
-      
+
       doc.setFontSize(10);
       doc.setTextColor(28, 61, 46);
       doc.setFont("helvetica", "bold");
       doc.text(title, x + 4, y + 6);
-      
+
       doc.setFontSize(12);
       doc.setTextColor(76, 175, 125);
       doc.text(avg, x + 4, y + 14);
-      
+
       doc.setFontSize(8);
       doc.setTextColor(143, 168, 149);
       doc.setFont("helvetica", "normal");
@@ -787,7 +844,7 @@ export class ReportsComponent {
     return currentY + cardHeight + 15;
   }
 
-  private _buildZoneComparisonChartConfig(paramKey: 'humedad'|'temperatura'|'salinidad'|'conductividad', label: string, stats: PdfStats): any {
+  private _buildZoneComparisonChartConfig(paramKey: 'humedad' | 'temperatura' | 'salinidad' | 'conductividad', label: string, stats: PdfStats): any {
     return {
       type: 'bar',
       data: {
@@ -843,16 +900,16 @@ export class ReportsComponent {
     const doc = new jsPDF();
     const logoData = await this._loadLogoBase64();
     const stats = this._computeStats(this._rawExportFeatures);
-    
+
     // --- PAGE 1: PORTADA & RESUMEN ---
     let currentY = 35;
-    
+
     doc.setFontSize(22);
     doc.setTextColor(28, 61, 46);
     doc.setFont("helvetica", "bold");
     doc.text(this.exportConfig.title, 14, currentY);
     currentY += 8;
-    
+
     doc.setFontSize(14);
     doc.setTextColor(90, 112, 96);
     doc.setFont("helvetica", "normal");
@@ -861,7 +918,7 @@ export class ReportsComponent {
 
     doc.setFontSize(11);
     doc.setTextColor(26, 46, 32);
-    const dateRange = this.exportConfig.dateFrom || this.exportConfig.dateTo 
+    const dateRange = this.exportConfig.dateFrom || this.exportConfig.dateTo
       ? `Período: ${this.exportConfig.dateFrom ? new Date(this.exportConfig.dateFrom).toLocaleDateString('es-CL') : 'Inicio'} — ${this.exportConfig.dateTo ? new Date(this.exportConfig.dateTo).toLocaleDateString('es-CL') : 'Fin'}`
       : `Período: Todas las fechas (${stats.dateMin} — ${stats.dateMax})`;
     doc.text(dateRange, 14, currentY); currentY += 6;
@@ -871,7 +928,7 @@ export class ReportsComponent {
     if (this.exportConfig.includeStats && stats.total > 0) {
       currentY = this._buildExecutiveSummary(doc, stats, currentY);
     }
-    
+
     // --- PAGE 2: GRÁFICOS COMPARATIVOS ---
     if (this.exportConfig.includeStats && stats.total > 0) {
       doc.addPage();
@@ -898,7 +955,7 @@ export class ReportsComponent {
       const chartHConfig = this._buildZoneComparisonChartConfig('humedad', 'Humedad (1-5)', stats);
       const chartTConfig = this._buildZoneComparisonChartConfig('temperatura', 'Temperatura (°C)', stats);
       const chartSConfig = this._buildZoneComparisonChartConfig('salinidad', 'Salinidad (dS/m)', stats);
-      const chartCConfig = this._buildZoneComparisonChartConfig('conductividad', 'Conductividad (µS/cm)', stats);
+      const chartCConfig = this._buildZoneComparisonChartConfig('conductividad', 'Conductividad (CE)', stats);
 
       const [chartH, chartT, chartS, chartC] = await Promise.all([
         this._renderChartToBase64(chartHConfig),
@@ -915,7 +972,7 @@ export class ReportsComponent {
         doc.addImage(chartT, 'JPEG', x1, yGrid, chartWidth, chartHeight);
         yGrid += chartHeight + 10;
       }
-      
+
       // Page break for the next two charts
       doc.addPage();
       yGrid = 35;
@@ -962,13 +1019,13 @@ export class ReportsComponent {
         doc.setFont("helvetica", "bold");
         doc.text('RELACIÓN ENTRE PARÁMETROS (COORDENADAS PARALELAS)', 14, currentY);
         currentY += 8;
-        
+
         doc.setFontSize(11);
         doc.setTextColor(90, 112, 96);
         doc.setFont("helvetica", "normal");
         doc.text('Este gráfico muestra la correlación individual de las muestras a través de todos los parámetros.', 14, currentY);
         currentY += 10;
-        
+
         doc.addImage(pcBase64, 'JPEG', 14, currentY, 180, 80);
       }
     }

@@ -5,7 +5,7 @@
     <div class="notif-header-left">
       <h1 class="notif-title">
         <i class="bi bi-bell-fill"></i>
-        Notificaciones
+        Notificaciones y Alertas
         @if (noLeidas() > 0) {
           <span class="notif-count-badge">{{ noLeidas() }}</span>
         }
@@ -92,6 +92,14 @@
             </span>
           </div>
           <p class="notif-mensaje">{{ notif.mensaje }}</p>
+          @if (notif.rut_usuario) {
+            <div class="notif-responsable">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="flex-shrink:0;">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+              {{ notif.rut_usuario.nombre }} {{ notif.rut_usuario.apellido }}
+            </div>
+          }
 
           <div class="notif-meta">
             <span class="notif-tipo-label" [ngClass]="colorPorTipo(notif.tipo)">
