@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass, CommonModule } from '@angular/common';
 import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
 import { DataService, SeccionFeature, FotoItem } from '../../services/data.service';
+import { UploadQueueService } from '../../services/upload-queue.service';
+import { SampleFile } from '../new-sample/new-sample.component';
 
 @Component({
   selector: 'app-edit-sample',
@@ -14,12 +16,14 @@ import { DataService, SeccionFeature, FotoItem } from '../../services/data.servi
 })
 export class EditSampleComponent implements OnInit {
   private dataService = inject(DataService);
+  private uploadQueueService = inject(UploadQueueService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
 
   sampleId = signal<number | null>(null);
   isDragging = false;
-  selectedFiles: File[] = [];
+  selectedFiles: SampleFile[] = [];
   existingPhotos: FotoItem[] = [];
   showSuccess = signal(false);
   mostrarMapa = false;
@@ -138,11 +142,10 @@ export class EditSampleComponent implements OnInit {
     }
   }
 
-  onFileChange(event: Event): void {
+  async onFileChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      const newFiles = Array.from(input.files);
-      this.selectedFiles = [...this.selectedFiles, ...newFiles];
+      await this.handleFiles(input.files);
     }
     input.value = '';
   }
@@ -151,13 +154,47 @@ export class EditSampleComponent implements OnInit {
     this.selectedFiles = this.selectedFiles.filter((_, i) => i !== index);
   }
 
-  onDrop(event: DragEvent): void {
+  async onDrop(event: DragEvent): Promise<void> {
     event.preventDefault();
     this.isDragging = false;
     if (event.dataTransfer?.files) {
-      const newFiles = Array.from(event.dataTransfer.files);
-      this.selectedFiles = [...this.selectedFiles, ...newFiles];
+      await this.handleFiles(event.dataTransfer.files);
     }
+  }
+
+  private async handleFiles(files: FileList | File[]): Promise<void> {
+    const allFiles = Array.from(files);
+    const MAX_SIZE_MB = 10;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+    
+    let hasInvalidType = false;
+    let hasOversized = false;
+
+    for (const file of allFiles) {
+      if (!file.type.startsWith('image/')) {
+        hasInvalidType = true;
+      } else if (file.size > MAX_SIZE_BYTES) {
+        hasOversized = true;
+      } else {
+        const sampleFile: SampleFile = {
+          file: file,
+          name: file.name,
+          status: 'ready',
+          progress: 100
+        };
+        this.selectedFiles.push(sampleFile);
+        this.cdr.detectChanges();
+      }
+    }
+
+    if (hasInvalidType) {
+      alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
+    }
+    if (hasOversized) {
+      alert(`Algunas imágenes superan el límite de ${MAX_SIZE_MB} MB y fueron ignoradas.`);
+    }
+
+    this.isSaving.set(false);
   }
 
   saveSample(): void {
@@ -205,24 +242,9 @@ export class EditSampleComponent implements OnInit {
     this.dataService.updateMuestra(currentId, payload).subscribe({
       next: (muestra) => {
         if (this.selectedFiles.length > 0) {
-          const uploadNext = (index: number) => {
-            if (index >= this.selectedFiles.length) {
-              this.onSaveSuccess();
-              return;
-            }
-            this.dataService.uploadFoto(muestra.id, this.selectedFiles[index]).subscribe({
-              next: () => uploadNext(index + 1),
-              error: () => {
-                this.isSaving.set(false);
-                alert(`Muestra actualizada, pero hubo un error al subir la imagen ${index + 1}.`);
-                this.router.navigate(['/samples/history']);
-              }
-            });
-          };
-          uploadNext(0);
-        } else {
-          this.onSaveSuccess();
+          this.uploadQueueService.queueUploads(muestra.id, this.selectedFiles);
         }
+        this.onSaveSuccess();
       },
       error: () => {
         this.isSaving.set(false);

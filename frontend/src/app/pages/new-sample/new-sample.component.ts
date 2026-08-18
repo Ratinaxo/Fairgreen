@@ -4,21 +4,30 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule, NgClass } from '@angular/common';
 import { MapPointPickerComponent } from '../../components/map/map-point-picker.component';
 import { DataService, SeccionFeature, PuntoCriticoFeature } from '../../services/data.service';
+import { UploadQueueService } from '../../services/upload-queue.service';
+
+export interface SampleFile {
+  file: File;
+  name: string;
+  status: 'ready' | 'error';
+  progress: number;
+}
 
 @Component({
   selector: 'app-new-sample',
   standalone: true,
-  imports: [FormsModule, NgClass, MapPointPickerComponent],
+  imports: [FormsModule, NgClass, CommonModule, MapPointPickerComponent],
   templateUrl: './new-sample.component.html',
   styleUrl: './new-sample.component.css'
 })
 export class NewSampleComponent implements OnInit {
   private dataService = inject(DataService);
+  private uploadQueueService = inject(UploadQueueService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   isDragging = false;
-  selectedFiles: File[] = [];
+  selectedFiles: SampleFile[] = [];
   showSuccess = false;
   mostrarMapa = false;
   isLoading = false;
@@ -275,12 +284,11 @@ export class NewSampleComponent implements OnInit {
     }
   }
 
-  private handleFiles(files: FileList | File[]): void {
+  private async handleFiles(files: FileList | File[]): Promise<void> {
     const allFiles = Array.from(files);
     const MAX_SIZE_MB = 10;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-    const validFiles: File[] = [];
     let hasInvalidType = false;
     let hasOversized = false;
 
@@ -290,7 +298,14 @@ export class NewSampleComponent implements OnInit {
       } else if (file.size > MAX_SIZE_BYTES) {
         hasOversized = true;
       } else {
-        validFiles.push(file);
+        const sampleFile: SampleFile = {
+          file: file,
+          name: file.name,
+          status: 'ready',
+          progress: 100
+        };
+        this.selectedFiles.push(sampleFile);
+        this.cdr.detectChanges();
       }
     }
 
@@ -300,8 +315,6 @@ export class NewSampleComponent implements OnInit {
     if (hasOversized) {
       alert(`Algunas imágenes superan el límite de ${MAX_SIZE_MB} MB y fueron ignoradas.`);
     }
-
-    this.selectedFiles = [...this.selectedFiles, ...validFiles];
   }
 
   saveSample(): void {
@@ -348,25 +361,9 @@ export class NewSampleComponent implements OnInit {
         next: (muestra) => {
           const muestraId = muestra.properties?.id_muestra ?? muestra.id;
           if (this.selectedFiles.length > 0 && muestraId) {
-            // Upload all photos sequentially
-            const uploadNext = (index: number) => {
-              if (index >= this.selectedFiles.length) {
-                this.onSaveSuccess();
-                return;
-              }
-              this.dataService.uploadFoto(muestraId, this.selectedFiles[index]).subscribe({
-                next: () => uploadNext(index + 1),
-                error: () => {
-                  this.isLoading = false;
-                  alert(`Muestra registrada, pero hubo un error al subir la imagen ${index + 1}.`);
-                  this.router.navigate(['/samples/history']);
-                }
-              });
-            };
-            uploadNext(0);
-          } else {
-            this.onSaveSuccess();
+            this.uploadQueueService.queueUploads(muestraId, this.selectedFiles);
           }
+          this.onSaveSuccess();
         },
         error: () => {
           this.isLoading = false;

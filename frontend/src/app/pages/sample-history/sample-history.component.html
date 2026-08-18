@@ -114,12 +114,12 @@
             <tr>
               <th scope="col">ID</th>
               <th scope="col">Fecha</th>
+              <th scope="col">Responsable</th>
               <th scope="col">Humedad</th>
               <th scope="col">Temperatura (°C)</th>
               <th scope="col">Conductividad</th>
               <th scope="col">Salinidad</th>
               <th scope="col">Pto. Crítico</th>
-              <th scope="col">Responsable</th>
               <th scope="col"><span class="sr-only">Acción</span></th>
             </tr>
           </thead>
@@ -135,22 +135,22 @@
                 <div class="skeleton-shimmer" style="width:120px;height:12px;margin-top:6px;border-radius:4px;"></div>
               </td>
               <td>
-                <div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div>
-              </td>
-              <td>
-                <div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div>
-              </td>
-              <td>
-                <div class="skeleton-shimmer" style="width:40px;height:16px;border-radius:4px;"></div>
-              </td>
-              <td>
-                <div class="skeleton-shimmer" style="width:40px;height:16px;border-radius:4px;"></div>
-              </td>
-              <td>
-                <div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div>
-              </td>
-              <td>
                 <div class="skeleton-shimmer" style="width:100px;height:16px;border-radius:4px;"></div>
+              </td>
+              <td>
+                <div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div>
+              </td>
+              <td>
+                <div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div>
+              </td>
+              <td>
+                <div class="skeleton-shimmer" style="width:40px;height:16px;border-radius:4px;"></div>
+              </td>
+              <td>
+                <div class="skeleton-shimmer" style="width:40px;height:16px;border-radius:4px;"></div>
+              </td>
+              <td>
+                <div class="skeleton-shimmer" style="width:30px;height:16px;border-radius:4px;"></div>
               </td>
               <td style="vertical-align:middle;padding:8px 16px;">
                 <div style="display:flex;gap:6px;align-items:center;justify-content:flex-start;height:30px;">
@@ -170,6 +170,7 @@
                 <div style="font-size:11px;color:var(--color-text-muted);">Sector {{ sample.sector }} · {{ sample.zona
                   }}</div>
               </td>
+              <td style="color:var(--color-text-secondary);">{{ sample.responsible }}</td>
               <td class="mono">{{ sample.humidity != null ? sample.humidity.toFixed(1) : '—' }}</td>
               <td class="mono">{{ sample.temperature != null ? sample.temperature.toFixed(1) : '—' }}</td>
               <td class="mono">{{ sample.conductivity != null ? sample.conductivity.toFixed(2) : '—' }}</td>
@@ -179,7 +180,6 @@
                   {{ sample.hasPuntoCritico ? 'Sí' : 'No' }}
                 </span>
               </td>
-              <td style="color:var(--color-text-secondary);">{{ sample.responsible }}</td>
               <td style="vertical-align:middle;padding:8px 16px;">
                 <div style="display:flex;gap:6px;align-items:center;justify-content:flex-start;height:30px;">
                   <button class="btn-primary" style="height:30px;font-size:12px;padding:0 8px;margin:0;"

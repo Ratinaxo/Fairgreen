@@ -18,7 +18,7 @@ const ROUTE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [NgOptimizedImage, RouterLink],
+  imports: [RouterLink],
   templateUrl: './topbar.component.html',
   styleUrl: './topbar.component.css'
 })

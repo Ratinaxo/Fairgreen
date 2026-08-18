@@ -257,6 +257,19 @@
   margin: 0 0 10px;
 }
 
+.notif-responsable {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary, #1C3D2E);
+  background: rgba(76, 175, 125, 0.10);
+  padding: 3px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
 .notif-meta {
   display: flex;
   align-items: center;

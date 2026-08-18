@@ -85,18 +85,9 @@
 
       <!-- Avatar grande -->
       <div style="text-align:center;margin-bottom:16px;">
-        <div style="position:relative;display:inline-block;">
+        <div style="display:inline-block;">
           <div class="avatar avatar-lg" [ngClass]="avatarClassStr(editForm.role)" aria-hidden="true"
             style="margin:0 auto;">{{ user.initials }}</div>
-          <button
-            style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--color-primary);border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;"
-            aria-label="Cambiar foto de usuario">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
-              aria-hidden="true">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-              <circle cx="12" cy="13" r="4" />
-            </svg>
-          </button>
         </div>
         <div style="margin-top:10px;font-size:15px;font-weight:600;color:var(--color-text-primary);">{{ user.name }}
         </div>

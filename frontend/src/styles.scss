@@ -26,10 +26,10 @@
   --color-sidebar-active: #FFFFFF;
   --color-sidebar-active-bg: rgba(255, 255, 255, 0.12);
 
-  /* Tipografía - colores */
-  --color-text-primary: #1A2E20;
-  --color-text-secondary: #5A7060;
-  --color-text-muted: #8FA895;
+  /* Tipografía - colores (alto contraste para uso en exteriores) */
+  --color-text-primary: #111D15;
+  --color-text-secondary: #2A3E30;
+  --color-text-muted: #4A5E50;
 
   /* Tipografías */
   --font-display: 'DM Serif Display', serif;
@@ -804,6 +804,6 @@ body.modal-open .content-area {
   overflow-y: hidden !important;
 }
 
-ody.modal-open .content-area {
+body.modal-open .content-area {
   overflow-y: hidden !important;
 }

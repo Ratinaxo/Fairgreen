@@ -21,6 +21,7 @@ interface NavItem {
 export class SidebarComponent {
   isCollapsed = signal(false);
   isOpen = signal(false);
+  isFaqModalOpen = signal(false);
 
   private auth = inject(AuthService);
   readonly notifications = inject(NotificationsService);
@@ -102,5 +103,9 @@ export class SidebarComponent {
     if (window.innerWidth < 1024) {
       this.isOpen.set(false);
     }
+  }
+
+  toggleFaqModal() {
+    this.isFaqModalOpen.update(v => !v);
   }
 }

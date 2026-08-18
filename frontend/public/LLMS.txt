@@ -1,0 +1,33 @@
+# FairGreen - Información para Modelos de Lenguaje (LLMs)
+
+## Descripción General
+FairGreen es una plataforma web desarrollada en Angular 18 (standalone components) diseñada para la gestión integral y el análisis del estado del césped en campos de golf. Permite a cancheros, agrónomos y administradores registrar muestras de suelo (humedad, temperatura, salinidad, conductividad) de forma georreferenciada.
+
+## Arquitectura y Stack Tecnológico
+- **Frontend**: Angular 18 (TypeScript), Standalone Components, Signal API (para reactividad).
+- **Estilos**: CSS nativo y variables CSS (`var(--color-primary)`, etc.).
+- **Backend (API)**: API REST que expone endpoints para autenticación, gestión de usuarios, muestras, puntos críticos y notificaciones.
+- **Iconos**: Bootstrap Icons (clases `bi bi-*`).
+- **Autenticación**: JWT (almacenado en `localStorage`).
+
+## Estructura del Proyecto (Frontend)
+- `src/app/pages/`: Contiene todas las rutas y vistas principales (`dashboard`, `login`, `new-sample`, `reports`, etc.).
+- `src/app/layout/`: Contiene componentes estructurales como el `sidebar`, `topbar` y `main-layout`.
+- `src/app/services/`: Contiene los servicios inyectables (`auth.service.ts`, `data.service.ts`, `notifications.service.ts`, etc.).
+- `src/app/app.routes.ts`: Definición de enrutamiento y guardias de navegación basados en roles.
+- `public/`: Archivos estáticos y recursos como `LLMS.txt` e imágenes.
+
+## Funciones Principales
+1. **Registro de Muestras**: Los usuarios toman muestras georreferenciadas. Pueden guardar coordenadas GPS o marcar en un mapa interactivo (Geomapa).
+2. **Historial y Detalle**: Revisión exhaustiva del histórico de métricas con filtros.
+3. **Puntos Críticos**: Zonas identificadas que requieren atención especial. Se pueden asociar muestras a estos puntos críticos.
+4. **Reportes**: Análisis histórico con gráficos y exportación en formato PDF o Excel.
+5. **Notificaciones**: Alertas y notificaciones del sistema gestionadas en tiempo real.
+
+## Guías para Modelos de Lenguaje
+- **UI/UX**: Al modificar la UI, se debe mantener el estilo consistente usando las variables CSS definidas en `styles.css`. No se debe incluir frameworks externos de CSS como Bootstrap CSS o TailwindCSS a menos que se indique explícitamente.
+- **Lógica Reactiva**: Se prefiere el uso de `signal()` y `computed()` de Angular 16+ en lugar de `BehaviorSubject` para el manejo de estado dentro de los componentes.
+- **Rendimiento**: Seguir estándares Core Web Vitals. Mantener el DOM limpio, usar directivas nativas modernas como `@if` y `@for` (Control Flow de Angular 17+).
+
+## Autor
+Desarrollado para facilitar el mantenimiento y la toma de decisiones agronómicas basadas en datos en campos de golf.

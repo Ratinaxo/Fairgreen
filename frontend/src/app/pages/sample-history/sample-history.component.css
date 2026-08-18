@@ -183,14 +183,16 @@
         margin-top: 4px;
       }
 
-      /* Hide less-critical columns to keep the table compact on mobile */
-      /* Conductividad (5), Salinidad (6), Pto. Crítico (7) */
-      .data-table th:nth-child(5),
-      .data-table td:nth-child(5),
+      /* Hide less-critical columns on tablets */
+      /* Humedad (4), Conductividad (6), Salinidad (7), Pto. Crítico (8) */
+      .data-table th:nth-child(4),
+      .data-table td:nth-child(4),
       .data-table th:nth-child(6),
       .data-table td:nth-child(6),
       .data-table th:nth-child(7),
-      .data-table td:nth-child(7) {
+      .data-table td:nth-child(7),
+      .data-table th:nth-child(8),
+      .data-table td:nth-child(8) {
         display: none;
       }
     }
@@ -203,11 +205,9 @@
         text-align: center;
       }
 
-      /* On very small screens, also hide Temperatura (4) and Responsable (8) */
-      .data-table th:nth-child(4),
-      .data-table td:nth-child(4),
-      .data-table th:nth-child(8),
-      .data-table td:nth-child(8) {
+      /* On very small screens, also hide Temperatura (5) */
+      .data-table th:nth-child(5),
+      .data-table td:nth-child(5) {
         display: none;
       }
     }

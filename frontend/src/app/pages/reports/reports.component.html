@@ -2,18 +2,20 @@
   <!-- Header -->
   <div class="reports-header" style="margin-bottom:20px;">
     <div>
-      <h1 style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">Análisis histórico</h1>
-      <p style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">Seleccione los filtros y visualice todos los parámetros en paralelo</p>
+      <h1 style="font-family:var(--font-display);font-size:22px;color:var(--color-text-primary);">Reportes y Análisis de Suelo</h1>
+      <p style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">Seleccione los filtros y visualice todos
+        los parámetros en paralelo</p>
     </div>
     @if (filtersApplied()) {
     <div style="display:flex;gap:10px;" aria-label="Exportar reporte">
       <button class="btn-primary" id="open-export-modal-btn" (click)="openExportModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" x2="8" y1="13" y2="13"/>
-          <line x1="16" x2="8" y1="17" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" x2="8" y1="13" y2="13" />
+          <line x1="16" x2="8" y1="17" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
         </svg>
         Generar Reporte Personalizado
       </button>
@@ -26,22 +28,28 @@
     <div class="filters-row">
       <div class="filter-item">
         <label for="date-from" class="filter-label">Desde</label>
-        <input id="date-from" type="date" class="form-control" [(ngModel)]="filters.dateFrom"
-          [max]="filters.dateTo" (change)="validateDates('filter')" style="width:150px;" />
+        <input id="date-from" type="date" class="form-control" [(ngModel)]="filters.dateFrom" [max]="filters.dateTo"
+          (change)="validateDates('filter')" style="width:150px;" />
       </div>
       <div class="filter-item">
         <label for="date-to" class="filter-label">Hasta</label>
-        <input id="date-to" type="date" class="form-control" [(ngModel)]="filters.dateTo"
-          [min]="filters.dateFrom" (change)="validateDates('filter')" style="width:150px;" />
+        <input id="date-to" type="date" class="form-control" [(ngModel)]="filters.dateTo" [min]="filters.dateFrom"
+          (change)="validateDates('filter')" style="width:150px;" />
       </div>
       <div class="filter-item">
         <label for="rep-sector" class="filter-label">Sector</label>
         <div class="select-wrapper" style="width:110px;">
           <select id="rep-sector" class="form-control" [(ngModel)]="filters.sector" aria-label="Sector">
             <option value="">Todos</option>
-            <option>1</option><option>2</option><option>3</option>
-            <option>4</option><option>5</option><option>6</option>
-            <option>7</option><option>8</option><option>9</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
           </select>
         </div>
       </div>
@@ -55,8 +63,25 @@
           </select>
         </div>
       </div>
+      <div class="filter-item">
+        <label for="rep-pc" class="filter-label">Pto. Crítico</label>
+        <div class="select-wrapper" style="width:160px;">
+          <select id="rep-pc" class="form-control" [(ngModel)]="filters.puntoCritico" aria-label="Punto Crítico">
+            <option value="">Todos</option>
+            @for (pc of puntosCriticosFiltro; track pc.id) {
+              <option [value]="pc.id">
+                Punto {{ pc.id }}
+                @if (pc.properties.id_seccion?.properties) {
+                  ({{ pc.properties.id_seccion!.properties.tipo_de_tierra }} {{ pc.properties.id_seccion!.properties.numero_de_hoyo }})
+                }
+              </option>
+            }
+          </select>
+        </div>
+      </div>
       <button class="btn-primary" id="apply-report-btn" (click)="applyFilters()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          aria-hidden="true">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
         Aplicar filtros
@@ -70,67 +95,69 @@
   <!-- Sample cap notice -->
   @if (pcTotalCount > 50) {
   <div class="cap-notice" role="status">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
-    Mostrando las <strong>{{ pcCappedCount }} muestras más recientes</strong> de {{ pcTotalCount }} totales. Refina los filtros para ver un rango más acotado.
+    Mostrando las <strong>{{ pcCappedCount }} muestras más recientes</strong> de {{ pcTotalCount }} totales. Refina los
+    filtros para ver un rango más acotado.
   </div>
   }
 
   <!-- Parallel Coordinates chart card -->
   <div class="card chart-card">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+    <div
+      style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
       <div>
         <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);">
           Coordenadas Paralelas — Parámetros de Suelo
         </h2>
         <p style="font-size:12px;color:var(--color-text-muted);">
-          {{ displayDateFrom() }} → {{ displayDateTo() }} &nbsp;·&nbsp; {{ pcSamples.length }} muestra{{ pcSamples.length === 1 ? '' : 's' }}
+          {{ displayDateFrom() }} → {{ displayDateTo() }} &nbsp;·&nbsp; {{ pcSamples.length }} muestra{{
+          pcSamples.length === 1 ? '' : 's' }}
         </p>
       </div>
 
       <!-- Axis toggle chips -->
       <div class="pc-axis-toggles" aria-label="Alternar ejes del gráfico">
         @for (param of PC_PARAMS; track param.key) {
-          <button class="pc-axis-chip"
-                  [class.pc-axis-chip-active]="pcIsParamActive(param.key)"
-                  (click)="pcToggleParam(param.key)"
-                  [attr.aria-pressed]="pcIsParamActive(param.key)"
-                  [attr.aria-label]="'Mostrar/ocultar eje ' + param.label">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
-              @if (pcIsParamActive(param.key)) {
-                <polyline points="20 6 9 17 4 12"/>
-              } @else {
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              }
-            </svg>
-            {{ param.label }}
-          </button>
+        <button class="pc-axis-chip" [class.pc-axis-chip-active]="pcIsParamActive(param.key)"
+          (click)="pcToggleParam(param.key)" [attr.aria-pressed]="pcIsParamActive(param.key)"
+          [attr.aria-label]="'Mostrar/ocultar eje ' + param.label">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            aria-hidden="true">
+            @if (pcIsParamActive(param.key)) {
+            <polyline points="20 6 9 17 4 12" />
+            } @else {
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+            }
+          </svg>
+          {{ param.label }}
+        </button>
         }
       </div>
     </div>
 
     @if (pcSamples.length === 0) {
     <div class="pc-empty">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path d="M3 3h18v18H3zM9 9h6M9 12h6M9 15h3"/>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+        aria-hidden="true">
+        <path d="M3 3h18v18H3zM9 9h6M9 12h6M9 15h3" />
       </svg>
       <p>No hay muestras que coincidan con los filtros seleccionados.</p>
     </div>
     } @else {
     <!-- SVG Chart — scrollable container -->
     <div class="pc-scroll-wrapper">
-      <div class="chart-wrapper pc-container"
-           id="pc-svg-chart"
-           role="img"
-           aria-label="Gráfico de coordenadas paralelas con parámetros de suelo"
-           (mousemove)="pcOnLineMove($event)">
+      <div class="chart-wrapper pc-container" id="pc-svg-chart" role="img"
+        aria-label="Gráfico de coordenadas paralelas con parámetros de suelo" (mousemove)="pcOnLineMove($event)">
 
         <!-- Tooltip -->
         @if (pcTooltip.show && pcTooltip.sample) {
-        <div class="pc-tooltip"
-             [style.left.px]="pcTooltip.x + 16"
-             [style.top.px]="pcTooltip.y - 10">
+        <div class="pc-tooltip" [style.left.px]="pcTooltip.x + 16" [style.top.px]="pcTooltip.y - 10">
           <div class="pc-tooltip-title">
             {{ pcSampleLabel(pcTooltip.sample) }}
           </div>
@@ -140,63 +167,55 @@
           @for (param of PC_PARAMS; track param.key) {
           <div class="pc-tooltip-row">
             <span class="pc-tooltip-label">{{ param.label }}</span>
-            <span class="pc-tooltip-value">{{ pcTooltipValue(param) }} <span class="pc-tooltip-unit">{{ param.unit }}</span></span>
+            <span class="pc-tooltip-value">{{ pcTooltipValue(param) }} <span class="pc-tooltip-unit">{{ param.unit
+                }}</span></span>
           </div>
           }
         </div>
         }
 
-        <svg [attr.viewBox]="'0 0 ' + PC_W + ' ' + PC_H" width="100%" preserveAspectRatio="xMidYMid meet" style="overflow:visible;min-width:700px;">
+        <svg [attr.viewBox]="'0 0 ' + PC_W + ' ' + PC_H" width="100%" preserveAspectRatio="xMidYMid meet"
+          style="overflow:visible;min-width:700px;">
 
           <!-- Grid lines (faint horizontal reference lines) -->
           @for (tick of [0, 0.25, 0.5, 0.75, 1]; track tick) {
-            <line
-              [attr.x1]="PC_MARGIN.left"
-              [attr.y1]="PC_MARGIN.top + (1 - tick) * (PC_H - PC_MARGIN.top - PC_MARGIN.bottom)"
-              [attr.x2]="PC_W - PC_MARGIN.right"
-              [attr.y2]="PC_MARGIN.top + (1 - tick) * (PC_H - PC_MARGIN.top - PC_MARGIN.bottom)"
-              class="pc-grid-line"/>
+          <line [attr.x1]="PC_MARGIN.left"
+            [attr.y1]="PC_MARGIN.top + (1 - tick) * (PC_H - PC_MARGIN.top - PC_MARGIN.bottom)"
+            [attr.x2]="PC_W - PC_MARGIN.right"
+            [attr.y2]="PC_MARGIN.top + (1 - tick) * (PC_H - PC_MARGIN.top - PC_MARGIN.bottom)" class="pc-grid-line" />
           }
 
           <!-- Sample lines — rendered below axes -->
           @for (s of pcSamples; track s.feature.id) {
-            @if (s.visible) {
-              <path [attr.d]="pcBuildPath(s.feature)"
-                    class="pc-line"
-                    [attr.data-id]="s.feature.id"
-                    [style.stroke]="s.color"
-                    [style.opacity]="pcLineOpacity(s.feature.id)"
-                    [style.stroke-width]="pcLineWidth(s.feature.id)"
-                    (mouseenter)="pcOnLineEnter(s.feature.id, $event)"
-                    (mouseleave)="pcOnLineLeave()"/>
-            }
+          @if (s.visible) {
+          <path [attr.d]="pcBuildPath(s.feature)" class="pc-line" [attr.data-id]="s.feature.id" [style.stroke]="s.color"
+            [style.opacity]="pcLineOpacity(s.feature.id)" [style.stroke-width]="pcLineWidth(s.feature.id)"
+            (mouseenter)="pcOnLineEnter(s.feature.id, $event)" (mouseleave)="pcOnLineLeave()" />
+          }
           }
 
           <!-- Axes — rendered above lines (only active params) -->
           @for (param of pcActiveParams; track param.key; let i = $index) {
-            <!-- Axis line -->
-            <line [attr.x1]="pcAxisX(i)" [attr.y1]="PC_MARGIN.top"
-                  [attr.x2]="pcAxisX(i)" [attr.y2]="PC_H - PC_MARGIN.bottom"
-                  class="pc-axis-line"/>
-            <!-- Min/max tick marks -->
-            <line [attr.x1]="pcAxisX(i) - 5" [attr.y1]="PC_MARGIN.top"
-                  [attr.x2]="pcAxisX(i) + 5" [attr.y2]="PC_MARGIN.top"
-                  class="pc-axis-tick"/>
-            <line [attr.x1]="pcAxisX(i) - 5" [attr.y1]="PC_H - PC_MARGIN.bottom"
-                  [attr.x2]="pcAxisX(i) + 5" [attr.y2]="PC_H - PC_MARGIN.bottom"
-                  class="pc-axis-tick"/>
-            <!-- Parameter label -->
-            <text [attr.x]="pcAxisX(i)" [attr.y]="PC_MARGIN.top - 26"
-                  text-anchor="middle" class="pc-axis-label">{{ param.label }}</text>
-            <!-- Unit -->
-            <text [attr.x]="pcAxisX(i)" [attr.y]="PC_MARGIN.top - 12"
-                  text-anchor="middle" class="pc-axis-unit">{{ param.unit }}</text>
-            <!-- Max value label -->
-            <text [attr.x]="pcAxisX(i) + 9" [attr.y]="PC_MARGIN.top + 4"
-                  text-anchor="start" class="pc-tick-label">{{ param.max }}</text>
-            <!-- Min value label -->
-            <text [attr.x]="pcAxisX(i) + 9" [attr.y]="PC_H - PC_MARGIN.bottom + 4"
-                  text-anchor="start" class="pc-tick-label">{{ param.min }}</text>
+          <!-- Axis line -->
+          <line [attr.x1]="pcAxisX(i)" [attr.y1]="PC_MARGIN.top" [attr.x2]="pcAxisX(i)"
+            [attr.y2]="PC_H - PC_MARGIN.bottom" class="pc-axis-line" />
+          <!-- Min/max tick marks -->
+          <line [attr.x1]="pcAxisX(i) - 5" [attr.y1]="PC_MARGIN.top" [attr.x2]="pcAxisX(i) + 5"
+            [attr.y2]="PC_MARGIN.top" class="pc-axis-tick" />
+          <line [attr.x1]="pcAxisX(i) - 5" [attr.y1]="PC_H - PC_MARGIN.bottom" [attr.x2]="pcAxisX(i) + 5"
+            [attr.y2]="PC_H - PC_MARGIN.bottom" class="pc-axis-tick" />
+          <!-- Parameter label -->
+          <text [attr.x]="pcAxisX(i)" [attr.y]="PC_MARGIN.top - 26" text-anchor="middle" class="pc-axis-label">{{
+            param.label }}</text>
+          <!-- Unit -->
+          <text [attr.x]="pcAxisX(i)" [attr.y]="PC_MARGIN.top - 12" text-anchor="middle" class="pc-axis-unit">{{
+            param.unit }}</text>
+          <!-- Max value label -->
+          <text [attr.x]="pcAxisX(i) + 9" [attr.y]="PC_MARGIN.top + 4" text-anchor="start" class="pc-tick-label">{{
+            param.max }}</text>
+          <!-- Min value label -->
+          <text [attr.x]="pcAxisX(i) + 9" [attr.y]="PC_H - PC_MARGIN.bottom + 4" text-anchor="start"
+            class="pc-tick-label">{{ param.min }}</text>
           }
         </svg>
       </div>
@@ -205,15 +224,18 @@
     <!-- Legend dropdown -->
     <div class="pc-legend-dropdown-wrapper">
       <button class="pc-legend-toggle" (click)="toggleLegendDropdown()" aria-expanded="{{legendDropdownOpen}}"
-              aria-controls="legend-dropdown-panel">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+        aria-controls="legend-dropdown-panel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          aria-hidden="true">
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="12" cy="5" r="1" />
+          <circle cx="12" cy="19" r="1" />
         </svg>
         Muestras ({{ pcVisibleCount }}/{{ pcSamples.length }} visibles)
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
-             [style.transform]="legendDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'"
-             style="transition:transform 0.2s ease;margin-left:auto;">
-          <polyline points="6 9 12 15 18 9"/>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          aria-hidden="true" [style.transform]="legendDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'"
+          style="transition:transform 0.2s ease;margin-left:auto;">
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
@@ -227,23 +249,24 @@
         <!-- Sample list -->
         <div class="pc-legend-list">
           @for (s of pcSamples; track s.feature.id) {
-            <button class="pc-legend-item"
-                    [class.pc-inactive]="!s.visible"
-                    (click)="pcToggleSample(s.feature.id)"
-                    [attr.aria-label]="'Alternar visibilidad de ' + pcSampleLabel(s.feature)">
-              <span class="pc-legend-swatch" [style.background]="s.color"></span>
-              {{ pcSampleLabel(s.feature) }}
-              @if (s.visible) {
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" style="margin-left:auto;flex-shrink:0;">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                </svg>
-              } @else {
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" style="margin-left:auto;flex-shrink:0;opacity:0.4;">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
-              }
-            </button>
+          <button class="pc-legend-item" [class.pc-inactive]="!s.visible" (click)="pcToggleSample(s.feature.id)"
+            [attr.aria-label]="'Alternar visibilidad de ' + pcSampleLabel(s.feature)">
+            <span class="pc-legend-swatch" [style.background]="s.color"></span>
+            {{ pcSampleLabel(s.feature) }}
+            @if (s.visible) {
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              aria-hidden="true" style="margin-left:auto;flex-shrink:0;">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            } @else {
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              aria-hidden="true" style="margin-left:auto;flex-shrink:0;opacity:0.4;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+            }
+          </button>
           }
         </div>
       </div>
@@ -254,9 +277,11 @@
 
   <!-- Data table -->
   <div class="card" style="margin-top:16px;overflow:hidden;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--color-border);">
+    <div
+      style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--color-border);">
       <span style="font-size:14px;font-weight:600;">Datos</span>
-      <span style="font-size:12px;color:var(--color-text-muted);">{{ reportRows.length }} registro{{ reportRows.length === 1 ? '' : 's' }}, más recientes primero</span>
+      <span style="font-size:12px;color:var(--color-text-muted);">{{ reportRows.length }} registro{{ reportRows.length
+        === 1 ? '' : 's' }}, más recientes primero</span>
     </div>
     <div class="table-scroll-wrapper">
       <table class="data-table" aria-label="Datos del análisis histórico">
@@ -292,27 +317,34 @@
     <!-- Pagination -->
     @if (tablePageCount > 1) {
     <div class="table-pagination">
-      <button class="pagination-btn" [disabled]="tablePage === 1" (click)="goToPage(tablePage - 1)" aria-label="Página anterior">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <button class="pagination-btn" [disabled]="tablePage === 1" (click)="goToPage(tablePage - 1)"
+        aria-label="Página anterior">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
       </button>
       @if (tablePageNumbers[0] > 1) {
-        <button class="pagination-btn" (click)="goToPage(1)">1</button>
-        @if (tablePageNumbers[0] > 2) {
-          <span class="pagination-ellipsis">…</span>
-        }
+      <button class="pagination-btn" (click)="goToPage(1)">1</button>
+      @if (tablePageNumbers[0] > 2) {
+      <span class="pagination-ellipsis">…</span>
+      }
       }
       @for (page of tablePageNumbers; track page) {
-        <button class="pagination-btn" [class.pagination-active]="page === tablePage" (click)="goToPage(page)">{{ page }}</button>
+      <button class="pagination-btn" [class.pagination-active]="page === tablePage" (click)="goToPage(page)">{{ page
+        }}</button>
       }
-      @if (tablePageNumbers[tablePageNumbers.length - 1] < tablePageCount) {
-        @if (tablePageNumbers[tablePageNumbers.length - 1] < tablePageCount - 1) {
-          <span class="pagination-ellipsis">…</span>
+      @if (tablePageNumbers[tablePageNumbers.length - 1] < tablePageCount) { @if
+        (tablePageNumbers[tablePageNumbers.length - 1] < tablePageCount - 1) { <span class="pagination-ellipsis">
+        …</span>
         }
         <button class="pagination-btn" (click)="goToPage(tablePageCount)">{{ tablePageCount }}</button>
-      }
-      <button class="pagination-btn" [disabled]="tablePage === tablePageCount" (click)="goToPage(tablePage + 1)" aria-label="Página siguiente">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
+        }
+        <button class="pagination-btn" [disabled]="tablePage === tablePageCount" (click)="goToPage(tablePage + 1)"
+          aria-label="Página siguiente">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
     </div>
     }
   </div>
@@ -321,99 +353,133 @@
   <!-- Empty state -->
   <div class="empty-state" role="status" aria-label="Sin filtros aplicados">
     <div class="empty-icon">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+        aria-hidden="true">
         <line x1="18" x2="18" y1="20" y2="10" />
         <line x1="12" x2="12" y1="20" y2="4" />
         <line x1="6" x2="6" y1="20" y2="14" />
       </svg>
     </div>
-    <h3 style="font-size:16px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">Sin filtros aplicados</h3>
-    <p style="font-size:13px;color:var(--color-text-muted);">Configura los filtros y presiona "Aplicar" para visualizar el análisis</p>
+    <h3 style="font-size:16px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">Sin filtros
+      aplicados</h3>
+    <p style="font-size:13px;color:var(--color-text-muted);">Configura los filtros y presiona "Aplicar" para visualizar
+      el análisis</p>
   </div>
   }
 
   <!-- Modal de Exportación Personalizada -->
   @if (showExportModal()) {
-    <div class="modal-overlay" (click)="closeExportModal()" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
-      <div class="modal-card" (click)="$event.stopPropagation()" style="width:480px;max-width:90vw;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-          <h3 id="export-modal-title" style="font-family:var(--font-display);font-size:18px;">Configurar Reporte</h3>
-          <button class="close-btn" (click)="closeExportModal()" aria-label="Cerrar modal">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
-          </button>
+  <div class="modal-overlay" (click)="closeExportModal()" role="dialog" aria-modal="true"
+    aria-labelledby="export-modal-title">
+    <div class="modal-card" (click)="$event.stopPropagation()" style="width:480px;max-width:90vw;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 id="export-modal-title" style="font-family:var(--font-display);font-size:18px;">Configurar Reporte</h3>
+        <button class="close-btn" (click)="closeExportModal()" aria-label="Cerrar modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" x2="6" y1="6" y2="18" />
+            <line x1="6" x2="18" y1="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="edit-form" style="padding:0;gap:12px;">
+        <!-- Formato -->
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Formato</label>
+            <div style="display:flex;gap:16px;margin-top:6px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+                <input type="radio" name="exportFormat" value="pdf" [(ngModel)]="exportConfig.format" /> PDF
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+                <input type="radio" name="exportFormat" value="excel" [(ngModel)]="exportConfig.format" /> Excel
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Título del Reporte</label>
+          <input type="text" class="form-control" [(ngModel)]="exportConfig.title" />
+        </div>
+        <div style="margin:16px 0;border-top:1px solid var(--color-border);"></div>
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">Filtros de Datos (Independientes)</h4>
+
+        <div style="display:flex;gap:12px;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Desde</label>
+            <input type="date" class="form-control" [(ngModel)]="exportConfig.dateFrom" [max]="exportConfig.dateTo"
+              (change)="validateDates('export')" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Hasta</label>
+            <input type="date" class="form-control" [(ngModel)]="exportConfig.dateTo" [min]="exportConfig.dateFrom"
+              (change)="validateDates('export')" />
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Sector</label>
+            <select class="form-control" [(ngModel)]="exportConfig.sector">
+              <option value="">Todos</option>
+              <option>1</option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Zona</label>
+            <select class="form-control" [(ngModel)]="exportConfig.zona">
+              <option value="">Todas</option>
+              <option>Green</option>
+              <option>Fairway</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Pto. Crítico</label>
+          <div class="select-wrapper">
+            <select class="form-control" [(ngModel)]="exportConfig.puntoCritico">
+              <option value="">Todos</option>
+              @for (pc of puntosCriticosExport; track pc.id) {
+                <option [value]="pc.id">
+                  Punto {{ pc.id }}
+                  @if (pc.properties.id_seccion?.properties) {
+                    ({{ pc.properties.id_seccion!.properties.tipo_de_tierra }} {{ pc.properties.id_seccion!.properties.numero_de_hoyo }})
+                  }
+                </option>
+              }
+            </select>
+          </div>
         </div>
 
-        <div class="edit-form" style="padding:0;gap:12px;">
-          <!-- Formato -->
-          <div style="display:flex;gap:12px;margin-bottom:8px;">
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">Formato</label>
-              <div style="display:flex;gap:16px;margin-top:6px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
-                  <input type="radio" name="exportFormat" value="pdf" [(ngModel)]="exportConfig.format"/> PDF
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
-                  <input type="radio" name="exportFormat" value="excel" [(ngModel)]="exportConfig.format"/> Excel
-                </label>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Título del Reporte</label>
-            <input type="text" class="form-control" [(ngModel)]="exportConfig.title"/>
-          </div>
-          <div style="margin:16px 0;border-top:1px solid var(--color-border);"></div>
-          <h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">Filtros de Datos (Independientes)</h4>
+        <div style="margin:16px 0;border-top:1px solid var(--color-border);"></div>
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">Elementos a Incluir</h4>
 
-          <div style="display:flex;gap:12px;">
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">Desde</label>
-              <input type="date" class="form-control" [(ngModel)]="exportConfig.dateFrom" [max]="exportConfig.dateTo" (change)="validateDates('export')"/>
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">Hasta</label>
-              <input type="date" class="form-control" [(ngModel)]="exportConfig.dateTo" [min]="exportConfig.dateFrom" (change)="validateDates('export')"/>
-            </div>
-          </div>
-          <div style="display:flex;gap:12px;">
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">Sector</label>
-              <select class="form-control" [(ngModel)]="exportConfig.sector">
-                <option value="">Todos</option>
-                <option>1</option><option>2</option><option>3</option><option>4</option>
-                <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option>
-              </select>
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">Zona</label>
-              <select class="form-control" [(ngModel)]="exportConfig.zona">
-                <option value="">Todas</option>
-                <option>Green</option>
-                <option>Fairway</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="margin:16px 0;border-top:1px solid var(--color-border);"></div>
-          <h4 style="font-size:14px;font-weight:600;margin-bottom:10px;">Elementos a Incluir</h4>
-
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
-              <input type="checkbox" [(ngModel)]="exportConfig.includeTable"/>
-              Tabla detallada de datos
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"
-                   [class.text-muted]="exportConfig.format === 'excel'">
-              <input type="checkbox" [(ngModel)]="exportConfig.includeStats" [disabled]="exportConfig.format === 'excel'"/>
-              Resumen estadístico (Solo PDF)
-            </label>
-          </div>
-
-          <button class="btn-primary w-full" (click)="generateReport()" style="margin-top:20px;justify-content:center;" [disabled]="isExporting()">
-            {{ isExporting() ? 'GENERANDO...' : 'GENERAR Y DESCARGAR' }}
-          </button>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+            <input type="checkbox" [(ngModel)]="exportConfig.includeTable" />
+            Tabla detallada de datos
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;"
+            [class.text-muted]="exportConfig.format === 'excel'">
+            <input type="checkbox" [(ngModel)]="exportConfig.includeStats"
+              [disabled]="exportConfig.format === 'excel'" />
+            Resumen estadístico (Solo PDF)
+          </label>
         </div>
+
+        <button class="btn-primary w-full" (click)="generateReport()" style="margin-top:20px;justify-content:center;"
+          [disabled]="isExporting()">
+          {{ isExporting() ? 'GENERANDO...' : 'GENERAR Y DESCARGAR' }}
+        </button>
       </div>
     </div>
+  </div>
   }
 </div>

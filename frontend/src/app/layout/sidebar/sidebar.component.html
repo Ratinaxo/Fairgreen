@@ -61,8 +61,18 @@
               </div>
               <span class="sb-tooltip">{{ item.label }}</span>
             </a>
-          }
         }
+        }
+
+        <div class="sb-divider"></div>
+        <div class="sb-section-label">AYUDA</div>
+        <a class="sb-link" (click)="toggleFaqModal()" style="cursor:pointer;" aria-label="Manual de Uso">
+          <div class="sb-link-inner">
+            <i class="bi bi-question-circle"></i>
+            <span class="sb-link-label">Manual de Uso</span>
+          </div>
+          <span class="sb-tooltip">Manual de Uso</span>
+        </a>
       </nav>
 
       <!-- Bottom zone -->
@@ -78,4 +88,29 @@
       </div>
     </aside>
 
-  
+    <!-- Modal FAQ / Manual -->
+    @if (isFaqModalOpen()) {
+      <div class="modal-overlay" (click)="toggleFaqModal()" role="dialog" aria-modal="true" aria-labelledby="faq-modal-title">
+        <div class="modal-card" (click)="$event.stopPropagation()" style="width: 500px; max-width: 90vw; padding: 24px;">
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 id="faq-modal-title" style="margin: 0; font-family: var(--font-display); font-size: 20px; color: var(--color-text-primary);">Manual: Registro de Muestras</h2>
+            <button class="btn-icon" (click)="toggleFaqModal()" aria-label="Cerrar modal" style="background: transparent; border: none; font-size: 20px; cursor: pointer;">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="modal-body" style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.6;">
+            <p style="margin-bottom: 12px;">Para registrar una muestra correctamente, siga estos pasos:</p>
+            <ol style="padding-left: 20px; margin-bottom: 16px;">
+              <li style="margin-bottom: 8px;"><strong>Seleccione el sector y zona:</strong> Indique en qué área del campo se encuentra (ej. Sector 1, Green).</li>
+              <li style="margin-bottom: 8px;"><strong>Marque la ubicación:</strong> Utilice el botón <em>"Marcar en el mapa"</em> para establecer las coordenadas exactas de la muestra, o use el GPS de su dispositivo.</li>
+              <li style="margin-bottom: 8px;"><strong>Métricas del suelo:</strong> Ingrese los valores correspondientes de humedad (1-5), temperatura, salinidad y conductividad eléctrica (CE).</li>
+              <li style="margin-bottom: 8px;"><strong>Evidencia:</strong> (Opcional) Adjunte fotografías relevantes y escriba recomendaciones para el equipo de mantenimiento si es necesario.</li>
+            </ol>
+            <p style="margin-bottom: 0;">Si tiene dudas adicionales, contacte al administrador del sistema.</p>
+          </div>
+          <div class="modal-footer" style="margin-top: 24px; text-align: right;">
+            <button class="btn-primary" (click)="toggleFaqModal()">Entendido</button>
+          </div>
+        </div>
+      </div>
+    }
