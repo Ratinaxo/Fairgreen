@@ -273,14 +273,8 @@ export class NewSampleComponent implements OnInit {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging = false;
-    if (event.dataTransfer?.files) {
-      const allFiles = Array.from(event.dataTransfer.files);
-      const validFiles = allFiles.filter(file => file.type.startsWith('image/'));
-
-      if (validFiles.length < allFiles.length) {
-        alert('Solo se permiten archivos de imagen (JPG, PNG, etc). Algunos archivos fueron ignorados.');
-      }
-      this.selectedFiles = [...this.selectedFiles, ...validFiles];
+    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+      this.handleFiles(event.dataTransfer.files);
     }
   }
 

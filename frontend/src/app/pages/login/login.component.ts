@@ -1,13 +1,13 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, NgOptimizedImage, RouterLink],
+  imports: [FormsModule, NgOptimizedImage],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
