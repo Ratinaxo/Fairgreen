@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { DatePipe, NgClass } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { NotificationsService } from '../../services/notifications.service';
 import { Notificacion } from '../../services/data.service';
 
@@ -8,7 +9,7 @@ type Filtro = 'todas' | 'no_leidas' | 'leidas';
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [NgClass, DatePipe],
+  imports: [NgClass, DatePipe, RouterLink],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.css',
 })

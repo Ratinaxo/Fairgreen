@@ -270,6 +270,26 @@
   margin-bottom: 10px;
 }
 
+.notif-ver-muestra {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-accent, #4caf7d);
+  text-decoration: none;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(76, 175, 125, 0.08);
+  margin-bottom: 10px;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.notif-ver-muestra:hover {
+  background: rgba(76, 175, 125, 0.18);
+  color: #2d8a5e;
+}
+
 .notif-meta {
   display: flex;
   align-items: center;

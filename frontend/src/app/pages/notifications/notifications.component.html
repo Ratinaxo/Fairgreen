@@ -91,14 +91,14 @@
               {{ tiempoRelativo(notif.fecha_hora) }}
             </span>
           </div>
-          <p class="notif-mensaje">{{ notif.mensaje }}</p>
-          @if (notif.rut_usuario) {
-            <div class="notif-responsable">
+          <p class="notif-mensaje" [style.white-space]="'pre-line'">{{ notif.mensaje }}</p>
+          @if (notif.id_muestra) {
+            <a class="notif-ver-muestra" [routerLink]="['/samples/detail', notif.id_muestra]">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="flex-shrink:0;">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
               </svg>
-              {{ notif.rut_usuario.nombre }} {{ notif.rut_usuario.apellido }}
-            </div>
+              Ver muestra
+            </a>
           }
 
           <div class="notif-meta">

@@ -250,13 +250,17 @@ class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # =============================================================================
-# Señal: genera notificaciones automáticas al crear una Muestra con PC
+# Señal: genera notificaciones automáticas al crear una Muestra
 # =============================================================================
 @receiver(post_save, sender=Muestra)
-def notificar_punto_critico(sender, instance, created, **kwargs):
+def notificar_nueva_muestra(sender, instance, created, **kwargs):
     """
-    Cuando se crea una nueva Muestra,
-    genera una notificación para todos los usuarios ADMIN y AGRO.
+    Cuando se crea una nueva Muestra, genera una notificación para todos
+    los usuarios ADMIN y AGRO incluyendo:
+    - Quién subió la muestra (nombre completo del usuario)
+    - Dónde (sección: tipo de tierra + número de hoyo)
+    - Descripción del punto crítico (si aplica)
+    - Recomendaciones (si las hay)
     """
     if not created:
         return
@@ -264,20 +268,33 @@ def notificar_punto_critico(sender, instance, created, **kwargs):
     destinatarios = Usuario.objects.filter(rol__in=['ADMIN', 'AGRO'], is_active=True)
     seccion = instance.id_seccion
 
+    # Datos del usuario que subió la muestra
+    usuario = instance.rut_usuario
+    nombre_usuario = f'{usuario.nombre} {usuario.apellido}' if usuario else 'Usuario desconocido'
+
+    # Ubicación detallada
+    ubicacion = f'{seccion.get_tipo_de_tierra_display()} - Hoyo {seccion.numero_de_hoyo}'
+
     if instance.id_punto_critico:
         pc = instance.id_punto_critico
         titulo = 'Punto Crítico Registrado'
         mensaje = (
-            f'Se registró un nuevo punto crítico en «{seccion}». '
-            f'Descripción: {pc.descripcion}. '
-            f'Muestra ID: {instance.id_muestra}.'
+            f'{nombre_usuario} registró una muestra en un punto crítico.\n'
+            f'📍 Ubicación: {ubicacion}.\n'
+            f'⚠️ Punto crítico: {pc.descripcion}.\n'
+            f'🆔 Muestra #{instance.id_muestra}.'
         )
     else:
         titulo = 'Nueva Muestra Registrada'
         mensaje = (
-            f'Se registró una nueva muestra en «{seccion}». '
-            f'Muestra ID: {instance.id_muestra}.'
+            f'{nombre_usuario} registró una nueva muestra.\n'
+            f'📍 Ubicación: {ubicacion}.\n'
+            f'🆔 Muestra #{instance.id_muestra}.'
         )
+
+    # Agregar recomendaciones si existen
+    if instance.recomendaciones:
+        mensaje += f'\n📝 Recomendaciones: {instance.recomendaciones}'
 
     notifs = [
         Notificacion(
