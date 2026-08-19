@@ -128,7 +128,7 @@ export class NewSampleComponent implements OnInit {
     if (pc && pc.geometry.type === 'Point') {
       this.form.lng = String(pc.geometry.coordinates[0]);
       this.form.lat = String(pc.geometry.coordinates[1]);
-      
+
       // Auto-rellenar zona y sector si está disponible
       if (pc.properties?.id_seccion?.properties) {
         this.form.zona = pc.properties.id_seccion.properties.tipo_de_tierra;
@@ -243,7 +243,7 @@ export class NewSampleComponent implements OnInit {
       const prevSector = this.form.sector;
       this.form.zona = coords.seccion.properties.tipo_de_tierra;
       this.form.sector = String(coords.seccion.properties.numero_de_hoyo);
-      
+
       // Si cambió la sección, el desplegable se filtrará solo por el getter
       if (coords.puntoCriticoId) {
         this.form.puntoCriticoId = String(coords.puntoCriticoId);
@@ -282,7 +282,7 @@ export class NewSampleComponent implements OnInit {
     const allFiles = Array.from(files);
     const MAX_SIZE_MB = 10;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-    
+
     let hasInvalidType = false;
     let hasOversized = false;
 
@@ -318,8 +318,8 @@ export class NewSampleComponent implements OnInit {
       return;
     }
 
-    if ((this.form.salinity !== '' && parseFloat(this.form.salinity) < 0) || 
-        (this.form.conductivity !== '' && parseFloat(this.form.conductivity) < 0)) {
+    if ((this.form.salinity !== '' && parseFloat(this.form.salinity) < 0) ||
+      (this.form.conductivity !== '' && parseFloat(this.form.conductivity) < 0)) {
       alert('La salinidad y la conductividad no pueden ser valores negativos.');
       return;
     }
@@ -330,7 +330,7 @@ export class NewSampleComponent implements OnInit {
     }
 
     const sec = this.secciones.find(s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === parseInt(this.form.sector, 10));
-    
+
     if (!sec) {
       alert('La combinación de Zona y Sector no existe en la base de datos del sistema.');
       return;

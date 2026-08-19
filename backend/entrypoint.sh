@@ -37,6 +37,9 @@ echo "✅ PostgreSQL está listo."
 echo "🔄 Ejecutando migraciones..."
 python manage.py migrate --noinput
 
+echo "📁 Recolectando archivos estáticos..."
+python manage.py collectstatic --noinput
+
 echo "🚀 Iniciando Gunicorn..."
 exec gunicorn fairgreen_api.wsgi:application \
     --bind 0.0.0.0:8000 \
@@ -44,3 +47,4 @@ exec gunicorn fairgreen_api.wsgi:application \
     --timeout 120 \
     --access-logfile - \
     --error-logfile -
+

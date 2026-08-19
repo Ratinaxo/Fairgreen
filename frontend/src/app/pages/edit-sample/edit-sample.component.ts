@@ -52,7 +52,7 @@ export class EditSampleComponent implements OnInit {
     this.dataService.getSecciones().subscribe({
       next: (data) => {
         this.secciones = data.features ?? [];
-        
+
         // Cargar datos de la muestra tras obtener las secciones
         this.route.paramMap.subscribe(params => {
           const idStr = params.get('id');
@@ -78,7 +78,7 @@ export class EditSampleComponent implements OnInit {
         try {
           const p = muestra.properties;
           const coords = muestra.geometry ? muestra.geometry.coordinates : [0, 0];
-          
+
           let zona = '';
           let sector = '';
           if (p.id_seccion) {
@@ -137,7 +137,7 @@ export class EditSampleComponent implements OnInit {
 
     // Auto-rellenar zona y sector si el punto cae dentro de un polígono conocido
     if (coords.seccion) {
-      this.form.zona   = coords.seccion.properties.tipo_de_tierra;
+      this.form.zona = coords.seccion.properties.tipo_de_tierra;
       this.form.sector = String(coords.seccion.properties.numero_de_hoyo);
     }
   }
@@ -219,7 +219,7 @@ export class EditSampleComponent implements OnInit {
     }
 
     const sec = this.secciones.find(s => s.properties.tipo_de_tierra === this.form.zona && s.properties.numero_de_hoyo === parseInt(this.form.sector, 10));
-    
+
     if (!sec) {
       alert('La combinación de Zona y Sector no existe en la base de datos del sistema.');
       return;

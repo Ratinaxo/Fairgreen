@@ -19,7 +19,10 @@
       overflow: hidden;
     }
 
-    .filter-card { padding: 14px 16px; margin-bottom: 0; }
+    .filter-card {
+      padding: 14px 16px;
+      margin-bottom: 0;
+    }
 
     .page-btn {
       width: 30px;
@@ -46,12 +49,19 @@
         border-color: var(--color-primary);
       }
 
-      &:disabled { opacity: 0.4; cursor: not-allowed; }
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
     }
 
     .sr-only {
-      position: absolute; width: 1px; height: 1px;
-      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
     }
 
     .skeleton-shimmer {
@@ -64,6 +74,7 @@
       0% {
         background-position: 100% 50%;
       }
+
       100% {
         background-position: 0% 50%;
       }
@@ -124,7 +135,8 @@
       gap: 8px;
       flex: 1 1 140px;
       min-width: 130px;
-      height: 38px; /* alinear con los inputs */
+      height: 38px;
+      /* alinear con los inputs */
     }
 
     .pagination-container {
@@ -152,15 +164,19 @@
       .mobile-filter-toggle {
         display: flex;
       }
+
       .filters-wrapper {
         gap: 12px;
       }
+
       .filter-item {
         flex: 1 1 45%;
       }
+
       .filters-wrapper.mobile-hidden {
         display: none;
       }
+
       .filter-buttons {
         flex: 1 1 100%;
         justify-content: center;
@@ -200,9 +216,11 @@
       .history-page {
         padding: 0 8px;
       }
+
       .filter-item {
         flex: 1 1 100%;
       }
+
       .filter-buttons button {
         width: 100%;
       }
